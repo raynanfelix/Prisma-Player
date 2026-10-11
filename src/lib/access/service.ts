@@ -96,11 +96,17 @@ function accessFrom(
   subscription: { status?: string | null; current_period_end?: string | null } | null,
 ): AccountAccess {
   const now = Date.now();
-  const trialActive = row?.trial_status === "active" && Boolean(row.trial_ends_at) && new Date(row.trial_ends_at!).getTime() > now;
+  const validTrialStatuses = ["available", "active", "used", "expired"] as const;
+  const rawTrialStatus = row?.trial_status ?? "used";
+  const trialStatus = validTrialStatuses.includes(rawTrialStatus as typeof validTrialStatuses[number])
+    ? rawTrialStatus
+    : "used"; // Fail-closed: valor inválido tratado como sem trial
+  const trialEndsAt = row?.trial_ends_at;
+  const trialActive = trialStatus === "active" && typeof trialEndsAt === "string" && new Date(trialEndsAt).getTime() > now;
   const subscriptionActive = isSubscriptionEffective(subscription);
   return {
     onboardingCompleted: row?.onboarding_completed ?? true,
-    trialStatus: (row?.trial_status as AccountAccess["trialStatus"]) ?? "used",
+    trialStatus: trialStatus as AccountAccess["trialStatus"],
     trialEndsAt: row?.trial_ends_at ?? null,
     subscriptionActive,
     trialActive,

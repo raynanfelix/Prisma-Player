@@ -7,6 +7,7 @@ import EmptyState from "@/components/dashboard/EmptyState";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Tabs from "@/components/dashboard/Tabs";
 import Dialog from "@/components/ui/Dialog";
+import AdminSelect from "@/components/ui/custom/AdminSelect";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useVideoUploads } from "@/features/videos/components/VideoUploadProvider";
 import {
@@ -440,16 +441,7 @@ export default function VideosPage() {
       ) : (
         <label className="block text-xs font-semibold text-[#191A23] dark:text-zinc-200">
           Pasta de destino
-          <select
-            value={manageFolder}
-            onChange={(event) => setManageFolder(event.target.value)}
-            className="mt-2 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]"
-          >
-            <option value="">Sem pasta</option>
-            {folders.map((folder) => (
-              <option key={folder.id} value={folder.id}>{folder.name}</option>
-            ))}
-          </select>
+          <AdminSelect label="Pasta de destino" value={manageFolder} onChange={setManageFolder} className="mt-2 w-full" options={[{ value: "", label: "Sem pasta" }, ...folders.map((folder) => ({ value: folder.id, label: folder.name }))]} />
         </label>
       )}
     </Dialog>

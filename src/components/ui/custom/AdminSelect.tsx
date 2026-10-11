@@ -14,6 +14,7 @@ type Props = {
   onChange: (value: string) => void;
   label: string;
   className?: string;
+  disabled?: boolean;
 };
 
 type PopoverPos = { top: number; left: number; width: number };
@@ -23,7 +24,7 @@ type PopoverPos = { top: number; left: number; width: number };
  * fixa calculada do botão. Fixa escapa de qualquer ancestral com
  * overflow-hidden (painéis, tabelas, drawers), que cortava a lista.
  */
-export default function AdminSelect({ value, options, onChange, label, className }: Props) {
+export default function AdminSelect({ value, options, onChange, label, className, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [focus, setFocus] = useState(-1);
   const [pos, setPos] = useState<PopoverPos | null>(null);
@@ -91,12 +92,13 @@ export default function AdminSelect({ value, options, onChange, label, className
       <button
         ref={buttonRef}
         type="button"
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
         onClick={toggle}
         onKeyDown={(event) => { if ((event.key === "ArrowDown" || event.key === "Enter") && !open) { event.preventDefault(); toggle(); } }}
-        className="flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-medium themeable-text-ink transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue dark:border-zinc-800 dark:bg-card"
+        className="flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-medium themeable-text-ink transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue disabled:opacity-50 dark:border-zinc-800 dark:bg-card"
       >
         <span className="truncate">{selected?.label ?? "—"}</span>
         <ChevronDown size={14} aria-hidden className={cn("shrink-0 transition-transform themeable-text-ink-muted-48", open && "rotate-180")} />

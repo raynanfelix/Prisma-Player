@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Globe, Bell, Volume2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AdminSelect from "@/components/ui/custom/AdminSelect";
 
 export function PreferencesSettingsTab() {
   const [darkMode, setDarkMode] = useState(false);
@@ -94,15 +95,7 @@ export function PreferencesSettingsTab() {
               </div>
             </div>
 
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="h-9 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3 text-xs font-semibold text-[#191A23] dark:text-zinc-200 outline-none"
-            >
-              <option value="pt-BR">Português (Brasil)</option>
-              <option value="en-US">English (US)</option>
-              <option value="es-ES">Español</option>
-            </select>
+            <AdminSelect label="Idioma do painel" value={language} onChange={setLanguage} className="w-full sm:w-56" options={[{ value: "pt-BR", label: "Português (Brasil)" }, { value: "en-US", label: "English (US)" }, { value: "es-ES", label: "Español" }]} />
           </div>
         </div>
       </div>

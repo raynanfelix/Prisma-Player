@@ -7,6 +7,7 @@ const { authState } = vi.hoisted(() => ({
 vi.mock("@/lib/auth/server", () => ({
   getCurrentUserId: vi.fn(async () => authState.userId),
   getCurrentAdminUser: vi.fn(async () => (authState.userId && authState.isAdmin ? { id: authState.userId } : null)),
+  getAuthAssuranceLevel: vi.fn(async () => "aal2"),
 }));
 
 import { adminGuard } from "@/lib/api/admin-guard";

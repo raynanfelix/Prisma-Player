@@ -40,5 +40,6 @@ export async function POST(request: Request) {
     const message = getAuthErrorMessage(result.error, "Não foi possível criar a conta. Tente novamente.");
     return NextResponse.json({ error: "signup_failed", message }, { status: 400 });
   }
-  return NextResponse.json({ data: result.data, hasSession: Boolean(result.data.session) });
+  // Não expor access_token, refresh_token ou objeto session completo no response
+  return NextResponse.json({ user: result.data.user, hasSession: Boolean(result.data.session) });
 }

@@ -3,6 +3,7 @@
 import { Trash2, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import AdminSelect from "@/components/ui/custom/AdminSelect";
 import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import type { AccountTeam } from "@/features/account/model/types";
@@ -104,9 +105,7 @@ export function TeamPanel({ notify }: { notify: (message: string) => void }) {
         >
           <div className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
             <Input className="h-11 rounded-xl" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="pessoa@empresa.com" disabled={!teamEnabled} />
-            <select className="h-11 rounded-xl border border-input bg-background px-3 text-sm" value={role} onChange={(event) => setRole(event.target.value)} disabled={!teamEnabled}>
-              {Object.entries(roleLabels).filter(([key]) => key !== "owner").map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-            </select>
+            <AdminSelect label="Nível de acesso" value={role} onChange={setRole} disabled={!teamEnabled} className="h-11" options={Object.entries(roleLabels).filter(([key]) => key !== "owner").map(([key, label]) => ({ value: key, label }))} />
             <Button className="h-11 rounded-full" onClick={() => void invite()} disabled={!teamEnabled || !email || busy}>
               <UserPlus className="size-4" />{busy ? "Enviando…" : "Convidar"}
             </Button>
@@ -128,9 +127,7 @@ export function TeamPanel({ notify }: { notify: (message: string) => void }) {
                 <span className="text-xs text-muted-foreground">Proprietário</span>
               ) : (
                 <>
-                  <select className="h-9 rounded-xl border border-input bg-background px-3 text-xs" value={member.role} onChange={(event) => void changeRole(member.id, event.target.value)} disabled={!canManage}>
-                    {Object.entries(roleLabels).filter(([key]) => key !== "owner").map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                  </select>
+                  <AdminSelect label={`Papel de ${member.profile?.full_name || member.profile?.email || "membro"}`} value={member.role} onChange={(value) => void changeRole(member.id, value)} disabled={!canManage} options={Object.entries(roleLabels).filter(([key]) => key !== "owner").map(([key, label]) => ({ value: key, label }))} />
                   {canManage && <Button variant="ghost" size="icon" aria-label="Remover membro" onClick={() => void remove({ memberId: member.id })} className="rounded-full text-destructive"><Trash2 /></Button>}
                 </>
               )}

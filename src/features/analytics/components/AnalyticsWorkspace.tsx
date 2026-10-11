@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import AdminSelect from "@/components/ui/custom/AdminSelect";
 import {
   Activity,
   ArrowLeft,
@@ -587,17 +588,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <select 
-              value={days} 
-              onChange={(event) => setDays(Number(event.target.value))} 
-              aria-label="Período das métricas" 
-              className="h-9 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-semibold text-slate-700 dark:text-zinc-200 outline-none cursor-pointer"
-            >
-              <option value={7}>Últimos 7 dias</option>
-              <option value={30}>Últimos 30 dias</option>
-              <option value={90}>Últimos 90 dias</option>
-              <option value={365}>Último ano</option>
-            </select>
+            <AdminSelect label="Período das métricas" value={String(days)} onChange={(v) => setDays(Number(v))} className="min-w-40" options={[{ value: "7", label: "Últimos 7 dias" }, { value: "30", label: "Últimos 30 dias" }, { value: "90", label: "Últimos 90 dias" }, { value: "365", label: "Último ano" }]} />
 
             <button 
               onClick={() => void load()} 

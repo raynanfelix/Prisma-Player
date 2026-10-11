@@ -38,11 +38,14 @@ import {
   Zap,
 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import AdminSelect from "@/components/ui/custom/AdminSelect";
 import Dialog from "@/components/ui/Dialog";
+import { resolveAutoplayCover } from "@/lib/player/autoplay-cover";
 import { ToastSave } from "@/components/ui/toast-save";
 import { VideoPlayer } from "@/features/player/components";
 import { apiRequest, ApiError } from "@/services/http/client";
 import PixelTrackingPanel, { type PixelTrackingFields } from "./PixelTrackingPanel";
+import LearnModal, { type LearnModuleId } from "./LearnModal";
 
 interface StoredVideo { id?: string; name: string; src: string; type: string }
 type ModuleId = "style" | "progress" | "autoplay" | "turbo" | "headlines" | "hooks" | "traffic" | "actions" | "thumbnail" | "resume" | "pixels" | "captions" | "protection" | "playback";
@@ -248,6 +251,7 @@ export default function VslStudio() {
   const [autoplayPresets, setAutoplayPresets] = useState<PresetCardItem[]>(defaultAutoplayPresetCards);
   const [activeAutoplayIndex, setActiveAutoplayIndex] = useState(2);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [learnModule, setLearnModule] = useState<LearnModuleId | null>(null);
 
   const [headlinePresets, setHeadlinePresets] = useState<PresetCardItem[]>(defaultHeadlinePresetCards);
   const [activeHeadlineIndex, setActiveHeadlineIndex] = useState(0);
@@ -274,6 +278,7 @@ export default function VslStudio() {
   const [headlineDesktopUrl, setHeadlineDesktopUrl] = useState<string>();
   const [headlineMobileUrl, setHeadlineMobileUrl] = useState<string>();
   const [thumbnailOverlay, setThumbnailOverlay] = useState<"pause" | "end" | null>(null);
+  const autoplayCover = resolveAutoplayCover(config as unknown as Record<string, unknown>);
   const [posterPreviewActive, setPosterPreviewActive] = useState(false);
   const [captionTrack, setCaptionTrack] = useState<{ src: string; kind: "subtitles"; label: string; srclang: string; default: boolean }>();
   const previewStageRef = useRef<HTMLDivElement>(null);
@@ -571,7 +576,11 @@ export default function VslStudio() {
 
               {/* Smart Autoplay Overlay Preview */}
               {config.smartAutoplay && !autoplayActivated && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+                <div className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden bg-black/60 p-4 backdrop-blur-xs">
+                  {autoplayCover.type !== "standard" && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={autoplayCover.url} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -643,10 +652,20 @@ export default function VslStudio() {
               <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center gap-2">
                 {modules.find((m) => m.id === active)?.label}
               </h3>
-              <button type="button" onClick={() => setActive(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                <X size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                {active && (
+                  <button type="button" onClick={() => setLearnModule(active)} aria-label={`Aprenda sobre ${modules.find((m) => m.id === active)?.label ?? active}`} title={`Aprenda sobre ${modules.find((m) => m.id === active)?.label ?? active}`} className="grid size-8 place-items-center rounded-lg text-sky-600 hover:bg-black/5 dark:text-sky-400 dark:hover:bg-transparent">
+                    <Info size={16} />
+                  </button>
+                )}
+                <button type="button" onClick={() => setActive(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                  <X size={16} />
+                </button>
+              </div>
             </div>
+            {learnModule && (
+              <LearnModal module={learnModule} label={modules.find((m) => m.id === learnModule)?.label ?? ""} onClose={() => setLearnModule(null)} />
+            )}
 
             <div className="p-4 space-y-5">
               {/* SMART AUTOPLAY PRESET CARDS LIST + FULL EDITABLE CONTROLS */}
@@ -662,9 +681,9 @@ export default function VslStudio() {
                     <Switch checked={config.smartAutoplay} onChange={(v) => update("smartAutoplay", v)} />
                   </div>
 
-                  <a href="#learn-autoplay" className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1">
+                  <button type="button" onClick={() => setLearnModule("autoplay")} className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1">
                     <Info size={13} /> Aprenda sobre Smart Autoplay™
-                  </a>
+                  </button>
 
                   {/* Vertical Preset Cards List */}
                   <div className="space-y-2.5 pt-1">
@@ -765,6 +784,15 @@ export default function VslStudio() {
                         value={config.autoplayGifUrl}
                         placeholder="https://media.giphy.com/media/.../giphy.gif"
                         onChange={(v) => update("autoplayGifUrl", v)}
+                      />
+                    )}
+
+                    {config.autoplayCoverType === "image" && (
+                      <TextInput
+                        label="URL da Imagem Custom"
+                        value={config.autoplayImageUrl}
+                        placeholder="https://seusite.com/capa.png"
+                        onChange={(v) => update("autoplayImageUrl", v)}
                       />
                     )}
 
@@ -927,9 +955,9 @@ export default function VslStudio() {
                     <Switch checked={config.turboEnabled} onChange={(v) => update("turboEnabled", v)} />
                   </div>
 
-                  <a href="#learn-turbo" className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1">
+                  <button type="button" onClick={() => setLearnModule("turbo")} className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1">
                     <Info size={13} /> Aprenda sobre Turbo
-                  </a>
+                  </button>
 
                   <div className="space-y-3 pt-2">
                     <h5 className="text-xs font-extrabold text-[#191A23] dark:text-white uppercase tracking-wider">Definir Velocidade</h5>
@@ -1160,14 +1188,7 @@ function ProtectionPanel({ config: c, update: u }: { config: StudioConfig; updat
                         onChange={(e) => u("watermarkIntervalValue", Number(e.target.value))}
                         className="h-10 w-24 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3 text-xs font-medium text-[#191A23] dark:text-white"
                       />
-                      <select
-                        value={c.watermarkIntervalUnit}
-                        onChange={(e) => u("watermarkIntervalUnit", e.target.value as "second" | "minute")}
-                        className="h-10 flex-1 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3 text-xs font-medium text-[#191A23] dark:text-white"
-                      >
-                        <option value="second">Segundo</option>
-                        <option value="minute">Minuto</option>
-                      </select>
+                      <AdminSelect label="Unidade do intervalo" value={c.watermarkIntervalUnit} onChange={(v) => u("watermarkIntervalUnit", v as "second" | "minute")} className="flex-1" options={[{ value: "second", label: "Segundo" }, { value: "minute", label: "Minuto" }]} />
                     </div>
                   </div>
                 )}
@@ -1371,5 +1392,5 @@ function formatPlayerTime(value: number) { const seconds = Math.max(0, Math.floo
 function TimeRange({ label, value, max, onChange }: { label: string; value: number; max: number; onChange: (value: number) => void }) { const safeValue = Math.min(Math.max(0, value), max); return <label className="block text-[14px] font-semibold">{label}<span className="float-right rounded-full bg-[#B9FF66] px-2.5 py-0.5 text-[11px] font-bold text-[#191A23]">{formatPlayerTime(safeValue)} / {formatPlayerTime(max)}</span><input type="range" min={0} max={max} step={1} value={safeValue} onChange={(e) => onChange(Number(e.target.value))} className="mt-4 w-full accent-[#B9FF66]" /></label>; }
 function TextInput({ label, value, placeholder, onChange }: { label: string; value?: string; placeholder?: string; onChange?: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<input value={value ?? ""} placeholder={placeholder} onChange={(e) => onChange?.(e.target.value)} className="studio-input mt-1.5 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" /></label>; }
 function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<textarea rows={3} value={value} onChange={(e) => onChange(e.target.value)} className="studio-input mt-1.5 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card p-3 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" /></label>; }
-function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<select value={value} onChange={(e) => onChange(e.target.value)} className="studio-input mt-1.5 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3 text-xs font-medium text-[#191A23] dark:text-white outline-none">{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
+function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <div className="block text-[14px] font-semibold"><span className="mb-1.5 block">{label}</span><AdminSelect label={label} value={value} onChange={onChange} options={options.map((option) => ({ value: option, label: option }))} /></div>; }
 function UploadBox({ label, selectedName, accept, onFile }: { label: string; selectedName?: string; accept: string; onFile: (file: File) => void }) { return <label className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 text-center transition-colors ${selectedName ? "border-[#B9FF66] bg-[#B9FF66]/10" : "border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-card"}`}><Subtitles size={24} className={`mb-2 ${selectedName ? "text-[#191A23] dark:text-[#B9FF66]" : "text-slate-400"}`} /><span className="text-[13px] font-bold">{label}</span>{selectedName ? <span className="mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">✓ {selectedName}</span> : <span className="mt-1 text-[11px] text-slate-400">Clique para selecionar</span>}<input type="file" accept={accept} className="sr-only" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} /></label>; }

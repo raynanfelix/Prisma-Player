@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeCoverUrl } from "@/lib/player/autoplay-cover";
 import { domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { getAccountAccess } from "@/lib/access/service";
@@ -18,6 +19,7 @@ const RATE_LIMIT_WINDOW_MS = envInt("EMBED_MANIFEST_RATE_LIMIT_WINDOW_MS", 60_00
  */
 const MANIFEST_CONFIG_KEYS = [
   "autoplayMessage", "autoplayBackground", "autoplayTextColor", "autoplayRadius",
+  "autoplayCoverType", "autoplayGifUrl", "autoplayImageUrl", "autoplayAnimation",
   "accent", "progressColor", "progressHeight", "smartProgress", "smartAutoplay",
   "smartPause", "muted", "loop", "bigPlay", "playPause", "fullscreenDesktop", "fullscreenMobile",
   "radius", "playbackRate", "thumbnailEnabled", "captionsEnabled",
@@ -33,6 +35,10 @@ function sanitizeConfigForManifest(raw: Record<string, unknown>): Record<string,
     if (key in raw) out[key] = raw[key];
   }
   if (Number(out.radius) === 12) out.radius = 0;
+  // URLs de capa passam por sanitização https (nunca refletem javascript:/data:).
+  if (typeof out.autoplayCoverType !== "string" || !["standard", "gif", "image"].includes(out.autoplayCoverType)) out.autoplayCoverType = "standard";
+  out.autoplayGifUrl = sanitizeCoverUrl(out.autoplayGifUrl) ?? "";
+  out.autoplayImageUrl = sanitizeCoverUrl(out.autoplayImageUrl) ?? "";
   return out;
 }
 
