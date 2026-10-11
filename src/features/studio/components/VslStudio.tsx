@@ -68,7 +68,7 @@ interface StudioConfig extends PixelTrackingFields {
   headlineEnabled: boolean; headline: string; headlineVariants: string[]; headlineFormat: "text" | "image"; headlineDesktopName: string; headlineMobileName: string; headlineColor: string; headlineBackground: string; headlineSize: number; headlineAlign: "left" | "center" | "right"; headlineTagBadge: string; headlineStart: number; headlineDuration: number;
   trafficEnabled: boolean; domains: string[]; browserLanguage: string; allowedCountries: string; allowedDevices: string[]; blockVpn: boolean; urlKeyEnabled: boolean; accessToken: boolean;
   miniHooksEnabled: boolean; miniHookText: string; miniHookStart: number; miniHookDuration: number; miniHookTextColor: string; miniHookBackground: string; miniHookCounterColor: string; miniHookSize: number; miniHookRadius: number; miniHookAlign: "left" | "center" | "right"; miniHookType: "live_viewers" | "sound_indicator" | "fast_speed" | "geo" | "custom";
-  ctaEnabled: boolean; ctaText: string; ctaSubtitle: string; ctaBadges: string; ctaUrl: string; ctaStart: number; ctaEnd: number; ctaNewTab: boolean; ctaPersist: boolean; ctaAutoScroll: boolean; ctaTextColor: string; ctaHoverTextColor: string; ctaBackground: string; ctaHoverBackground: string; ctaFontSize: number; ctaRadius: number; ctaPaddingY: number; ctaPaddingX: number; ctaPulse: boolean; ctaShadow: boolean; ctaPosition: "top" | "bottom";
+  ctaEnabled: boolean; ctaText: string; ctaSubtitle: string; ctaBadges: string; ctaUrl: string; ctaStart: number; ctaEnd: number; ctaNewTab: boolean; ctaPersist: boolean; ctaAutoScroll: boolean; ctaTextColor: string; ctaHoverTextColor: string; ctaBackground: string; ctaHoverBackground: string; ctaFontSize: number; ctaRadius: number; ctaPaddingY: number; ctaPaddingX: number; ctaPulse: boolean; ctaShadow: boolean; ctaPosition: "top" | "middle" | "bottom";
   thumbnailEnabled: boolean; resumeEnabled: boolean; resumeMessage: string;
   thumbnailStartName: string; thumbnailPauseName: string; thumbnailEndName: string;
   pixelsEnabled: boolean; pixelProvider: string; pixelName: string; pixelId: string; captionsEnabled: boolean; captionName: string;
@@ -410,9 +410,19 @@ export default function VslStudio() {
   }, []);
 
   const sources = useMemo(() => video ? [{ src: video.src, type: video.type }] : [], [video]);
+  // Fit real: mede o palco e calcula a largura para o vídeo inteiro caber sem
+  // scroll, em qualquer formato (vertical, YouTube deitado etc.). Reserva espaço
+  // para headline/CTA desativáveis; usa só flags (estáveis), nunca o tempo atual.
+  const stageFitWidth = useMemo(() => {
+    const w = previewStageSize.width, h = previewStageSize.height;
+    if (!w || !h) return undefined;
+    const reserve = 120 + (config.headlineEnabled ? 110 : 0) + (config.ctaEnabled && config.ctaPosition !== "middle" ? 120 : 0);
+    const ratio = videoSize.width / Math.max(1, videoSize.height);
+    return Math.max(200, Math.min(w, Math.floor(Math.max(220, h - reserve) * ratio)));
+  }, [previewStageSize, videoSize, config.headlineEnabled, config.ctaEnabled, config.ctaPosition]);
   // Proporção real do arquivo (dos metadados): o preview enquadra igual ao
-  // player publicado, sem corte. Trava a altura para caber na tela.
-  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, maxHeight: "75vh" }), [config.radius, videoSize]);
+  // player publicado, sem corte. Com fit calculado, sem trava fixa de altura.
+  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, ...(stageFitWidth ? { width: stageFitWidth } : { maxHeight: "75vh" }) }), [config.radius, videoSize, stageFitWidth]);
 
   const handleMetadata = (meta: { duration: number; width: number; height: number }) => {
     setDuration(meta.duration);
@@ -792,6 +802,38 @@ export default function VslStudio() {
                 </div>
               )}
 
+              {/* CTA no meio do vídeo (overlay central, como o Smart Autoplay) */}
+              {config.ctaEnabled && config.ctaPosition === "middle" && currentTime >= Number(config.ctaStart ?? 0) && (Number(config.ctaEnd ?? 0) <= 0 || currentTime <= Number(config.ctaEnd ?? 0)) && (
+                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center p-4">
+                  <div className="pointer-events-auto max-w-full">
+                    <a
+                      href={/^https?:\/\//i.test(config.ctaUrl) ? config.ctaUrl : undefined}
+                      target={config.ctaNewTab ? "_blank" : undefined}
+                      rel="noreferrer"
+                      className={`inline-flex max-w-full flex-col items-center justify-center rounded-2xl font-extrabold cursor-pointer ${
+                        config.ctaPulse ? "studio-cta-pulse" : ""
+                      }`}
+                      style={{
+                        color: config.ctaTextColor,
+                        backgroundColor: config.ctaBackground,
+                        fontSize: `${config.ctaFontSize}px`,
+                        borderRadius: `${config.ctaRadius}px`,
+                        padding: `${config.ctaPaddingY}px ${config.ctaPaddingX}px`,
+                        boxShadow: config.ctaShadow ? "0 10px 30px rgba(0,0,0,0.28)" : "none",
+                      }}
+                    >
+                      <span>{config.ctaText}</span>
+                      {config.ctaSubtitle && (
+                        <span className="text-[11px] font-normal opacity-90">{config.ctaSubtitle}</span>
+                      )}
+                      {config.ctaBadges && (
+                        <span className="text-[10px] font-semibold opacity-75">{config.ctaBadges}</span>
+                      )}
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* ThumbSniper Preview: pausa/fim mostram a capa enviada */}
               {thumbnailOverlay && (thumbnailOverlay === "pause" ? pausePosterUrl : endPosterUrl) && (
                 <button
@@ -816,7 +858,7 @@ export default function VslStudio() {
             </div>
 
             {/* CTA Button Preview (obedece o mesmo horário do player publicado) */}
-            {config.ctaEnabled && currentTime >= Number(config.ctaStart ?? 0) && (Number(config.ctaEnd ?? 0) <= 0 || currentTime <= Number(config.ctaEnd ?? 0)) && (
+            {config.ctaEnabled && config.ctaPosition !== "middle" && currentTime >= Number(config.ctaStart ?? 0) && (Number(config.ctaEnd ?? 0) <= 0 || currentTime <= Number(config.ctaEnd ?? 0)) && (
               <div className={`${config.ctaPosition === "top" ? "mb-5 order-1" : "mt-5 order-3"} text-center space-y-1.5`}>
                 <a
                   href={/^https?:\/\//i.test(config.ctaUrl) ? config.ctaUrl : undefined}
@@ -1803,6 +1845,7 @@ function renderPanel(
             value={c.ctaPosition ?? "bottom"}
             options={[
               { label: "Acima do vídeo", value: "top" },
+              { label: "No meio do vídeo", value: "middle" },
               { label: "Abaixo do vídeo", value: "bottom" },
             ]}
             onChange={(v) => u("ctaPosition", v as StudioConfig["ctaPosition"])}
