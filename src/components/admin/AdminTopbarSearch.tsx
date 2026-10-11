@@ -90,7 +90,7 @@ export default function AdminTopbarSearch() {
       {open && results.length > 0 && (
         <div role="listbox" aria-label="Resultados" className="absolute inset-x-0 top-12 z-50 overflow-hidden rounded-xl border bg-white shadow-2xl themeable-border-hairline dark:bg-card">
           {results.map((item) => (
-            <Link key={`${item.kind}-${item.id}`} href={hrefFor(item)} onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-black/5 dark:hover:bg-transparent dark:hover:text-white">
+            <Link key={`${item.kind}-${item.id}`} href={hrefFor(item)} onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white">
               <span className="w-16 shrink-0 text-[10px] font-bold uppercase themeable-text-ink-muted-48">{kindLabel[item.kind]}</span>
               <span className="min-w-0"><span className="block truncate text-[13px] font-semibold themeable-text-ink">{item.title}</span><span className="block truncate text-[11px] themeable-text-ink-muted-48">{item.subtitle}</span></span>
             </Link>

@@ -455,7 +455,7 @@ export default function VslStudio() {
       {/* Top Header with New Official Logo */}
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 px-4 dark:border-white/10">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/videos" className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-card text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-transparent">
+          <Link href="/dashboard/videos" className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-card text-slate-700 dark:text-zinc-300 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white">
             <ArrowLeft size={16} />
           </Link>
           <div className="flex items-center gap-2">
@@ -512,7 +512,7 @@ export default function VslStudio() {
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
                     isSelected
                       ? "bg-[#B9FF66] text-[#191A23] font-bold shadow-xs"
-                      : "text-slate-700 dark:text-zinc-300 hover:bg-slate-200/60 dark:hover:bg-transparent"
+                      : "text-slate-700 dark:text-zinc-300 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
                   }`}
                 >
                   <IconComp size={16} />
@@ -686,11 +686,11 @@ export default function VslStudio() {
               </h3>
               <div className="flex items-center gap-1">
                 {active && (
-                  <button type="button" onClick={() => setLearnModule(active)} aria-label={`Aprenda sobre ${modules.find((m) => m.id === active)?.label ?? active}`} title={`Aprenda sobre ${modules.find((m) => m.id === active)?.label ?? active}`} className="grid size-8 place-items-center rounded-lg text-sky-600 hover:bg-black/5 dark:text-sky-400 dark:hover:bg-transparent">
+                  <button type="button" onClick={() => setLearnModule(active)} aria-label={`Aprenda sobre ${modules.find((m) => m.id === active)?.label ?? active}`} title={`Aprenda sobre ${modules.find((m) => m.id === active)?.label ?? active}`} className="grid size-8 place-items-center rounded-lg text-sky-600 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white">
                     <Info size={16} />
                   </button>
                 )}
-                <button type="button" onClick={() => setActive(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <button type="button" onClick={() => setActive(null)} className="text-slate-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white p-1 rounded-lg">
                   <X size={16} />
                 </button>
               </div>
@@ -713,7 +713,7 @@ export default function VslStudio() {
                     <Switch checked={config.smartAutoplay} onChange={(v) => update("smartAutoplay", v)} />
                   </div>
 
-                  <button type="button" onClick={() => setLearnModule("autoplay")} className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1">
+                  <button type="button" onClick={() => setLearnModule("autoplay")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
                     <Info size={13} /> Aprenda sobre Smart Autoplay™
                   </button>
 
@@ -734,7 +734,7 @@ export default function VslStudio() {
                           className={`relative flex items-center justify-between rounded-2xl border p-3.5 transition-all cursor-pointer ${
                             isActive
                               ? "border-sky-500 ring-2 ring-sky-500/20 bg-white dark:bg-card shadow-sm"
-                              : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-slate-300"
+                              : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-[#B9FF66] hover:bg-[#B9FF66]/10"
                           }`}
                         >
                           {isActive && (
@@ -764,7 +764,7 @@ export default function VslStudio() {
                               setAutoplayPresets(next);
                               setActiveAutoplayIndex(Math.max(0, idx - 1));
                             }}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+                            className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
                           >
                             <MoreVertical size={16} />
                           </button>
@@ -777,7 +777,7 @@ export default function VslStudio() {
                   <button
                     type="button"
                     onClick={() => setTemplateModalOpen(true)}
-                    className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-transparent cursor-pointer shadow-xs"
+                    className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs"
                   >
                     + Adicionar outro Autoplay
                   </button>
@@ -888,7 +888,7 @@ export default function VslStudio() {
                           className={`relative flex items-center justify-between rounded-2xl border p-3.5 transition-all cursor-pointer ${
                             isActive
                               ? "border-sky-500 ring-2 ring-sky-500/20 bg-white dark:bg-card shadow-sm"
-                              : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-slate-300"
+                              : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-[#B9FF66] hover:bg-[#B9FF66]/10"
                           }`}
                         >
                           {isActive && (
@@ -915,7 +915,7 @@ export default function VslStudio() {
                               setHeadlinePresets(next);
                               setActiveHeadlineIndex(Math.max(0, idx - 1));
                             }}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+                            className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
                           >
                             <MoreVertical size={16} />
                           </button>
@@ -987,7 +987,7 @@ export default function VslStudio() {
                     <Switch checked={config.turboEnabled} onChange={(v) => update("turboEnabled", v)} />
                   </div>
 
-                  <button type="button" onClick={() => setLearnModule("turbo")} className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1">
+                  <button type="button" onClick={() => setLearnModule("turbo")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
                     <Info size={13} /> Aprenda sobre Turbo
                   </button>
 
@@ -1038,7 +1038,7 @@ export default function VslStudio() {
                       type="button"
                       onClick={() => void saveConfig()}
                       disabled={saving}
-                      className="mt-4 flex w-full min-h-11 items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-600 px-4 text-xs font-bold text-white shadow-xs cursor-pointer disabled:opacity-50"
+                      className="mt-4 flex w-full min-h-11 items-center justify-center rounded-xl bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] px-4 text-xs font-bold text-[#191A23] shadow-xs cursor-pointer disabled:opacity-50"
                     >
                       Iniciar novo teste
                     </button>
@@ -1074,7 +1074,7 @@ export default function VslStudio() {
             <button
               type="button"
               onClick={() => addAutoplayTemplate(0)}
-              className="min-h-10 rounded-xl bg-sky-500 hover:bg-sky-600 px-5 text-xs font-bold text-white shadow-xs"
+              className="min-h-10 rounded-xl bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] px-5 text-xs font-bold text-[#191A23] shadow-xs"
             >
               Definir template
             </button>
@@ -1095,7 +1095,7 @@ export default function VslStudio() {
               <div
                 key={t.id}
                 onClick={() => addAutoplayTemplate(t.id)}
-                className="flex aspect-4/3 flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-card p-3 text-center transition-transform hover:scale-105 cursor-pointer shadow-xs"
+                className="flex aspect-4/3 flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-card p-3 text-center transition-all cursor-pointer shadow-xs hover:border-[#B9FF66] hover:bg-[#B9FF66]/10"
               >
                 <div
                   className="flex h-14 w-20 flex-col items-center justify-center rounded-xl font-bold text-white shadow-xs p-1"
@@ -1148,7 +1148,7 @@ function ProtectionPanel({ config: c, update: u }: { config: StudioConfig; updat
               className={`pb-2.5 px-3 border-b-2 transition-all cursor-pointer ${
                 isActive
                   ? "border-[#B9FF66] text-[#191A23] dark:text-[#B9FF66] font-extrabold"
-                  : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-700"
+                  : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-[#B9FF66]"
               }`}
             >
               {tab.label}

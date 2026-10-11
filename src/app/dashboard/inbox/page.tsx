@@ -240,7 +240,7 @@ export default function InboxPage() {
                     className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer border ${
                       active
                         ? "bg-[#B9FF66] text-[#191A23] font-bold border-slate-300 dark:border-zinc-700 shadow-xs"
-                        : "bg-slate-50 dark:bg-card text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-800 hover:text-[#191A23] dark:hover:text-white"
+                        : "bg-slate-50 dark:bg-card text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-800 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
                     }`}
                   >
                     <span>{tab.label}</span>
@@ -260,7 +260,7 @@ export default function InboxPage() {
                 type="button"
                 onClick={markAllAsRead}
                 disabled={unreadCount === 0}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-[#191A23] dark:hover:text-white disabled:opacity-40 cursor-pointer"
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white disabled:opacity-40 cursor-pointer rounded-xl px-2 py-1.5"
               >
                 <CheckCheck size={14} /> Marcar todas como lidas
               </button>
@@ -268,7 +268,7 @@ export default function InboxPage() {
                 type="button"
                 onClick={clearAllMessages}
                 disabled={items.length === 0}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 cursor-pointer"
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 cursor-pointer rounded-xl px-2 py-1.5"
               >
                 <Trash2 size={14} /> Limpar inbox
               </button>
@@ -304,8 +304,8 @@ export default function InboxPage() {
                       isSelected
                         ? "border-[#B9FF66] bg-[#B9FF66]/10 dark:bg-[#B9FF66]/5 shadow-xs"
                         : isUnread
-                        ? "border-slate-300 dark:border-zinc-700 bg-slate-50/80 dark:bg-card font-semibold"
-                        : "border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-transparent"
+                        ? "border-slate-300 dark:border-zinc-700 bg-slate-50/80 dark:bg-card font-semibold hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
+                        : "border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-card hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -375,7 +375,7 @@ export default function InboxPage() {
                     type="button"
                     onClick={() => void deleteMessage(selectedItem.id)}
                     title="Excluir mensagem"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-card text-slate-400 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-card text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -408,7 +408,7 @@ export default function InboxPage() {
                   <button
                     type="button"
                     onClick={() => void markAsRead(selectedItem.id)}
-                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-transparent cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer transition-colors"
                   >
                     <Check size={14} /> Marcar como lida
                   </button>

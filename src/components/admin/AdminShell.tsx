@@ -57,7 +57,7 @@ function NavList({ collapsed, onNavigate, active }: { collapsed?: boolean; onNav
                   title={collapsed ? item.label : undefined}
                   aria-current={isActive ? "page" : undefined}
                   onClick={onNavigate}
-                  className={`flex min-h-11 items-center gap-3 rounded-[12px] px-3 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue ${collapsed ? "justify-center" : ""} ${isActive ? "bg-selected text-selected-foreground font-semibold data-active:bg-selected" : "themeable-text-ink hover:bg-black/5 dark:hover:bg-transparent dark:hover:text-white"}`}
+                  className={`flex min-h-11 items-center gap-3 rounded-[12px] px-3 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue ${collapsed ? "justify-center" : ""} ${isActive ? "bg-selected text-selected-foreground font-semibold data-active:bg-selected" : "themeable-text-ink hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"}`}
                 >
                   <Icon size={18} className="shrink-0" aria-hidden />
                   {!collapsed && <span className="truncate">{item.label}</span>}
@@ -93,15 +93,15 @@ export default function AdminShell({ email, children }: { email: string; childre
         <div className={`flex h-16 items-center border-b themeable-border-hairline ${collapsed ? "justify-center px-2" : "justify-between px-4"}`}>
           {collapsed ? <Link href="/admin" title="Prisma Player" aria-label="Visão geral"><LogoIcon className="size-8" /></Link> : <Link href="/admin" aria-label="Prisma Player — Administração"><Logo /></Link>}
           {!collapsed && (
-            <button type="button" onClick={() => setCollapsed(true)} aria-label="Recolher barra lateral" className="grid h-9 w-9 place-items-center rounded-lg themeable-text-ink-muted-48 hover:bg-black/5 dark:hover:bg-transparent"><PanelLeftClose size={18} /></button>
+            <button type="button" onClick={() => setCollapsed(true)} aria-label="Recolher barra lateral" className="grid h-9 w-9 place-items-center rounded-lg themeable-text-ink-muted-48 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"><PanelLeftClose size={18} /></button>
           )}
         </div>
-        {collapsed && <button type="button" onClick={() => setCollapsed(false)} aria-label="Expandir barra lateral" className="mx-auto mt-2 grid h-9 w-9 place-items-center rounded-lg themeable-text-ink-muted-48 hover:bg-black/5 dark:hover:bg-transparent"><PanelLeftOpen size={18} /></button>}
+        {collapsed && <button type="button" onClick={() => setCollapsed(false)} aria-label="Expandir barra lateral" className="mx-auto mt-2 grid h-9 w-9 place-items-center rounded-lg themeable-text-ink-muted-48 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"><PanelLeftOpen size={18} /></button>}
         <NavList collapsed={collapsed} active={active} />
         <div className={`border-t px-4 py-4 themeable-border-hairline ${collapsed ? "px-2 text-center" : ""}`}>
           {!collapsed && <p className="text-[11px] font-semibold uppercase tracking-[.12em] themeable-text-ink-muted-48">Administrador</p>}
           <p className="mt-1 truncate text-[12px] themeable-text-ink" title={email}>{collapsed ? email.slice(0, 1).toUpperCase() : email}</p>
-          <Link href="/dashboard/videos" className={`mt-2 flex min-h-9 items-center gap-2 rounded-[10px] px-2 text-[12px] font-medium themeable-text-ink-muted-48 hover:bg-black/5 dark:hover:bg-transparent ${collapsed ? "justify-center" : ""}`} title="Voltar ao produto"><CreditCard size={15} className="shrink-0" aria-hidden />{!collapsed && "Voltar ao produto"}</Link>
+          <Link href="/dashboard/videos" className={`mt-2 flex min-h-9 items-center gap-2 rounded-[10px] px-2 text-[12px] font-medium themeable-text-ink-muted-48 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white ${collapsed ? "justify-center" : ""}`} title="Voltar ao produto"><CreditCard size={15} className="shrink-0" aria-hidden />{!collapsed && "Voltar ao produto"}</Link>
         </div>
       </aside>
 
@@ -128,7 +128,7 @@ export default function AdminShell({ email, children }: { email: string; childre
             </div>
             <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2">
               <AdminTopbarSearch />
-              <button type="button" onClick={() => void logout()} className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[12px] font-semibold themeable-text-ink-muted-48 hover:themeable-text-ink dark:border-zinc-800" title={`Sair (${email})`}><LogOut size={15} aria-hidden /><span className="hidden lg:inline">Sair</span></button>
+              <button type="button" onClick={() => void logout()} className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[12px] font-semibold themeable-text-ink-muted-48 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white dark:border-zinc-800" title={`Sair (${email})`}><LogOut size={15} aria-hidden /><span className="hidden lg:inline">Sair</span></button>
             </div>
           </div>
         </header>

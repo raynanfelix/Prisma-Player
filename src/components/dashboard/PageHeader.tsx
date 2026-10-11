@@ -43,7 +43,7 @@ export default function PageHeader({
                 ${
                   action.primary
                     ? "bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] text-[#191A23] font-bold shadow-xs px-4 py-2"
-                    : "bg-white dark:bg-card text-[#191A23] dark:text-zinc-200 border border-slate-200 dark:border-zinc-800 font-semibold shadow-xs px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-transparent"
+                    : "bg-white dark:bg-card text-[#191A23] dark:text-zinc-200 border border-slate-200 dark:border-zinc-800 font-semibold shadow-xs px-3.5 py-2 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
                 }
               `}
             >
