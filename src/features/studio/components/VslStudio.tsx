@@ -412,7 +412,8 @@ export default function VslStudio() {
   const sources = useMemo(() => video ? [{ src: video.src, type: video.type }] : [], [video]);
   // Tamanho padrão: largura cheia + proporção real do arquivo (sem corte, sem
   // encolher). Vídeo vertical fica alto e o palco rola (sem barrinha visível).
-  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}` }), [config.radius, videoSize]);
+  // Cor principal/fundo/gradiente do módulo Estilo aplicados de verdade.
+  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, background: config.colorStyle === "gradient" ? `linear-gradient(135deg, ${config.background}, ${config.gradientEnd})` : config.background, "--player-accent": String(config.progressColor ?? config.accent ?? "#0066cc") } as React.CSSProperties), [config.radius, config.background, config.gradientEnd, config.colorStyle, config.progressColor, config.accent, videoSize]);
 
   const handleMetadata = (meta: { duration: number; width: number; height: number }) => {
     setDuration(meta.duration);

@@ -5,6 +5,8 @@ import { rateLimit } from "@/lib/security/rate-limit";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { getAccountAccess } from "@/lib/access/service";
 import { ownedAssetPaths } from "@/lib/player/assets";
+import { isValidViewerId } from "@/lib/player/viewer-id";
+import { clientIpFromHeaders, isVpnOrProxy } from "@/lib/security/vpn";
 import { envInt } from "@/lib/config/env";
 import { VIDEO } from "@/lib/constants";
 
@@ -95,6 +97,31 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const acceptedLanguage = (request.headers.get("accept-language") || "").toLowerCase();
     const languagePrefix = requestedLanguage === "português" ? "pt" : requestedLanguage === "inglês" ? "en" : requestedLanguage === "espanhol" ? "es" : "";
     if (languagePrefix && !acceptedLanguage.includes(languagePrefix)) return NextResponse.json({ error: "language_not_allowed" }, { status: 403 });
+
+    if (Boolean(config.blockVpn)) {
+      const ip = clientIpFromHeaders(request.headers);
+      if (await isVpnOrProxy(ip)) return NextResponse.json({ error: "vpn_not_allowed" }, { status: 403 });
+    }
+  }
+
+  // Fluxos simultâneos por navegador: conta sessões vivas (heartbeat ≤75s)
+  // deste viewer neste vídeo. Sem migration: usa video_live_sessions (a mesma
+  // linha que o analytics atualiza; o cron poda o resto). Corrida de abas
+  // abertas no mesmo segundo pode passar — documentado, não bloqueante.
+  if (Boolean(config.limitConcurrentStreams)) {
+    const maxStreams = Math.max(1, Math.min(50, Math.floor(Number(config.maxConcurrentStreams) || 1)));
+    const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
+    const viewer = isValidViewerId(rawViewer) ? rawViewer : "";
+    const rawSession = requestUrl.searchParams.get("sessionId") ?? "";
+    const session = uuid.test(rawSession) ? rawSession : "";
+    if (viewer && session) {
+      const countryHeader = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toLowerCase();
+      const { error: liveError } = await supabase.from("video_live_sessions").upsert({ video_id: playerConfig.video_id, user_id: playerConfig.user_id, session_id: session, viewer_id: viewer, country_code: countryHeader.length === 2 ? countryHeader.toUpperCase() : "XX", last_seen_at: new Date().toISOString() }, { onConflict: "video_id,session_id" });
+      if (liveError) console.error("live session upsert failed", liveError.message);
+      const freshSince = new Date(Date.now() - 75_000).toISOString();
+      const { count } = await supabase.from("video_live_sessions").select("session_id", { count: "exact", head: true }).eq("video_id", playerConfig.video_id).eq("viewer_id", viewer).neq("session_id", session).gt("last_seen_at", freshSince);
+      if ((count ?? 0) >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
+    }
   }
 
   const { data: video } = await supabase.from("videos").select("id,title,object_path,mime_type,user_id,storage_provider").eq("id", playerConfig.video_id).eq("status", "ready").maybeSingle();
