@@ -21,7 +21,7 @@ export default function FeaturePlaceholder({
       <Header title={title} description={description} />
       <section className="dashboard-content flex flex-1 flex-col">
         <div className="mb-5 flex items-center gap-3 sm:mb-6">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] bg-prisma-blue/10 text-prisma-blue">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] bg-prisma-blue/10 text-prisma-blue dark:bg-white/10 dark:text-white">
             <Icon size={21} strokeWidth={1.7} />
           </div>
           <div className="min-w-0">

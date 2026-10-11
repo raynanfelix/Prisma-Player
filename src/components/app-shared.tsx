@@ -45,7 +45,7 @@ export const navGroups: SidebarNavGroup[] = [{
 }];
 
 export const footerNavLinks: SidebarNavItem[] = [
-  { title: "Ajuda", messageKey: "help", path: "#", icon: <LifeBuoy className="size-4" /> },
+  { title: "Ajuda", messageKey: "help", path: "/dashboard/support", icon: <LifeBuoy className="size-4" /> },
 ];
 
 export const navLinks = [

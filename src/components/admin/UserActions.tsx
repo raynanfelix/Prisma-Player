@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminConfirm from "@/components/admin/AdminConfirm";
+import AdminSelect from "@/components/ui/custom/AdminSelect";
 
 type Plan = { slug: string; name: string };
 type Pending =
@@ -71,10 +72,8 @@ export default function UserActions({ userId, email, plans, subStatus }: { userI
   return (
     <div className="space-y-2 rounded-xl border p-3 themeable-border-hairline">
       <div className="flex items-center gap-2">
-        <select value={planSlug} onChange={(event) => setPlanSlug(event.target.value)} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] dark:border-zinc-800 dark:bg-card" aria-label="Plano">
-          {plans.map((plan) => <option key={plan.slug} value={plan.slug}>{plan.name}</option>)}
-        </select>
-        <button type="button" onClick={() => { setReason(""); setPending({ kind: "plan" }); }} className="h-8 rounded-lg bg-selected px-2.5 text-[11px] font-bold text-selected-foreground">Trocar plano</button>
+        <AdminSelect label="Plano" value={planSlug} onChange={setPlanSlug} className="min-w-44 flex-1" options={plans.map((plan) => ({ value: plan.slug, label: plan.name }))} />
+        <button type="button" onClick={() => { setReason(""); setPending({ kind: "plan" }); }} className="h-9 shrink-0 rounded-xl bg-selected px-3 text-[12px] font-bold text-selected-foreground">Trocar plano</button>
       </div>
       <div className="flex flex-wrap gap-2">
         {subStatus !== "suspended"

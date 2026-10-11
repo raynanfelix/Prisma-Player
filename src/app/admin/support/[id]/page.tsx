@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminHeader, AdminPanel, StatusPill } from "@/components/admin/AdminUi";
-import { SupportCaseControls, SupportNoteForm } from "@/components/admin/SupportForms";
+import { SupportCaseControls, SupportNoteForm, SupportReplyForm } from "@/components/admin/SupportForms";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export default async function AdminSupportDetailPage({ params }: { params: Promi
   const { data: item } = await admin.from("support_cases").select("id,user_id,subject,category,priority,status,created_at,updated_at").eq("id", id).maybeSingle();
   if (!item) notFound();
   const [notes, account] = await Promise.all([
-    admin.from("support_notes").select("id,author_admin_id,body,created_at").eq("case_id", id).order("created_at", { ascending: true }).limit(200),
+    admin.from("support_notes").select("id,author_admin_id,body,is_internal,created_at").eq("case_id", id).order("created_at", { ascending: true }).limit(200),
     item.user_id ? admin.from("profiles").select("id,email,full_name").eq("id", item.user_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const authorIds = [...new Set((notes.data ?? []).map((note) => note.author_admin_id).filter(Boolean))] as string[];
@@ -29,8 +29,8 @@ export default async function AdminSupportDetailPage({ params }: { params: Promi
       {account.data && <Link href={`/admin/users/${account.data.id}`} className="text-[12px] font-semibold underline">{account.data.full_name || account.data.email}</Link>}
       <span className="ml-auto"><SupportCaseControls caseId={item.id} status={item.status} priority={item.priority} /></span>
     </div>
-    <AdminPanel title="Notas internas" description="Visíveis só para a equipe. Para falar com o cliente, use o email do cadastro."><div className="space-y-3 p-5">{(notes.data ?? []).map((note) => <div key={note.id} className="rounded-[14px] border p-4 themeable-border-hairline"><p className="text-[13px] leading-relaxed themeable-text-ink">{note.body}</p><p className="mt-2 text-[11px] themeable-text-ink-muted-48">{authorEmail.get(note.author_admin_id) ?? "equipe"} · {new Date(note.created_at).toLocaleString("pt-BR")}</p></div>)}
-      {(notes.data ?? []).length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Sem notas ainda.</p>}</div><SupportNoteForm caseId={item.id} /></AdminPanel>
+    <AdminPanel title="Conversa" description="Visível ao cliente e notas internas. Responder move o caso para em andamento."><div className="space-y-3 p-5">{(notes.data ?? []).map((note) => <div key={note.id} className="rounded-[14px] border p-4 themeable-border-hairline"><p className="text-[13px] leading-relaxed themeable-text-ink">{note.body}</p><p className="mt-2 text-[11px] themeable-text-ink-muted-48">{note.author_admin_id ? (authorEmail.get(note.author_admin_id) ?? "equipe") : "cliente"} · {note.is_internal ? "nota interna" : "visível ao cliente"} · {new Date(note.created_at).toLocaleString("pt-BR")}</p></div>)}
+      {(notes.data ?? []).length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Sem mensagens ainda.</p>}</div><SupportReplyForm caseId={item.id} /><SupportNoteForm caseId={item.id} /></AdminPanel>
     <p className="mt-6 text-[12px] themeable-text-ink-muted-48"><Link href="/admin/support" className="font-semibold underline">← Voltar para suporte</Link></p>
   </div>;
 }

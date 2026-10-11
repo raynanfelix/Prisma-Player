@@ -45,7 +45,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
     return (
       <div className="flex min-h-[75vh] items-center justify-center p-5">
         <section className="max-w-md rounded-[24px] border p-7 text-center themeable-bg-canvas themeable-border-hairline">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-prisma-blue/10 text-prisma-blue">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-prisma-blue/10 text-prisma-blue dark:bg-white/10 dark:text-white">
             <LockKeyhole size={26} />
           </div>
           <h1 className="mt-5 text-[26px] font-semibold themeable-text-ink">

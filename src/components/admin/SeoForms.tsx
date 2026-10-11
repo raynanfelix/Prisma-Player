@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import AdminSelect from "@/components/ui/custom/AdminSelect";
+
 const platforms = ["google-aio", "chatgpt", "perplexity", "gemini", "copilot"] as const;
 
 async function post(body: Record<string, unknown>, method = "POST") {
@@ -30,12 +32,8 @@ export function SeoCheckForm({ targetId }: { targetId: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <form onSubmit={(event) => { event.preventDefault(); if (busy) return; setBusy(true); post({ targetId, platform, cited, runs: Number(runs) }).then(() => router.refresh()).catch(() => undefined).finally(() => setBusy(false)); }} className="flex flex-wrap items-center gap-2">
-      <select value={platform} onChange={(event) => setPlatform(event.target.value)} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] dark:border-zinc-800 dark:bg-card" aria-label="Plataforma">
-        {platforms.map((item) => <option key={item} value={item}>{item}</option>)}
-      </select>
-      <select value={runs} onChange={(event) => setRuns(event.target.value)} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] dark:border-zinc-800 dark:bg-card" aria-label="Execuções">
-        {["1", "3", "5"].map((item) => <option key={item} value={item}>{item}x</option>)}
-      </select>
+      <AdminSelect label="Plataforma" value={platform} onChange={setPlatform} className="min-w-36" options={platforms.map((item) => ({ value: item, label: item }))} />
+      <AdminSelect label="Execuções" value={runs} onChange={setRuns} className="min-w-24" options={["1", "3", "5"].map((item) => ({ value: item, label: `${item}x` }))} />
       <label className="flex items-center gap-1.5 text-[11px] font-semibold"><input type="checkbox" checked={cited} onChange={(event) => setCited(event.target.checked)} className="h-4 w-4 accent-[#B9FF66]" /> Citado</label>
       <button type="submit" disabled={busy} className="h-8 rounded-lg bg-selected px-2.5 text-[11px] font-bold text-selected-foreground disabled:opacity-40">Registrar</button>
     </form>

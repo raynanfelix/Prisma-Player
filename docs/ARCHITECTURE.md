@@ -97,6 +97,10 @@ ignorados para autorização. UUID identifica, não autoriza.
   base técnica verificada em runtime (robots, sitemap, llms.txt, pricing).
 - Suporte: `support_cases` + `support_notes` (internas, sem envio externo);
   toda mudança de status/prioridade é auditada.
+- Tickets do cliente (`/dashboard/support`, Ajuda da sidebar): APIs
+  `/api/support/*` usam `guard()` da sessão — user_id sempre da sessão;
+  o cliente só lê notas não-internas; resposta da equipe avança o caso.
 - Admin UI: `/admin` tem shell próprio (sidebar colapsível + topbar com
   busca global + drawer mobile); confirmações via `AdminConfirm`
-  (alertdialog acessível) — nunca `window.confirm`.
+  (alertdialog acessível) — nunca `window.confirm`; dropdowns via
+  `AdminSelect` (`ui/custom`, listbox com teclado) — nunca `<select>` nativo.
