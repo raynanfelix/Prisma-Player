@@ -65,10 +65,10 @@ interface StudioConfig extends PixelTrackingFields {
   smartAutoplay: boolean; autoplayMessage: string; autoplayTextColor: string; autoplayBackground: string; autoplayRadius: number;
   autoplayCoverType: "standard" | "gif" | "image"; autoplayGifUrl: string; autoplayImageUrl: string; autoplayTagBadge: string; autoplayAnimation: "pulse" | "sound_bars" | "cursor_click" | "play_glow"; autoplayOverlayOpacity: number;
   turboEnabled: boolean; turboMode: "automatic" | "manual"; turboMin: number; turboMax: number; playbackRate: number;
-  headlineEnabled: boolean; headline: string; headlineVariants: string[]; headlineFormat: "text" | "image"; headlineDesktopName: string; headlineMobileName: string; headlineColor: string; headlineBackground: string; headlineSize: number; headlineAlign: "left" | "center" | "right"; headlineTagBadge: string;
+  headlineEnabled: boolean; headline: string; headlineVariants: string[]; headlineFormat: "text" | "image"; headlineDesktopName: string; headlineMobileName: string; headlineColor: string; headlineBackground: string; headlineSize: number; headlineAlign: "left" | "center" | "right"; headlineTagBadge: string; headlineStart: number; headlineDuration: number;
   trafficEnabled: boolean; domains: string[]; browserLanguage: string; allowedCountries: string; allowedDevices: string[]; blockVpn: boolean; urlKeyEnabled: boolean; accessToken: boolean;
   miniHooksEnabled: boolean; miniHookText: string; miniHookStart: number; miniHookDuration: number; miniHookTextColor: string; miniHookBackground: string; miniHookCounterColor: string; miniHookSize: number; miniHookRadius: number; miniHookAlign: "left" | "center" | "right"; miniHookType: "live_viewers" | "sound_indicator" | "fast_speed" | "geo" | "custom";
-  ctaEnabled: boolean; ctaText: string; ctaSubtitle: string; ctaBadges: string; ctaUrl: string; ctaStart: number; ctaEnd: number; ctaNewTab: boolean; ctaPersist: boolean; ctaAutoScroll: boolean; ctaTextColor: string; ctaHoverTextColor: string; ctaBackground: string; ctaHoverBackground: string; ctaFontSize: number; ctaRadius: number; ctaPaddingY: number; ctaPaddingX: number; ctaPulse: boolean; ctaShadow: boolean;
+  ctaEnabled: boolean; ctaText: string; ctaSubtitle: string; ctaBadges: string; ctaUrl: string; ctaStart: number; ctaEnd: number; ctaNewTab: boolean; ctaPersist: boolean; ctaAutoScroll: boolean; ctaTextColor: string; ctaHoverTextColor: string; ctaBackground: string; ctaHoverBackground: string; ctaFontSize: number; ctaRadius: number; ctaPaddingY: number; ctaPaddingX: number; ctaPulse: boolean; ctaShadow: boolean; ctaPosition: "top" | "bottom";
   thumbnailEnabled: boolean; resumeEnabled: boolean; resumeMessage: string;
   thumbnailStartName: string; thumbnailPauseName: string; thumbnailEndName: string;
   pixelsEnabled: boolean; pixelProvider: string; pixelName: string; pixelId: string; captionsEnabled: boolean; captionName: string;
@@ -209,10 +209,10 @@ const initialConfig: StudioConfig = {
   smartAutoplay: true, autoplayMessage: "Seu vídeo já começou. Clique para ouvir.", autoplayTextColor: "#191A23", autoplayBackground: "#B9FF66", autoplayRadius: 16,
   autoplayCoverType: "standard", autoplayGifUrl: "", autoplayImageUrl: "", autoplayTagBadge: "🔴 AULÃO AO VIVO", autoplayAnimation: "pulse", autoplayOverlayOpacity: 90,
   turboEnabled: true, turboMode: "manual", turboMin: 1, turboMax: 1.2, playbackRate: 1,
-  headlineEnabled: true, headline: "Descubra a maneira mais simples de transformar atenção em vendas", headlineVariants: [], headlineFormat: "text", headlineDesktopName: "", headlineMobileName: "", headlineColor: "#1d1d1f", headlineBackground: "#ffffff", headlineSize: 30, headlineAlign: "center", headlineTagBadge: "🔥 EXCLUSIVO",
+  headlineEnabled: true, headline: "Descubra a maneira mais simples de transformar atenção em vendas", headlineVariants: [], headlineFormat: "text", headlineDesktopName: "", headlineMobileName: "", headlineColor: "#1d1d1f", headlineBackground: "#ffffff", headlineSize: 30, headlineAlign: "center", headlineTagBadge: "🔥 EXCLUSIVO", headlineStart: 0, headlineDuration: 0,
   trafficEnabled: false, domains: [], browserLanguage: "Todos", allowedCountries: "Todos", allowedDevices: ["desktop", "mobile", "tablet"], blockVpn: true, urlKeyEnabled: false, accessToken: false,
   miniHooksEnabled: false, miniHookText: "Continue assistindo — a parte mais importante está chegando.", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom",
-  ctaEnabled: false, ctaText: "Quero aproveitar agora", ctaSubtitle: "🔒 Compra 100% Segura • Entrega Imediata", ctaBadges: "7 Dias de Garantia • Pix em 12x", ctaUrl: "https://", ctaStart: 60, ctaEnd: 0, ctaNewTab: true, ctaPersist: true, ctaAutoScroll: false, ctaTextColor: "#191A23", ctaHoverTextColor: "#191A23", ctaBackground: "#B9FF66", ctaHoverBackground: "#a6ee50", ctaFontSize: 18, ctaRadius: 12, ctaPaddingY: 12, ctaPaddingX: 24, ctaPulse: false, ctaShadow: true,
+  ctaEnabled: false, ctaText: "Quero aproveitar agora", ctaSubtitle: "🔒 Compra 100% Segura • Entrega Imediata", ctaBadges: "7 Dias de Garantia • Pix em 12x", ctaUrl: "https://", ctaStart: 60, ctaEnd: 0, ctaNewTab: true, ctaPersist: true, ctaAutoScroll: false, ctaTextColor: "#191A23", ctaHoverTextColor: "#191A23", ctaBackground: "#B9FF66", ctaHoverBackground: "#a6ee50", ctaFontSize: 18, ctaRadius: 12, ctaPaddingY: 12, ctaPaddingX: 24, ctaPulse: false, ctaShadow: true, ctaPosition: "bottom",
   thumbnailEnabled: false, resumeEnabled: true, resumeMessage: "Você já começou a assistir este vídeo",
   thumbnailStartName: "", thumbnailPauseName: "", thumbnailEndName: "",
   pixelsEnabled: false, pixelProvider: "Meta", pixelName: "", pixelId: "", metaPixelEnabled: false, metaPixelId: "", googlePixelEnabled: false, googleTagId: "", googleConversionDestination: "", tiktokPixelEnabled: false, tiktokPixelId: "", pixelConsentMode: "banner", pixelConsentTitle: "Sua privacidade importa", pixelConsentDescription: "Usamos tecnologias de publicidade para medir resultados e melhorar sua experiência.", pixelConsentAcceptLabel: "Aceitar", pixelConsentRejectLabel: "Recusar", pixelPrivacyUrl: "", captionsEnabled: false, captionName: "",
@@ -379,6 +379,24 @@ export default function VslStudio() {
     void loadConfig();
   }, [loadConfig]);
 
+  // Trocar de VSL zera a reprodução e oferece retomada se houver ponto salvo.
+  useEffect(() => {
+    setStartTime(0);
+    setCurrentTime(0);
+    setResumePoint(null);
+    setAutoplayActivated(false);
+    setThumbnailOverlay(null);
+    if (video?.id) {
+      try {
+        const raw = localStorage.getItem(`prisma-resume:${video.id}`);
+        const point = raw ? Math.floor(Number(raw)) : NaN;
+        if (Number.isFinite(point) && point > 5) setResumePoint(point);
+      } catch {
+        // Sem retomada salva.
+      }
+    }
+  }, [video?.id]);
+
   useEffect(() => {
     const stage = previewStageRef.current;
     if (!stage) return;
@@ -399,6 +417,12 @@ export default function VslStudio() {
   const handleMetadata = (meta: { duration: number; width: number; height: number }) => {
     setDuration(meta.duration);
     if (meta.width > 0 && meta.height > 0) setVideoSize({ width: meta.width, height: meta.height });
+    // Duração real alimenta os sliders de tempo (ganchos, CTA, headlines).
+    // Sem marcar como sujo: é dado do arquivo, não edição do usuário.
+    const floored = Math.floor(meta.duration);
+    if (Number.isFinite(floored) && floored > 0) {
+      setConfig((current) => (current.videoDuration === floored ? current : { ...current, videoDuration: floored }));
+    }
   };
 
   const handleTimeUpdate = (time: number) => {
@@ -613,16 +637,16 @@ export default function VslStudio() {
             </span>
           </div>
 
-          <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto overscroll-contain">
+          <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* m-auto centraliza quando o conteúdo é curto e libera o scroll completo quando é alto (justify-center cortava o topo). */}
             <div className="m-auto flex w-full flex-col items-center">
-            {/* Headline Preview */}
-            {config.headlineEnabled && (
+            {/* Headline Preview (obedece horário configurado) */}
+            {config.headlineEnabled && currentTime >= Number(config.headlineStart ?? 0) && (Number(config.headlineDuration ?? 0) <= 0 || currentTime <= Number(config.headlineStart ?? 0) + Number(config.headlineDuration ?? 0)) && (
               <HeadlinePreview config={config} desktopUrl={headlineDesktopUrl} mobileUrl={headlineMobileUrl} />
             )}
 
             {/* Video Canvas Container */}
-            <div className="relative w-full max-w-3xl overflow-hidden shadow-2xl rounded-2xl bg-black" style={playerStyle}>
+            <div className="relative order-2 w-full max-w-3xl overflow-hidden shadow-2xl rounded-2xl bg-black" style={playerStyle}>
               {video ? (
                 <VideoPlayer
                   key={`${posterUrl ?? "video"}-${config.smartAutoplay}`}
@@ -732,7 +756,7 @@ export default function VslStudio() {
                 const hookRemaining = Math.max(0, Math.ceil(Number(config.miniHookStart ?? 0) + Number(config.miniHookDuration ?? 6) - currentTime));
                 const hookPreviewText = String(config.miniHookText || "Continue assistindo").replace("{mm:ss}", `${Math.floor(hookRemaining / 60)}:${String(hookRemaining % 60).padStart(2, "0")}`);
                 return (
-                  <div className="pointer-events-none absolute inset-x-4 top-4 z-20 mx-auto max-w-[520px] px-4 py-3 font-semibold shadow-lg backdrop-blur-md" style={{ color: String(config.miniHookTextColor ?? "#ffffff"), backgroundColor: `${String(config.miniHookBackground ?? "#111111")}e8`, fontSize: `${Number(config.miniHookSize ?? 16)}px`, borderRadius: `${Number(config.miniHookRadius ?? 10)}px`, textAlign: String(config.miniHookAlign ?? "center") as React.CSSProperties["textAlign"] }}>
+                  <div className="pointer-events-none absolute inset-x-4 top-4 z-20 mx-auto max-w-[520px] px-4 py-3 font-semibold shadow-md backdrop-blur-md" style={{ color: String(config.miniHookTextColor ?? "#ffffff"), backgroundColor: `${String(config.miniHookBackground ?? "#111111")}e8`, fontSize: `${Number(config.miniHookSize ?? 16)}px`, borderRadius: `${Number(config.miniHookRadius ?? 10)}px`, textAlign: String(config.miniHookAlign ?? "center") as React.CSSProperties["textAlign"] }}>
                     {hookPreviewText}
                     {config.miniHookType === "live_viewers" && (
                       <span className="ml-1.5 font-extrabold" style={{ color: String(config.miniHookCounterColor ?? "#ff3b30") }}>
@@ -742,6 +766,31 @@ export default function VslStudio() {
                   </div>
                 );
               })()}
+
+              {/* Continuar assistindo (retomada salva deste vídeo) */}
+              {resumePoint !== null && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/75 p-5 text-center text-white backdrop-blur-sm">
+                  <div>
+                    <p className="mb-4 text-[16px] font-semibold">{config.resumeMessage || "Você já começou a assistir este vídeo"}</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setStartTime(resumePoint); setResumePoint(null); setAutoplayActivated(true); setResumePlaybackSignal((prev) => prev + 1); }}
+                        className="min-h-11 rounded-full bg-white px-5 text-[13px] font-semibold text-black cursor-pointer"
+                      >
+                        Continuar em {Math.floor(resumePoint / 60)}:{String(Math.floor(resumePoint % 60)).padStart(2, "0")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { try { if (video?.id) localStorage.removeItem(`prisma-resume:${video.id}`); } catch { /* segue do início */ } setStartTime(0); setResumePoint(null); setAutoplayActivated(true); setRestartWithSoundSignal((prev) => prev + 1); }}
+                        className="min-h-11 rounded-full border border-white/30 px-5 text-[13px] font-semibold cursor-pointer"
+                      >
+                        Assistir do início
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ThumbSniper Preview: pausa/fim mostram a capa enviada */}
               {thumbnailOverlay && (thumbnailOverlay === "pause" ? pausePosterUrl : endPosterUrl) && (
@@ -768,7 +817,7 @@ export default function VslStudio() {
 
             {/* CTA Button Preview (obedece o mesmo horário do player publicado) */}
             {config.ctaEnabled && currentTime >= Number(config.ctaStart ?? 0) && (Number(config.ctaEnd ?? 0) <= 0 || currentTime <= Number(config.ctaEnd ?? 0)) && (
-              <div className="mt-5 text-center space-y-1.5">
+              <div className={`${config.ctaPosition === "top" ? "mb-5 order-1" : "mt-5 order-3"} text-center space-y-1.5`}>
                 <a
                   href={/^https?:\/\//i.test(config.ctaUrl) ? config.ctaUrl : undefined}
                   target={config.ctaNewTab ? "_blank" : undefined}
@@ -784,7 +833,7 @@ export default function VslStudio() {
                     fontSize: `${config.ctaFontSize}px`,
                     borderRadius: `${config.ctaRadius}px`,
                     padding: `${config.ctaPaddingY}px ${config.ctaPaddingX}px`,
-                    boxShadow: config.ctaShadow ? "0 10px 30px rgba(185,255,102,0.3)" : "none",
+                    boxShadow: config.ctaShadow ? "0 10px 30px rgba(0,0,0,0.28)" : "none",
                   }}
                 >
                   <span>{config.ctaText}</span>
@@ -1100,6 +1149,9 @@ export default function VslStudio() {
                       value={config.headlineBackground}
                       onChange={(v) => update("headlineBackground", v)}
                     />
+
+                    <TimeRange label="Exibir a partir de" value={config.headlineStart} max={Math.max(1, Math.floor(config.videoDuration || 1))} onChange={(v) => update("headlineStart", v)} />
+                    <Range label="Duração visível (0 = sempre)" value={config.headlineDuration} min={0} max={Math.max(60, Math.floor(config.videoDuration || 60))} suffix="s" onChange={(v) => update("headlineDuration", v)} />
                   </div>
                 </div>
               )}
@@ -1746,6 +1798,15 @@ function renderPanel(
           <TextInput label="Link de Destino" value={c.ctaUrl} onChange={(v) => u("ctaUrl", v)} />
           <TimeRange label="Exibir botão a partir de" value={c.ctaStart} max={Math.max(1, Math.floor(c.videoDuration || 1))} onChange={(v) => u("ctaStart", v)} />
           <TimeRange label="Ocultar botão em (0 = até o fim)" value={c.ctaEnd} max={Math.max(1, Math.floor(c.videoDuration || 1))} onChange={(v) => u("ctaEnd", v)} />
+          <Segmented
+            label="Posição do botão"
+            value={c.ctaPosition ?? "bottom"}
+            options={[
+              { label: "Acima do vídeo", value: "top" },
+              { label: "Abaixo do vídeo", value: "bottom" },
+            ]}
+            onChange={(v) => u("ctaPosition", v as StudioConfig["ctaPosition"])}
+          />
           <CheckRow label="Abrir em nova aba" checked={c.ctaNewTab} onChange={(v) => u("ctaNewTab", v)} />
           <CheckRow label="Persistir após fechar" checked={c.ctaPersist} onChange={(v) => u("ctaPersist", v)} />
           <CheckRow label="Auto-scroll ao aparecer" checked={c.ctaAutoScroll} onChange={(v) => u("ctaAutoScroll", v)} />

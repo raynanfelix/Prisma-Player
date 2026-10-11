@@ -47,6 +47,9 @@ export function ToastSave({
     }
   }, [state]);
 
+  // Depois de sumir, não sobra nem o invólucro vazio.
+  if (state === "success" && !showSuccess) return null;
+
   return (
     <motion.div
       className={cn(
