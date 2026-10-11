@@ -31,7 +31,8 @@ export default function VideoPlayer({
   controlVisibility,
   textTracks = [],
   className = "",
-}: VideoPlayerProps) {
+  preload = "metadata",
+}: VideoPlayerProps & { preload?: "auto" | "metadata" | "none" }) {
   const mediaRef = useRef<HTMLVideoElement>(null);
   const source = sources[0];
   const contentProtection = protectContent ?? (className.includes("prisma-player--embed") && !className.includes("prisma-player--unprotected"));
@@ -105,7 +106,7 @@ export default function VideoPlayer({
             disablePictureInPicture={controlVisibility?.pictureInPictureToggle === false}
             onContextMenu={(event) => { if (contentProtection) event.preventDefault(); }}
             draggable={!contentProtection}
-            preload="metadata"
+            preload={preload}
             crossOrigin="anonymous"
             onLoadedMetadata={(event) => {
               const media = event.currentTarget;
