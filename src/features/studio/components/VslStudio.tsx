@@ -178,6 +178,18 @@ const defaultHeadlinePresetCards: PresetCardItem[] = [
 
 const defaultCtaPresetCards: PresetCardItem[] = [
   { id: "cta-1", name: "Botão 1", color: "#B9FF66", badge: "Ativo", data: { ctaText: "QUERO GARANTIR MINHA VAGA AGORA", ctaSubtitle: "🔒 Compra 100% Segura • Acesso Imediato", ctaBadges: "7 Dias de Garantia • Pix em 12x", ctaBackground: "#B9FF66", ctaTextColor: "#191A23", ctaHoverBackground: "#a6ee50", ctaPulse: true } },
+  { id: "cta-2", name: "Botão 2", color: "#0066cc", data: { ctaText: "ACESSAR AGORA COM DESCONTO", ctaSubtitle: "🔒 Garantia de 7 dias • Suporte 24h", ctaBadges: "50% OFF • Pix em 12x", ctaBackground: "#0066cc", ctaTextColor: "#ffffff", ctaHoverBackground: "#0052a3", ctaPulse: false } },
+  { id: "cta-3", name: "Botão 3", color: "#ef4444", data: { ctaText: "GARANTIR MINHA VAGA", ctaSubtitle: "⚡ Vagas limitadas • Acesso imediato", ctaBadges: "Bônus exclusivo • 7 dias", ctaBackground: "#ef4444", ctaTextColor: "#ffffff", ctaHoverBackground: "#dc2626", ctaPulse: true } },
+];
+
+const defaultHookPresetCards: PresetCardItem[] = [
+  { id: "hook-1", name: "Gancho 1", color: "#B9FF66", badge: "Ativo", data: { miniHookText: "Continue assistindo — a parte mais importante está chegando.", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom" } },
+  { id: "hook-2", name: "Gancho 2", color: "#0066cc", data: { miniHookText: "🔴 AO VIVO: Não perca o que vem a seguir!", miniHookStart: 60, miniHookDuration: 8, miniHookTextColor: "#ffffff", miniHookBackground: "#0066cc", miniHookCounterColor: "#B9FF66", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "left", miniHookType: "live_viewers" } },
+  { id: "hook-3", name: "Gancho 3", color: "#ef4444", data: { miniHookText: "⚡ VELOCIDADE 2x ATIVADA — Acelere seu aprendizado", miniHookStart: 120, miniHookDuration: 5, miniHookTextColor: "#ffffff", miniHookBackground: "#ef4444", miniHookCounterColor: "#ffffff", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "right", miniHookType: "fast_speed" } },
+];
+
+const defaultThumbnailPresetCards: PresetCardItem[] = [
+  { id: "thumb-1", name: "Thumbnail Padrão", color: "#B9FF66", badge: "Ativo", data: { thumbnailEnabled: true, thumbnailStartName: "thumb_start.jpg", thumbnailPauseName: "thumb_pause.jpg", thumbnailEndName: "thumb_end.jpg" } },
 ];
 
 const initialConfig: StudioConfig = {
@@ -259,6 +271,12 @@ export default function VslStudio() {
 
   const [ctaPresets, setCtaPresets] = useState<PresetCardItem[]>(defaultCtaPresetCards);
   const [activeCtaIndex, setActiveCtaIndex] = useState(0);
+
+  const [hookPresets, setHookPresets] = useState<PresetCardItem[]>(defaultHookPresetCards);
+  const [activeHookIndex, setActiveHookIndex] = useState(0);
+
+  const [thumbnailPresets, setThumbnailPresets] = useState<PresetCardItem[]>(defaultThumbnailPresetCards);
+  const [activeThumbnailIndex, setActiveThumbnailIndex] = useState(0);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -727,7 +745,7 @@ export default function VslStudio() {
                           onClick={() => {
                             setActiveAutoplayIndex(idx);
                             setAutoplayPresets((prev) =>
-                              prev.map((p, i) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
+                              prev.map((p: PresetCardItem, i: number) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
                             );
                             applyPresetData(preset.data);
                           }}
@@ -881,7 +899,7 @@ export default function VslStudio() {
                           onClick={() => {
                             setActiveHeadlineIndex(idx);
                             setHeadlinePresets((prev) =>
-                              prev.map((p, i) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
+                              prev.map((p: PresetCardItem, i: number) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
                             );
                             applyPresetData(preset.data);
                           }}
@@ -1049,7 +1067,12 @@ export default function VslStudio() {
               {/* Module Form Controls for remaining modules */}
               {/* O update grava em um ref write-only (rastreamento sujo); inlining aqui exigiria refatorar o painel. */}
               {/* eslint-disable-next-line react-hooks/refs -- ref é gravado apenas em handlers; análise estática não enxerga através do helper de módulo */}
-              {renderPanel(active, config, update, handlePoster, handleCaption, playerId, video?.id)}
+              {renderPanel(active, config, update, handlePoster, handleCaption, playerId, video?.id, {
+    hookPresets, setHookPresets, activeHookIndex, setActiveHookIndex,
+    ctaPresets, setCtaPresets, activeCtaIndex, setActiveCtaIndex,
+    thumbnailPresets, setThumbnailPresets, activeThumbnailIndex, setActiveThumbnailIndex,
+    setLearnModule,
+  })}
             </div>
           </aside>
         )}
@@ -1376,13 +1399,332 @@ function ProtectionPanel({ config: c, update: u }: { config: StudioConfig; updat
   );
 }
 
-function renderPanel(module: ModuleId, c: StudioConfig, u: <K extends keyof StudioConfig>(key: K, value: StudioConfig[K]) => void, onPoster: (file: File, kind: "start" | "pause" | "end") => void, onCaption: (file: File) => void, playerId?: string, videoId?: string) {
+interface PanelExtras {
+  hookPresets: PresetCardItem[];
+  setHookPresets: React.Dispatch<React.SetStateAction<PresetCardItem[]>>;
+  activeHookIndex: number;
+  setActiveHookIndex: (idx: number) => void;
+  ctaPresets: PresetCardItem[];
+  setCtaPresets: React.Dispatch<React.SetStateAction<PresetCardItem[]>>;
+  activeCtaIndex: number;
+  setActiveCtaIndex: (idx: number) => void;
+  thumbnailPresets: PresetCardItem[];
+  setThumbnailPresets: React.Dispatch<React.SetStateAction<PresetCardItem[]>>;
+  activeThumbnailIndex: number;
+  setActiveThumbnailIndex: (idx: number) => void;
+  setLearnModule: (module: LearnModuleId | null) => void;
+}
+
+function renderPanel(
+  module: ModuleId,
+  c: StudioConfig,
+  u: <K extends keyof StudioConfig>(key: K, value: StudioConfig[K]) => void,
+  onPoster: (file: File, kind: "start" | "pause" | "end") => void,
+  onCaption: (file: File) => void,
+  playerId?: string,
+  videoId?: string,
+  extras?: PanelExtras
+) {
   if (module === "style") return <><Color label="Cor principal" value={c.accent} onChange={(v) => u("accent", v)} /><Range label="Cantos arredondados" value={c.radius} min={0} max={28} suffix="px" onChange={(v) => u("radius", v)} /><p className="panel-help">O raio recorta diretamente o vídeo. Não existe uma camada de fundo atrás dele, portanto nenhuma cor aparece nos cantos.</p><PanelTitle>Controles do player</PanelTitle><CheckRow label="Botão de play grande" checked={c.bigPlay} onChange={(v) => u("bigPlay", v)} /><CheckRow label="Botão de play pequeno" checked={c.playPause} onChange={(v) => u("playPause", v)} /><CheckRow label="Desativar pausa" checked={c.disablePause} onChange={(v) => u("disablePause", v)} /><CheckRow label="Barra de progresso" checked={c.progressBar} onChange={(v) => u("progressBar", v)} /><CheckRow label="Tempo do vídeo" checked={c.time} onChange={(v) => u("time", v)} /><CheckRow label="Voltar 10 segundos" checked={c.seekBackward} onChange={(v) => u("seekBackward", v)} /><CheckRow label="Avançar 10 segundos" checked={c.seekForward} onChange={(v) => u("seekForward", v)} /><CheckRow label="Volume" checked={c.volume} onChange={(v) => u("volume", v)} /><CheckRow label="Fullscreen" checked={c.fullscreen} onChange={(v) => u("fullscreen", v)} /><CheckRow label="Picture-in-Picture" checked={c.pictureInPicture} onChange={(v) => u("pictureInPicture", v)} /><CheckRow label="Controle de velocidade" checked={c.speedControl} onChange={(v) => u("speedControl", v)} /></>;
   if (module === "progress") return <><p className="panel-help">A barra avança mais rápido no início e desacelera perto do final, dando a percepção de que falta pouco para o vídeo terminar.</p><Color label="Cor da barra" value={c.progressColor} onChange={(v) => u("progressColor", v)} /><Range label="Altura" value={c.progressHeight} min={4} max={12} suffix="px" onChange={(v) => u("progressHeight", v)} /></>;
-  if (module === "hooks") return <><TextArea label="Texto do Mini-Ganho / Widget" value={c.miniHookText} onChange={(v) => u("miniHookText", v)} /><TimeRange label="Aparecer em" value={c.miniHookStart} max={Math.max(1, Math.floor(c.videoDuration || 1))} onChange={(v) => u("miniHookStart", v)} /><Range label="Duração" value={c.miniHookDuration} min={2} max={60} suffix="s" onChange={(v) => u("miniHookDuration", v)} /><Color label="Cor do texto" value={c.miniHookTextColor} onChange={(v) => u("miniHookTextColor", v)} /><Color label="Cor do fundo" value={c.miniHookBackground} onChange={(v) => u("miniHookBackground", v)} /></>;
+  if (module === "hooks") {
+    const { hookPresets, setHookPresets, activeHookIndex, setActiveHookIndex } = extras ?? {};
+    const applyHook = (data: Record<string, unknown>) => {
+      Object.entries(data).forEach(([k, v]) => u(k as keyof StudioConfig, v as StudioConfig[keyof StudioConfig]));
+    };
+    return (
+      <>
+        <p className="panel-help">Crie vários mini-ganchos para aparecerem em diferentes momentos do vídeo, igual ao Smart Autoplay.</p>
+        <Switch checked={c.miniHooksEnabled} onChange={(v) => u("miniHooksEnabled", v)} />
+        <button type="button" onClick={() => extras?.setLearnModule("hooks")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+          <Info size={13} /> Aprenda sobre Mini-ganchos
+        </button>
+        <div className="space-y-2.5 pt-1">
+          {(hookPresets ?? []).map((preset, idx) => {
+            const isActive = idx === activeHookIndex;
+            return (
+              <div
+                key={preset.id}
+                onClick={() => {
+                  setActiveHookIndex?.(idx);
+                  setHookPresets?.((prev: PresetCardItem[]) =>
+                    prev.map((p: PresetCardItem, i: number) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
+                  );
+                  applyHook(preset.data);
+                }}
+                className={`relative flex items-center justify-between rounded-2xl border p-3.5 transition-all cursor-pointer ${
+                  isActive
+                    ? "border-sky-500 ring-2 ring-sky-500/20 bg-white dark:bg-card shadow-sm"
+                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-[#B9FF66] hover:bg-[#B9FF66]/10"
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute -top-2.5 right-3 rounded-md bg-sky-500 px-2 py-0.5 text-[9px] font-extrabold text-white uppercase shadow-xs">
+                    Ativo
+                  </span>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl font-bold text-white shadow-xs" style={{ backgroundColor: preset.color }}>
+                    <Zap size={18} fill="currentColor" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#191A23] dark:text-white">{preset.name}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = (hookPresets ?? []).filter((_, i) => i !== idx);
+                    setHookPresets?.(next);
+                    setActiveHookIndex?.(Math.max(0, idx - 1));
+                  }}
+                  className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                >
+                  <MoreVertical size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <button type="button" onClick={() => {
+          const newHook: PresetCardItem = {
+            id: `hook-${Date.now()}`,
+            name: `Gancho ${(hookPresets ?? []).length + 1}`,
+            color: ["#B9FF66", "#0066cc", "#ef4444", "#a855f7", "#10b981"][(hookPresets ?? []).length % 5],
+            data: { miniHookText: "Novo gancho...", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom" },
+          };
+          setHookPresets?.([...(hookPresets ?? []), newHook]);
+          setActiveHookIndex?.((hookPresets ?? []).length);
+          applyHook(newHook.data);
+        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
+          + Adicionar outro Mini-gancho
+        </button>
+        <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">
+          <PanelTitle>Personalizar Gancho Selecionado</PanelTitle>
+          <TextArea label="Texto do Mini-Gancho / Widget" value={c.miniHookText} onChange={(v) => u("miniHookText", v)} />
+          <TimeRange label="Aparecer em" value={c.miniHookStart} max={Math.max(1, Math.floor(c.videoDuration || 1))} onChange={(v) => u("miniHookStart", v)} />
+          <Range label="Duração" value={c.miniHookDuration} min={2} max={60} suffix="s" onChange={(v) => u("miniHookDuration", v)} />
+          <Color label="Cor do texto" value={c.miniHookTextColor} onChange={(v) => u("miniHookTextColor", v)} />
+          <Color label="Cor do fundo" value={c.miniHookBackground} onChange={(v) => u("miniHookBackground", v)} />
+          <Color label="Cor do contador" value={c.miniHookCounterColor} onChange={(v) => u("miniHookCounterColor", v)} />
+          <Range label="Tamanho da fonte" value={c.miniHookSize} min={12} max={24} suffix="px" onChange={(v) => u("miniHookSize", v)} />
+          <Range label="Raio dos cantos" value={c.miniHookRadius} min={0} max={20} suffix="px" onChange={(v) => u("miniHookRadius", v)} />
+          <Segmented
+            label="Alinhamento"
+            value={c.miniHookAlign}
+            options={[
+              { label: "Esquerda", value: "left" },
+              { label: "Centro", value: "center" },
+              { label: "Direita", value: "right" },
+            ]}
+            onChange={(v) => u("miniHookAlign", v as StudioConfig["miniHookAlign"])}
+          />
+          <Select
+            label="Tipo de Gancho"
+            value={c.miniHookType}
+            options={["live_viewers", "sound_indicator", "fast_speed", "geo", "custom"]}
+            onChange={(v) => u("miniHookType", v as StudioConfig["miniHookType"])}
+          />
+        </div>
+      </>
+    );
+  }
   if (module === "traffic") return <><p className="panel-help">As regras são avaliadas no backend.</p><Select label="Idioma do navegador" value={c.browserLanguage} options={["Todos", "Português", "Inglês", "Espanhol"]} onChange={(v) => u("browserLanguage", v)} /><TextInput label="Países permitidos" value={c.allowedCountries} placeholder="Todos ou BR, PT, US" onChange={(v) => u("allowedCountries", v)} /><CheckRow label="Bloquear Proxy / VPN" checked={c.blockVpn} onChange={(v) => u("blockVpn", v)} /></>;
-  if (module === "actions") return <><TextInput label="Texto do Botão" value={c.ctaText} onChange={(v) => u("ctaText", v)} /><TextInput label="Subtítulo / Garantia abaixo do Botão" value={c.ctaSubtitle} placeholder="Ex: 🔒 Compra 100% Segura • Entrega Imediata" onChange={(v) => u("ctaSubtitle", v)} /><TextInput label="Selo de Segurança / Badges" value={c.ctaBadges} placeholder="Ex: 7 Dias de Garantia • Pix em 12x" onChange={(v) => u("ctaBadges", v)} /><TextInput label="Link de Destino" value={c.ctaUrl} onChange={(v) => u("ctaUrl", v)} /><CheckRow label="Fazer o botão pulsar" checked={c.ctaPulse} onChange={(v) => u("ctaPulse", v)} /><Color label="Cor do texto" value={c.ctaTextColor} onChange={(v) => u("ctaTextColor", v)} /><Color label="Cor do botão" value={c.ctaBackground} onChange={(v) => u("ctaBackground", v)} /></>;
-  if (module === "thumbnail") return <><p className="panel-help">Use capas diferentes para aumentar o clique inicial e recuperar pausas ou finais.</p><UploadBox label="Thumbnail inicial" selectedName={c.thumbnailStartName || (c.assets.thumbnailStart ? "Thumbnail salva" : "")} accept="image/*" onFile={(file) => { onPoster(file, "start"); u("thumbnailStartName", file.name); u("thumbnailEnabled", true); }} /></>;
+  if (module === "actions") {
+    const { ctaPresets, setCtaPresets, activeCtaIndex, setActiveCtaIndex } = extras ?? {};
+    const applyCta = (data: Record<string, unknown>) => {
+      Object.entries(data).forEach(([k, v]) => u(k as keyof StudioConfig, v as StudioConfig[keyof StudioConfig]));
+    };
+    return (
+      <>
+        <p className="panel-help">Crie vários botões de ação (CTAs) com diferentes textos, links e estilos. Selecione qual usar no momento da publicação.</p>
+        <Switch checked={c.ctaEnabled} onChange={(v) => u("ctaEnabled", v)} />
+        <button type="button" onClick={() => extras?.setLearnModule("actions")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+          <Info size={13} /> Aprenda sobre Botões de Ação
+        </button>
+        <div className="space-y-2.5 pt-1">
+          {(ctaPresets ?? []).map((preset, idx) => {
+            const isActive = idx === activeCtaIndex;
+            return (
+              <div
+                key={preset.id}
+                onClick={() => {
+                  setActiveCtaIndex?.(idx);
+                  setCtaPresets?.((prev: PresetCardItem[]) =>
+                    prev.map((p: PresetCardItem, i: number) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
+                  );
+                  applyCta(preset.data);
+                }}
+                className={`relative flex items-center justify-between rounded-2xl border p-3.5 transition-all cursor-pointer ${
+                  isActive
+                    ? "border-sky-500 ring-2 ring-sky-500/20 bg-white dark:bg-card shadow-sm"
+                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-[#B9FF66] hover:bg-[#B9FF66]/10"
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute -top-2.5 right-3 rounded-md bg-sky-500 px-2 py-0.5 text-[9px] font-extrabold text-white uppercase shadow-xs">
+                    Ativo
+                  </span>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl font-bold text-white shadow-xs" style={{ backgroundColor: preset.color }}>
+                    <MousePointerClick size={18} fill="currentColor" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#191A23] dark:text-white">{preset.name}</p>
+                    <p className="text-[10px] truncate max-w-40 text-slate-500 dark:text-zinc-400">{preset.data.ctaText as string}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = (ctaPresets ?? []).filter((_, i) => i !== idx);
+                    setCtaPresets?.(next);
+                    setActiveCtaIndex?.(Math.max(0, idx - 1));
+                  }}
+                  className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                >
+                  <MoreVertical size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <button type="button" onClick={() => {
+          const newCta: PresetCardItem = {
+            id: `cta-${Date.now()}`,
+            name: `Botão ${(ctaPresets ?? []).length + 1}`,
+            color: ["#B9FF66", "#0066cc", "#ef4444", "#a855f7", "#10b981"][(ctaPresets ?? []).length % 5],
+            data: { ctaText: "Quero aproveitar agora", ctaSubtitle: "🔒 Compra 100% Segura • Entrega Imediata", ctaBadges: "7 Dias de Garantia • Pix em 12x", ctaUrl: "https://", ctaNewTab: true, ctaPersist: true, ctaAutoScroll: false, ctaTextColor: "#191A23", ctaHoverTextColor: "#191A23", ctaBackground: "#B9FF66", ctaHoverBackground: "#a6ee50", ctaFontSize: 18, ctaRadius: 12, ctaPaddingY: 12, ctaPaddingX: 24, ctaPulse: false, ctaShadow: true },
+          };
+          setCtaPresets?.([...(ctaPresets ?? []), newCta]);
+          setActiveCtaIndex?.((ctaPresets ?? []).length);
+          applyCta(newCta.data);
+        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
+          + Adicionar outro Botão de Ação
+        </button>
+        <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">
+          <PanelTitle>Personalizar Botão Selecionado</PanelTitle>
+          <TextInput label="Texto do Botão" value={c.ctaText} onChange={(v) => u("ctaText", v)} />
+          <TextInput label="Subtítulo / Garantia abaixo do Botão" value={c.ctaSubtitle} placeholder="Ex: 🔒 Compra 100% Segura • Entrega Imediata" onChange={(v) => u("ctaSubtitle", v)} />
+          <TextInput label="Selo de Segurança / Badges" value={c.ctaBadges} placeholder="Ex: 7 Dias de Garantia • Pix em 12x" onChange={(v) => u("ctaBadges", v)} />
+          <TextInput label="Link de Destino" value={c.ctaUrl} onChange={(v) => u("ctaUrl", v)} />
+          <CheckRow label="Abrir em nova aba" checked={c.ctaNewTab} onChange={(v) => u("ctaNewTab", v)} />
+          <CheckRow label="Persistir após fechar" checked={c.ctaPersist} onChange={(v) => u("ctaPersist", v)} />
+          <CheckRow label="Auto-scroll ao aparecer" checked={c.ctaAutoScroll} onChange={(v) => u("ctaAutoScroll", v)} />
+          <CheckRow label="Fazer o botão pulsar" checked={c.ctaPulse} onChange={(v) => u("ctaPulse", v)} />
+          <Color label="Cor do texto" value={c.ctaTextColor} onChange={(v) => u("ctaTextColor", v)} />
+          <Color label="Cor do hover do texto" value={c.ctaHoverTextColor} onChange={(v) => u("ctaHoverTextColor", v)} />
+          <Color label="Cor do botão" value={c.ctaBackground} onChange={(v) => u("ctaBackground", v)} />
+          <Color label="Cor do hover do botão" value={c.ctaHoverBackground} onChange={(v) => u("ctaHoverBackground", v)} />
+          <Range label="Tamanho da fonte" value={c.ctaFontSize} min={14} max={28} suffix="px" onChange={(v) => u("ctaFontSize", v)} />
+          <Range label="Raio dos cantos" value={c.ctaRadius} min={0} max={28} suffix="px" onChange={(v) => u("ctaRadius", v)} />
+          <Range label="Padding vertical" value={c.ctaPaddingY} min={8} max={24} suffix="px" onChange={(v) => u("ctaPaddingY", v)} />
+          <Range label="Padding horizontal" value={c.ctaPaddingX} min={16} max={48} suffix="px" onChange={(v) => u("ctaPaddingX", v)} />
+          <CheckRow label="Sombra no botão" checked={c.ctaShadow} onChange={(v) => u("ctaShadow", v)} />
+        </div>
+      </>
+    );
+  }
+  if (module === "thumbnail") {
+    const { thumbnailPresets, setThumbnailPresets, activeThumbnailIndex, setActiveThumbnailIndex } = extras ?? {};
+    const applyThumb = (data: Record<string, unknown>) => {
+      Object.entries(data).forEach(([k, v]) => u(k as keyof StudioConfig, v as StudioConfig[keyof StudioConfig]));
+    };
+    return (
+      <>
+        <p className="panel-help">Configure thumbnails diferentes para: inicial (antes do play), pausa (quando o usuário pausa) e final (quando o vídeo termina). O ThumbSniper troca automaticamente a capa baseada no estado do player.</p>
+        <Switch checked={c.thumbnailEnabled} onChange={(v) => u("thumbnailEnabled", v)} />
+        <button type="button" onClick={() => extras?.setLearnModule("thumbnail")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+          <Info size={13} /> Aprenda sobre ThumbSniper
+        </button>
+        <div className="space-y-2.5 pt-1">
+          {(thumbnailPresets ?? []).map((preset, idx) => {
+            const isActive = idx === activeThumbnailIndex;
+            return (
+              <div
+                key={preset.id}
+                onClick={() => {
+                  setActiveThumbnailIndex?.(idx);
+                  setThumbnailPresets?.((prev: PresetCardItem[]) =>
+                    prev.map((p: PresetCardItem, i: number) => ({ ...p, badge: i === idx ? "Ativo" : undefined }))
+                  );
+                  applyThumb(preset.data);
+                }}
+                className={`relative flex items-center justify-between rounded-2xl border p-3.5 transition-all cursor-pointer ${
+                  isActive
+                    ? "border-sky-500 ring-2 ring-sky-500/20 bg-white dark:bg-card shadow-sm"
+                    : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-card hover:border-[#B9FF66] hover:bg-[#B9FF66]/10"
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute -top-2.5 right-3 rounded-md bg-sky-500 px-2 py-0.5 text-[9px] font-extrabold text-white uppercase shadow-xs">
+                    Ativo
+                  </span>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl font-bold text-white shadow-xs" style={{ backgroundColor: preset.color }}>
+                    <ImageIcon size={18} fill="currentColor" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#191A23] dark:text-white">{preset.name}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = (thumbnailPresets ?? []).filter((_, i) => i !== idx);
+                    setThumbnailPresets?.(next);
+                    setActiveThumbnailIndex?.(Math.max(0, idx - 1));
+                  }}
+                  className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                >
+                  <MoreVertical size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <button type="button" onClick={() => {
+          const newThumb: PresetCardItem = {
+            id: `thumb-${Date.now()}`,
+            name: `Thumbnail ${(thumbnailPresets ?? []).length + 1}`,
+            color: ["#B9FF66", "#0066cc", "#ef4444", "#a855f7", "#10b981"][(thumbnailPresets ?? []).length % 5],
+            data: { thumbnailEnabled: true, thumbnailStartName: "", thumbnailPauseName: "", thumbnailEndName: "" },
+          };
+          setThumbnailPresets?.([...(thumbnailPresets ?? []), newThumb]);
+          setActiveThumbnailIndex?.((thumbnailPresets ?? []).length);
+          applyThumb(newThumb.data);
+        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
+          + Adicionar Thumbnail Set
+        </button>
+        <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">
+          <PanelTitle>Uploads do Thumbnail Ativo</PanelTitle>
+          <UploadBox
+            label="Thumbnail inicial (capa do vídeo)"
+            selectedName={c.thumbnailStartName || (c.assets.thumbnailStart ? "Thumbnail salva" : "")}
+            accept="image/*"
+            onFile={(file) => { onPoster(file, "start"); u("thumbnailStartName", file.name); u("thumbnailEnabled", true); }}
+          />
+          <UploadBox
+            label="Thumbnail de pausa (quando usuário pausa)"
+            selectedName={c.thumbnailPauseName || (c.assets.thumbnailPause ? "Thumbnail salva" : "")}
+            accept="image/*"
+            onFile={(file) => { onPoster(file, "pause"); u("thumbnailPauseName", file.name); }}
+          />
+          <UploadBox
+            label="Thumbnail final (quando vídeo termina)"
+            selectedName={c.thumbnailEndName || (c.assets.thumbnailEnd ? "Thumbnail salva" : "")}
+            accept="image/*"
+            onFile={(file) => { onPoster(file, "end"); u("thumbnailEndName", file.name); }}
+          />
+        </div>
+      </>
+    );
+  }
   if (module === "resume") return <TextArea label="Mensagem" value={c.resumeMessage} onChange={(v) => u("resumeMessage", v)} />;
   if (module === "pixels") return <PixelTrackingPanel config={c} update={u} playerId={playerId} videoId={videoId} />;
   if (module === "protection") return <ProtectionPanel config={c} update={u} />;

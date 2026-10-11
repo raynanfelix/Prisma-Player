@@ -22,7 +22,6 @@ import {
   Play,
   Radio,
   RefreshCw,
-  Search,
   Sparkles,
   TrendingUp,
   UserCheck,
@@ -30,7 +29,6 @@ import {
   X,
 } from "lucide-react";
 import ClaudeChatInput from "@/components/ui/claude-style-chat-input";
-import { useSidebar } from "@/components/ui/sidebar";
 
 // Custom charts imports
 import {
@@ -117,7 +115,7 @@ const tabs = [
   { id: "audience", label: "Audiência & Países", icon: Users },
   { id: "traffic", label: "Dispositivos & Tecnologia", icon: MonitorSmartphone },
   { id: "live", label: "Ao Vivo", icon: Radio },
-  { id: "intelligence", label: "Motor de Inteligência", icon: BrainCircuit },
+  { id: "intelligence", label: "Inteligência", icon: BrainCircuit },
 ];
 
 const FUNNEL_RAMP = ["#6366f1", "#8b5cf6", "#a855f7", "#c026d3", "#ec4899", "#f43f5e"];
@@ -234,22 +232,14 @@ function DimensionTable({ title, rows, isCountry = false, onRowClick }: { title:
 }
 
 export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoId: string }) {
-  const { setOpen } = useSidebar();
   const [currentVideoId, setCurrentVideoId] = useState(initialVideoId);
   const [tab, setTab] = useState("performance");
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Auto-collapse main app sidebar on mount to open analytics in full-width desktop screen
-  useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  // TikTok Sidebar Video List States
+  // Videos list for IntelligenceControls
   const [allVideos, setAllVideos] = useState<VideoItem[]>([]);
-  const [videoSearchQuery, setVideoSearchQuery] = useState("");
-  const [sidebarFilter, setSidebarFilter] = useState<"recent" | "all">("recent");
 
   // AI Chat states
   const [aiOpen, setAiOpen] = useState(false);
@@ -269,7 +259,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
   const [hoveredBrowsersIndex, setHoveredBrowsersIndex] = useState<number | null>(null);
   const [hoveredOSIndex, setHoveredOSIndex] = useState<number | null>(null);
 
-  // Load all user videos for TikTok-style left list
+  // Load all user videos for IntelligenceControls
   useEffect(() => {
     fetch("/api/videos", { cache: "no-store" })
       .then((res) => res.json())
@@ -280,12 +270,6 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
       })
       .catch(() => null);
   }, []);
-
-  const filteredVideos = useMemo(() => {
-    return allVideos.filter((v) =>
-      v.title.toLowerCase().includes(videoSearchQuery.toLowerCase())
-    );
-  }, [allVideos, videoSearchQuery]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -495,83 +479,17 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
 
   return (
     <div className={`w-full min-h-[calc(100vh-60px)] flex bg-[#F8F9FA] dark:bg-card text-[#191A23] dark:text-zinc-100 relative ${aiOpen && !aiFullscreen ? "xl:pr-[480px]" : ""} transition-all duration-300`}>
-      
-      {/* TIKTOK STUDIO LEFT SIDEBAR VIDEO SELECTOR LIST */}
-      <aside className="w-64 lg:w-72 shrink-0 border-r border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-4 hidden md:flex flex-col space-y-4 shadow-xs">
-        <div className="flex items-center justify-between">
-          <Link href="/dashboard/videos" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-[#191A23] dark:hover:text-white">
-            <ArrowLeft size={14} />
-            <span>Voltar para Meus vídeos</span>
-          </Link>
-        </div>
 
-        {/* Video Search input */}
-        <div className="relative">
-          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
-          <input
-            type="text"
-            value={videoSearchQuery}
-            onChange={(e) => setVideoSearchQuery(e.target.value)}
-            placeholder="Buscar VSL pelo nome..."
-            className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-card pl-8 pr-3 py-1.5 text-xs font-medium text-[#191A23] dark:text-zinc-100 outline-none focus:border-[#B9FF66] focus:bg-white dark:focus:bg-card"
-          />
-        </div>
-
-        {/* Filter buttons (Recentes vs Todas VSLs) */}
-        <div className="flex gap-1.5 border-b border-slate-100 dark:border-zinc-800 pb-2">
-          <button
-            onClick={() => setSidebarFilter("recent")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${sidebarFilter === "recent" ? "bg-selected text-selected-foreground" : "text-slate-500 dark:text-zinc-400 hover:text-[#191A23] dark:hover:text-white"}`}
-          >
-            Recentes
-          </button>
-          <button
-            onClick={() => setSidebarFilter("all")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${sidebarFilter === "all" ? "bg-selected text-selected-foreground" : "text-slate-500 dark:text-zinc-400 hover:text-[#191A23] dark:hover:text-white"}`}
-          >
-            Todas VSLs
-          </button>
-        </div>
-
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-          {filteredVideos.length} {filteredVideos.length === 1 ? "VSL ENCONTRADA" : "VSLs ENCONTRADAS"}
-        </span>
-
-        {/* Scrollable list of user's videos */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-          {filteredVideos.map((video) => {
-            const isActive = video.id === currentVideoId;
-            return (
-              <button
-                key={video.id}
-                onClick={() => setCurrentVideoId(video.id)}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  isActive 
-                    ? "border-slate-300 dark:border-zinc-700 bg-[#B9FF66]/20 dark:bg-[#B9FF66]/10 text-[#191A23] dark:text-white font-bold shadow-xs" 
-                    : "border-slate-200/80 dark:border-zinc-800/80 bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-transparent text-slate-700 dark:text-zinc-300"
-                }`}
-              >
-                <div className="relative h-12 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-900 grid place-items-center text-white">
-                  <Play size={14} fill="currentColor" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="truncate text-xs font-bold text-[#191A23] dark:text-zinc-100">{video.title}</h4>
-                  <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-zinc-500">
-                    {new Date(video.created_at).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT AREA - OPTIMIZED FOR FULL DESKTOP SCREEN */}
+      {/* MAIN CONTENT AREA - FULL SCREEN, NO SIDEBAR */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
         
-        {/* TIKTOK STUDIO VIDEO HEADER */}
+        {/* VIDEO HEADER WITH BACK BUTTON */}
         <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-center gap-4 min-w-0">
+            <Link href="/dashboard/videos" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-[#191A23] dark:hover:text-white">
+              <ArrowLeft size={14} />
+              <span>Voltar para Meus vídeos</span>
+            </Link>
             <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-900 grid place-items-center text-white shadow-xs">
               <Play size={20} fill="currentColor" />
             </div>
@@ -891,7 +809,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block">Tempo Médio</span>
-                        <strong className="text-xl font-bold text-[#191A23] dark:text-white">{avgWatchTimeSeconds}s</strong>
+                        <strong className="text-xl font-bold text-[#191A23] dark:text-white">{formatSecondsToTimeString(avgWatchTimeSeconds)}</strong>
                       </div>
                     </div>
 
@@ -899,6 +817,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block">Conclusão do Vídeo</span>
                       <strong className="text-xl font-bold text-[#191A23] dark:text-white">{format(data.summary.completionRate, true)}</strong>
                       <span className="text-[11px] text-slate-500 dark:text-zinc-400 block mt-0.5">{data.summary.completed} espectadores até o fim</span>
+                      <span className="text-[10px] text-slate-400 dark:text-zinc-500 block mt-0.5">{data.video.duration_seconds ? formatSecondsToTimeString(Math.round(data.video.duration_seconds * data.summary.completionRate / 100)) : "—"} no total</span>
                     </div>
 
                     <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-card p-4">
@@ -914,6 +833,43 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     </div>
                   </div>
                 </div>
+                
+                {/* Detailed Retention Breakdown with Minutes */}
+                <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#191A23] dark:text-white">Detalhamento de Retenção por Marco</h3>
+                    <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Tempo assistido e espectadores em cada ponto percentual do vídeo.</p>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-zinc-800">
+                    <table className="w-full min-w-[600px] text-left text-xs font-medium text-[#191A23] dark:text-zinc-200">
+                      <thead className="bg-slate-50 dark:bg-card uppercase text-slate-500 dark:text-zinc-400 border-b border-slate-100 dark:border-zinc-800 font-semibold">
+                        <tr>
+                          <th className="p-3">Marco</th>
+                          <th className="p-3 text-right">Tempo no Vídeo</th>
+                          <th className="p-3 text-right">Retenção</th>
+                          <th className="p-3 text-right">Espectadores</th>
+                          <th className="p-3 text-right">Desistiram</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                        {data.retention.map((point) => {
+                          const duration = data.video.duration_seconds || 0;
+                          const timeAtPoint = Math.round(duration * point.point / 100);
+                          const dropped = (point.point === 10 ? data.summary.plays : data.retention.find(p => p.point === point.point - 10)?.viewers ?? data.summary.plays) - point.viewers;
+                          return (
+                            <tr key={point.point} className="group transition-colors duration-150 hover:bg-slate-50/60 dark:hover:bg-transparent">
+                              <td className="p-3 font-semibold text-[#191A23] dark:text-zinc-100">{point.point}%</td>
+                              <td className="p-3 text-right font-mono text-slate-600 dark:text-zinc-400">{formatSecondsToTimeString(timeAtPoint)}</td>
+                              <td className="p-3 text-right font-bold text-[#191A23] dark:text-zinc-100">{format(point.rate, true)}</td>
+                              <td className="p-3 text-right font-medium text-slate-600 dark:text-zinc-400">{format(point.viewers)}</td>
+                              <td className="p-3 text-right font-medium text-red-600 dark:text-red-400">{format(Math.max(0, dropped))}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
 
                 <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
                   <div>
@@ -968,16 +924,18 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                   </div>
                 </div>
 
-                <div className="w-full pt-2">
+                <div className="w-full pt-2 min-h-[400px]">
                   <HeatmapInteractionProvider>
                     <HeatmapInteractionBoundary>
-                      <div className="flex w-full flex-col items-stretch gap-3">
-                        <HeatmapChart className="w-full" data={heatmapColumns} layout="fluid">
-                          <HeatmapCells inactiveOpacity={1} inactiveScale={1} />
-                          <HeatmapXAxis />
-                          <HeatmapYAxis />
-                          <HeatmapTooltip instant />
-                        </HeatmapChart>
+                      <div className="flex w-full flex-col items-stretch gap-3 h-full">
+                        <div className="flex-1 min-h-[350px]">
+                          <HeatmapChart className="w-full h-full" data={heatmapColumns} layout="fluid">
+                            <HeatmapCells inactiveOpacity={1} inactiveScale={1} />
+                            <HeatmapXAxis />
+                            <HeatmapYAxis />
+                            <HeatmapTooltip instant />
+                          </HeatmapChart>
+                        </div>
                         <HeatmapLegend
                           inactiveOpacity={1}
                           inactiveScale={1}
@@ -1161,7 +1119,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
             {tab === "intelligence" && (
               <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-6">
                 <div>
-                  <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Motor de Inteligência da VSL</h2>
+                  <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Configurações de Inteligência</h2>
                   <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
                     Configurações operacionais com dados reais para esta VSL, organizadas em um único lugar.
                   </p>
