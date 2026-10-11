@@ -46,6 +46,11 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   const [resumePlaybackSignal, setResumePlaybackSignal] = useState(0);
   const [thumbnailOverlay, setThumbnailOverlay] = useState<"pause" | "end" | null>(null);
   const [ctaUnlocked, setCtaUnlocked] = useState(false);
+  // Selo orgânico anti-download: aparece onde o visitante clica com o botão
+  // direito sobre o vídeo, em TODAS as VSLs (não é opcional). Leva para a Prisma.
+  const [promoSpot, setPromoSpot] = useState<{ x: number; y: number } | null>(null);
+  const videoBoxRef = useRef<HTMLDivElement>(null);
+  const promoTimerRef = useRef(0);
   const sentEvents = useRef(new Set<string>());
   const analyticsEvents = useRef(new Set<string>());
   const ctaAutoScrolled = useRef(false);
@@ -322,6 +327,29 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   }, []);
 
   useEffect(() => {
+    // Limpa o timer do selo orgânico ao desmontar.
+    return () => window.clearTimeout(promoTimerRef.current);
+  }, []);
+
+  function handleVideoContextMenu(event: React.MouseEvent) {
+    // Selo orgânico em todas as VSLs: intercepta o botão direito sobre o vídeo,
+    // mostra o selo exatamente onde clicou e some sozinho em 6s.
+    event.preventDefault();
+    event.stopPropagation();
+    const box = videoBoxRef.current?.getBoundingClientRect();
+    if (box) {
+      const rawX = event.clientX - box.left;
+      const rawY = event.clientY - box.top;
+      // Prende o selo dentro do player para nunca vazar para fora.
+      const x = Math.min(Math.max(rawX, 140), Math.max(140, box.width - 140));
+      const y = Math.min(Math.max(rawY, 90), Math.max(90, box.height - 24));
+      setPromoSpot({ x, y });
+      window.clearTimeout(promoTimerRef.current);
+      promoTimerRef.current = window.setTimeout(() => setPromoSpot(null), 6000);
+    }
+  }
+
+  useEffect(() => {
     if (!Boolean(payload?.config.disablePause)) return;
     const media = document.querySelector<HTMLVideoElement>("video");
     if (!media) return;
@@ -367,7 +395,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   return <main data-prisma-embed className="flex min-h-0 select-none justify-center bg-transparent" onContextMenu={(event) => { if (c.antiDownload !== false) event.preventDefault(); }}>
     <div className="w-full" style={responsiveStyle}>
       {Boolean(c.headlineEnabled) && (c.headlineFormat === "image" && (assetUrls.headlineDesktop || assetUrls.headlineMobile) ? <picture className="mb-4 block w-full"><source media="(max-width: 767px)" srcSet={assetUrls.headlineMobile || assetUrls.headlineDesktop} /><img src={assetUrls.headlineDesktop || assetUrls.headlineMobile} alt="" draggable={false} className="block h-auto w-full object-contain" /></picture> : <h1 className="mb-4 px-4 py-3 font-semibold leading-tight" style={{ color: String(c.headlineColor ?? "#1d1d1f"), backgroundColor: String(c.headlineBackground ?? "#ffffff"), fontSize: `clamp(16px,4vw,${Number(c.headlineSize ?? 30)}px)`, textAlign: String(c.headlineAlign ?? "center") as CSSProperties["textAlign"], borderRadius: `${Math.min(Number(c.radius ?? 0), 16)}px` }}>{String(c.headline ?? "")}</h1>)}
-      <div className="relative w-full overflow-hidden bg-transparent" style={{ borderRadius: `${Number(c.radius ?? 0)}px`, aspectRatio: String(videoRatio ?? initialRatio) }}>
+      <div ref={videoBoxRef} className="relative w-full overflow-hidden bg-transparent" style={{ borderRadius: `${Number(c.radius ?? 0)}px`, aspectRatio: String(videoRatio ?? initialRatio) }} onContextMenu={handleVideoContextMenu}>
       <VideoPlayer className={playerClasses} sources={[{ src: payload.source, type: payload.type }]} poster={thumbnailEnabled && !smartAutoplay ? assetUrls.thumbnailStart : undefined} textTracks={Boolean(c.captionsEnabled) && assetUrls.captions ? [{ src: assetUrls.captions, kind: "subtitles", label: String(c.captionName || "Legendas"), srclang: "pt-BR", default: true }] : []} autoplay={smartAutoplay && resumeChecked && resumePoint === null && !autoplayActivated} muted={Boolean(c.muted) || (smartAutoplay && !autoplayActivated)} loop={Boolean(c.loop)} playbackRate={Number(c.playbackRate ?? 1)} bigPlayButton={c.bigPlay !== false} pauseWhenHidden={Boolean(c.smartPause)} startTime={startTime} restartWithSoundSignal={restartWithSoundSignal} resumePlaybackSignal={resumePlaybackSignal} onPlay={() => { isPlaying.current = true; track("play", 0, currentTime); trackAnalytics("play", 0, currentTime); setThumbnailOverlay(null); }} onPause={() => { isPlaying.current = false; if (thumbnailEnabled && assetUrls.thumbnailPause && currentTime > 0 && currentTime < duration) setThumbnailOverlay("pause"); }} onEnded={() => { isPlaying.current = false; track("complete", 100, duration); trackAnalytics("complete", 100, duration); if (!Boolean(c.loop)) localStorage.removeItem(resumeStorageKey); if (thumbnailEnabled && assetUrls.thumbnailEnd) setThumbnailOverlay("end"); }} onTimeUpdate={(time) => { if (Math.floor(time) !== renderedSecondRef.current) { renderedSecondRef.current = Math.floor(time); setCurrentTime(time); } liveProgress.current = { percent: duration > 0 ? Math.min(100, Math.round(time / duration * 100)) : 0, watchedSeconds: time }; if (resumeEnabled && time > 0 && Math.floor(time) !== lastResumeWriteRef.current) { lastResumeWriteRef.current = Math.floor(time); localStorage.setItem(resumeStorageKey, String(Math.floor(time))); } if (duration > 0) [10, 25, 50, 75, 90].forEach((point) => { if (time / duration * 100 >= point) { if ([25, 50, 75].includes(point)) track("progress", point, time); trackAnalytics("progress", point, time); } }); }} onLoadedMetadata={(metadata) => { setDuration(metadata.duration); if (metadata.width > 0 && metadata.height > 0) setVideoRatio(metadata.width / metadata.height); if (resumeEnabled) { const saved = Number(localStorage.getItem(resumeStorageKey)); if (Number.isFinite(saved) && saved >= 5 && saved < metadata.duration - 5) setResumePoint(saved); } setResumeChecked(true); }} controlVisibility={{ progressControl: !Boolean(c.smartProgress) && c.progressBar !== false, currentTimeDisplay: c.time !== false, durationDisplay: c.time !== false, volumePanel: c.volume !== false, fullscreenToggle: c.fullscreen !== false, pictureInPictureToggle: c.pictureInPicture !== false, playbackRateMenuButton: c.speedControl !== false }} />
         {Boolean(c.watermarkEnabled) && <div className={`pointer-events-none absolute z-40 p-3 font-mono text-[11px] leading-tight select-none ${c.watermarkPosition === "top-left" ? "top-3 left-3 text-left" : c.watermarkPosition === "bottom-left" ? "bottom-3 left-3 text-left" : c.watermarkPosition === "bottom-right" ? "bottom-3 right-3 text-right" : c.watermarkPosition === "center" ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center" : "top-3 right-3 text-right"}`} style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 3px rgba(0,0,0,0.8)", opacity: Number(c.watermarkOpacity ?? 85) / 100 }}>
           {Boolean(c.watermarkShowUsername) && viewerIdRef.current && <div>ID: {viewerIdRef.current.slice(0, 8)}</div>}
@@ -380,6 +408,24 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
         {Boolean(c.smartProgress) && <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-transparent" style={{ height: `${Math.max(Number(c.progressHeight ?? 6), 4)}px` }}><div className="h-full transition-[width] duration-300 ease-out" style={{ width: `${smartProgress}%`, backgroundColor: String(c.progressColor ?? c.accent ?? "#0066cc") }} /></div>}
         {Boolean(c.miniHooksEnabled) && currentTime >= Number(c.miniHookStart ?? 0) && currentTime < Number(c.miniHookStart ?? 0) + Number(c.miniHookDuration ?? 6) && <div className="pointer-events-none absolute inset-x-4 top-4 z-20 mx-auto max-w-[520px] px-4 py-3 font-semibold shadow-lg backdrop-blur-md" style={{ color: String(c.miniHookTextColor ?? "#ffffff"), backgroundColor: `${String(c.miniHookBackground ?? "#111111")}e8`, fontSize: `${Number(c.miniHookSize ?? 16)}px`, borderRadius: `${Number(c.miniHookRadius ?? 10)}px`, textAlign: String(c.miniHookAlign ?? "center") as CSSProperties["textAlign"] }}>{hookText}</div>}
         {thumbnailOverlay && <button type="button" onClick={() => { const paused = thumbnailOverlay === "pause"; setThumbnailOverlay(null); if (paused) setResumePlaybackSignal((value) => value + 1); else setRestartWithSoundSignal((value) => value + 1); }} className="absolute inset-0 z-50 bg-cover bg-center" style={{ backgroundImage: `url(${thumbnailOverlay === "pause" ? assetUrls.thumbnailPause : assetUrls.thumbnailEnd})` }} aria-label={thumbnailOverlay === "pause" ? "Continuar vídeo" : "Assistir novamente"}><span className="absolute inset-0 grid place-items-center bg-black/20"><span className="rounded-full bg-black/70 px-5 py-3 text-[13px] font-semibold text-white backdrop-blur-md">{thumbnailOverlay === "pause" ? "Continuar assistindo" : "Assistir novamente"}</span></span></button>}
+        {promoSpot && (
+          <a
+            href="https://prismaplayer.com.br"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Hospede sua VSL na Prisma Player e aumente suas vendas"
+            className="absolute z-50 w-max max-w-[280px] -translate-x-1/2 -translate-y-[115%] rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-center shadow-2xl backdrop-blur-xl transition-transform hover:scale-105"
+            style={{ left: promoSpot.x, top: promoSpot.y, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
+          >
+            <span className="flex items-center justify-center gap-1.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#B9FF66]">
+              <span aria-hidden className="inline-block size-1.5 rounded-full bg-[#B9FF66]" />
+              Prisma Player
+            </span>
+            <span className="mt-1 block text-[13px] font-bold leading-snug text-white">
+              Hospede sua VSL e aumente suas vendas
+            </span>
+          </a>
+        )}
       </div>
       {ctaVisible && safeCtaUrl && <a data-prisma-cta href={safeCtaUrl} target={Boolean(c.ctaNewTab) ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => trackAnalytics("cta_click", 0, currentTime)} className={`prisma-embed-cta mx-auto mt-4 flex min-h-12 w-fit items-center justify-center font-semibold ${Boolean(c.ctaPulse) ? "studio-cta-pulse" : ""}`} style={{ color: String(c.ctaTextColor ?? "#ffffff"), backgroundColor: String(c.ctaBackground ?? c.accent ?? "#0066cc"), fontSize: `${Number(c.ctaFontSize ?? 18)}px`, borderRadius: `${Number(c.ctaRadius ?? 12)}px`, padding: `${Number(c.ctaPaddingY ?? 12)}px ${Number(c.ctaPaddingX ?? 24)}px`, boxShadow: Boolean(c.ctaShadow) ? "0 12px 28px rgba(0,102,204,.24)" : "none", "--cta-hover-bg": String(c.ctaHoverBackground ?? "#0055aa"), "--cta-hover-color": String(c.ctaHoverTextColor ?? "#ffffff") } as CSSProperties}>{String(c.ctaText ?? "Quero aproveitar agora")}</a>}
     </div>

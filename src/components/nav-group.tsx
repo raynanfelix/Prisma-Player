@@ -69,8 +69,8 @@ export function NavGroup({ label, items }: NavGroupProps) {
                       className={cn(
                         "min-h-10 rounded-xl px-3 text-xs font-semibold transition-all cursor-pointer border",
                         isItemActive
-                          ? "border-slate-300 dark:border-zinc-700 bg-selected text-selected-foreground font-bold shadow-xs data-active:bg-selected data-active:text-selected-foreground dark:hover:bg-selected"
-                          : "border-transparent text-slate-600 dark:text-zinc-400 hover:border-slate-200 dark:hover:border-zinc-800 hover:bg-[#B9FF66]/15 dark:hover:bg-transparent hover:text-[#191A23] dark:hover:text-white"
+                          ? "border-transparent bg-[#B9FF66] text-[#191A23] font-bold shadow-xs data-active:bg-[#B9FF66] data-active:text-[#191A23]"
+                          : "border-transparent text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
                       )}
                     >
                       {item.icon}
@@ -89,8 +89,8 @@ export function NavGroup({ label, items }: NavGroupProps) {
                                 className={cn(
                                   "min-h-9 rounded-lg border px-3 text-xs transition-all cursor-pointer",
                                   isSubActive
-                                    ? "border-slate-300 dark:border-zinc-700 bg-selected text-selected-foreground font-bold shadow-xs data-active:bg-selected data-active:text-selected-foreground dark:hover:bg-selected"
-                                    : "border-transparent text-slate-600 dark:text-zinc-400 font-medium hover:bg-[#B9FF66]/15 dark:hover:bg-transparent hover:text-[#191A23] dark:hover:text-white"
+                                    ? "border-transparent bg-[#B9FF66] text-[#191A23] font-bold shadow-xs data-active:bg-[#B9FF66] data-active:text-[#191A23]"
+                                    : "border-transparent text-slate-600 dark:text-zinc-400 font-medium hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"
                                 )}
                               >
                                 {subItem.icon}
@@ -110,8 +110,8 @@ export function NavGroup({ label, items }: NavGroupProps) {
                     className={cn(
                       "min-h-10 rounded-xl px-3 text-xs transition-all cursor-pointer border",
                       isItemActive
-                        ? "border-slate-300 dark:border-zinc-700 bg-selected text-selected-foreground font-bold shadow-xs data-active:bg-selected data-active:text-selected-foreground dark:hover:bg-selected"
-                        : "border-transparent text-slate-600 dark:text-zinc-400 font-semibold hover:border-slate-200 dark:hover:border-zinc-800 hover:bg-[#B9FF66]/15 dark:hover:bg-transparent hover:text-[#191A23] dark:hover:text-white",
+                        ? "border-transparent bg-[#B9FF66] text-[#191A23] font-bold shadow-xs data-active:bg-[#B9FF66] data-active:text-[#191A23]"
+                        : "border-transparent text-slate-600 dark:text-zinc-400 font-semibold hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white",
                     )}
                   >
                     {item.icon}

@@ -57,7 +57,7 @@ function NavList({ collapsed, onNavigate, active }: { collapsed?: boolean; onNav
                   title={collapsed ? item.label : undefined}
                   aria-current={isActive ? "page" : undefined}
                   onClick={onNavigate}
-                  className={`flex min-h-11 items-center gap-3 rounded-[12px] px-3 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue ${collapsed ? "justify-center" : ""} ${isActive ? "bg-selected text-selected-foreground font-semibold data-active:bg-selected" : "themeable-text-ink hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"}`}
+                  className={`flex min-h-11 items-center gap-3 rounded-[12px] px-3 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue ${collapsed ? "justify-center" : ""} ${isActive ? "bg-[#B9FF66] text-[#191A23] font-bold shadow-xs" : "themeable-text-ink hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white"}`}
                 >
                   <Icon size={18} className="shrink-0" aria-hidden />
                   {!collapsed && <span className="truncate">{item.label}</span>}

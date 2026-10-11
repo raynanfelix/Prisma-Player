@@ -48,7 +48,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 tooltip={item.messageKey ? t(item.messageKey) : item.title}
-                className="min-h-10 rounded-xl border border-transparent px-3 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:border-slate-200 dark:hover:border-zinc-800 hover:bg-[#B9FF66]/15 dark:hover:bg-transparent hover:text-[#191A23] dark:hover:text-white transition-all cursor-pointer"
+                className="min-h-10 rounded-xl border border-transparent px-3 text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white transition-all cursor-pointer"
                 render={<Link href={item.path ?? "#"} />}
               >
                 {item.icon}
