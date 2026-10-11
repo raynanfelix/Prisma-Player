@@ -316,6 +316,8 @@ export default function VslStudio() {
   const autoplayCover = resolveAutoplayCover(config as unknown as Record<string, unknown>);
   const [posterPreviewActive, setPosterPreviewActive] = useState(false);
   const [captionTrack, setCaptionTrack] = useState<{ src: string; kind: "subtitles"; label: string; srclang: string; default: boolean }>();
+  const [slowFileWarn, setSlowFileWarn] = useState(false);
+  const probedSrcRef = useRef<string | null>(null);
   const previewStageRef = useRef<HTMLDivElement>(null);
   const [previewStageSize, setPreviewStageSize] = useState({ width: 0, height: 0 });
   const dirtyConfigKeys = useRef(new Set<keyof StudioConfig>());
@@ -388,6 +390,8 @@ export default function VslStudio() {
     setResumePoint(null);
     setAutoplayActivated(false);
     setThumbnailOverlay(null);
+    setSlowFileWarn(false);
+    probedSrcRef.current = null;
     if (video?.id) {
       try {
         const raw = localStorage.getItem(`prisma-resume:${video.id}`);
@@ -398,6 +402,16 @@ export default function VslStudio() {
       }
     }
   }, [video?.id]);
+
+  // Diagnóstico de startup lento: avisa quando o MP4 não tem faststart.
+  useEffect(() => {
+    const src = video?.src;
+    if (!src || probedSrcRef.current === src) return;
+    probedSrcRef.current = src;
+    void probeMoovPosition(src).then((result) => {
+      if (result === "late" && probedSrcRef.current === src) setSlowFileWarn(true);
+    });
+  }, [video?.src]);
 
   useEffect(() => {
     const stage = previewStageRef.current;
@@ -413,9 +427,12 @@ export default function VslStudio() {
 
   const sources = useMemo(() => video ? [{ src: video.src, type: video.type }] : [], [video]);
   // Tamanho padrão: largura cheia + proporção real do arquivo (sem corte, sem
-  // encolher). Vídeo vertical fica alto e o palco rola (sem barrinha visível).
-  // Cor principal/fundo/gradiente do módulo Estilo aplicados de verdade.
-  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, background: config.colorStyle === "gradient" ? `linear-gradient(135deg, ${config.background}, ${config.gradientEnd})` : config.background, "--player-accent": String(config.progressColor ?? config.accent ?? "#0066cc") } as React.CSSProperties), [config.radius, config.background, config.gradientEnd, config.colorStyle, config.progressColor, config.accent, videoSize]);
+  // encolher). Fundo do Estilo só quando customizado (senão, transparente como antes).
+  const playerStyle = useMemo(() => {
+    const isGradient = config.colorStyle === "gradient";
+    const customBg = isGradient || (config.background && config.background.toLowerCase() !== "#000000" && config.background.toLowerCase() !== "#000");
+    return { borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, "--player-accent": String(config.progressColor ?? config.accent ?? "#0066cc"), ...(customBg ? { background: isGradient ? `linear-gradient(135deg, ${config.background}, ${config.gradientEnd})` : config.background } : {}) } as React.CSSProperties;
+  }, [config.radius, config.background, config.gradientEnd, config.colorStyle, config.progressColor, config.accent, videoSize]);
 
   const handleMetadata = (meta: { duration: number; width: number; height: number }) => {
     setDuration(meta.duration);
@@ -643,6 +660,12 @@ export default function VslStudio() {
           <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* m-auto centraliza quando o conteúdo é curto e libera o scroll completo quando é alto (justify-center cortava o topo). */}
             <div className="m-auto flex w-full flex-col items-center">
+            {slowFileWarn && (
+              <div role="alert" className="mb-3 flex w-full max-w-3xl items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs font-medium leading-relaxed text-amber-700 dark:text-amber-300">
+                <span className="flex-1">Este arquivo demora para iniciar: não está otimizado para streaming (faststart). Re-exporte com “faststart”/“Web Optimized” para abrir instantâneo.</span>
+                <button type="button" onClick={() => setSlowFileWarn(false)} aria-label="Dispensar aviso" className="grid size-6 shrink-0 place-items-center rounded-lg hover:bg-black/5 dark:hover:bg-transparent cursor-pointer">✕</button>
+              </div>
+            )}
             {/* Headline Preview (obedece horário configurado; mesmo componente do publicado) */}
             {config.headlineEnabled && currentTime >= Number(config.headlineStart ?? 0) && (Number(config.headlineDuration ?? 0) <= 0 || currentTime <= Number(config.headlineStart ?? 0) + Number(config.headlineDuration ?? 0)) && (
               <HeadlineBlock
@@ -1984,6 +2007,51 @@ function Color({ label, value, onChange }: { label: string; value: string; onCha
 function Segmented({ label, value, options, onChange }: { label: string; value: string; options: Array<{ label: string; value: string }>; onChange: (value: string) => void }) { return <fieldset><legend className="mb-2 text-[14px] font-semibold">{label}</legend><div className="grid grid-cols-2 gap-1 rounded-[11px] bg-slate-100 p-1 dark:bg-card">{options.map((option) => <button key={option.value} type="button" onClick={() => onChange(option.value)} className={`min-h-9 rounded-[8px] px-2 text-[12px] font-semibold transition cursor-pointer ${value === option.value ? "bg-[#B9FF66] text-[#191A23] font-bold shadow-xs" : "text-slate-600 dark:text-zinc-400"}`}>{option.label}</button>)}</div></fieldset>; }
 function Range({ label, value, min, max, step = 1, suffix, onChange }: { label: string; value: number; min: number; max: number; step?: number; suffix: string; onChange: (value: number) => void }) { return <label className="block text-[14px] font-semibold">{label}<span className="float-right text-[12px] font-bold text-[#191A23] dark:text-[#B9FF66]">{value}{suffix}</span><input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="mt-3 w-full accent-[#B9FF66]" /></label>; }
 function formatPlayerTime(value: number) { const seconds = Math.max(0, Math.floor(Number.isFinite(value) ? value : 0)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; }
+
+/**
+ * Detecta MP4 com `moov` depois do `mdat` (sem faststart): o navegador baixa o
+ * arquivo inteiro antes do primeiro frame — a causa mais comum de VSL que
+ * "demora para aparecer". Lê só o primeiro chunk (Range) e falha em silêncio.
+ */
+async function probeMoovPosition(url: string): Promise<"late" | "early" | "unknown"> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch(url, { headers: { Range: "bytes=0-131071" }, signal: controller.signal });
+    clearTimeout(timer);
+    if (!response.ok && response.status !== 206) return "unknown";
+    const reader = response.body?.getReader();
+    if (!reader) return "unknown";
+    const { value } = await reader.read();
+    await reader.cancel().catch(() => undefined);
+    const buf = value ?? new Uint8Array(0);
+    if (buf.length < 8) return "unknown";
+    const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    let offset = 0;
+    let sawMdat = false;
+    while (offset + 8 <= buf.length) {
+      const size = view.getUint32(offset);
+      const type = String.fromCharCode(buf[offset + 4], buf[offset + 5], buf[offset + 6], buf[offset + 7]);
+      if (type === "moov") return sawMdat ? "late" : "early";
+      if (type === "mdat") sawMdat = true;
+      let step = size;
+      if (size === 1) {
+        if (offset + 16 > buf.length) break;
+        const big = view.getBigUint64(offset + 8);
+        if (big < BigInt(16) || big > BigInt(Number.MAX_SAFE_INTEGER)) break;
+        step = Number(big);
+      } else if (size === 0) {
+        return sawMdat ? "late" : "unknown";
+      }
+      if (step < 8) break;
+      offset += step;
+      if (offset >= buf.length) return sawMdat ? "late" : "unknown";
+    }
+    return sawMdat ? "late" : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 function TimeRange({ label, value, max, onChange }: { label: string; value: number; max: number; onChange: (value: number) => void }) { const safeValue = Math.min(Math.max(0, value), max); return <label className="block text-[14px] font-semibold">{label}<span className="float-right rounded-full bg-[#B9FF66] px-2.5 py-0.5 text-[11px] font-bold text-[#191A23]">{formatPlayerTime(safeValue)} / {formatPlayerTime(max)}</span><input type="range" min={0} max={max} step={1} value={safeValue} onChange={(e) => onChange(Number(e.target.value))} className="mt-4 w-full accent-[#B9FF66]" /></label>; }
 function TextInput({ label, value, placeholder, onChange }: { label: string; value?: string; placeholder?: string; onChange?: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<input value={value ?? ""} placeholder={placeholder} onChange={(e) => onChange?.(e.target.value)} className="studio-input mt-1.5 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" /></label>; }
 function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<textarea rows={3} value={value} onChange={(e) => onChange(e.target.value)} className="studio-input mt-1.5 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card p-3 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" /></label>; }
