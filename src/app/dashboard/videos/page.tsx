@@ -346,7 +346,7 @@ export default function VideosPage() {
                             <button disabled={item.status === "processing"} aria-label="Mais ações" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-transparent disabled:opacity-30"><MoreHorizontal size={17} /></button>
                           }
                         />
-                        <DropdownMenuContent align="end" className="w-[230px] p-1.5 bg-white dark:bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
+                        <DropdownMenuContent align="end" className="w-[230px] border border-slate-200 bg-white rounded-xl p-1.5 dark:border-zinc-800 dark:bg-card">
                           {[
                             { label: "Editar e personalizar", icon: Pencil, action: () => edit(item) },
                             { label: "Ver Analytics", icon: BarChart3, action: () => router.push(`/dashboard/analytics/${item.id}`) },
@@ -356,7 +356,7 @@ export default function VideosPage() {
                             { label: "Mover para pasta", icon: Folder, action: () => startManage(item, "move") },
                             { label: "Duplicar", icon: Copy, action: () => void duplicateVideo(item) },
                           ].map((actionItem) => (
-                            <DropdownMenuItem key={actionItem.label} onClick={actionItem.action} className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-transparent rounded-lg cursor-pointer">
+                            <DropdownMenuItem key={actionItem.label} onClick={actionItem.action} className="flex items-center gap-2.5 rounded-lg cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-transparent hover:text-[#191A23] focus:bg-transparent focus:text-[#191A23] dark:text-zinc-200 dark:hover:bg-transparent dark:hover:text-white dark:focus:bg-transparent dark:focus:text-white">
                               <actionItem.icon size={15} />
                               <span>{actionItem.label}</span>
                             </DropdownMenuItem>

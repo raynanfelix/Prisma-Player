@@ -108,7 +108,10 @@
 | GET | `/api/billing/status` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | `getCurrentUserId` |
 | POST | `/api/billing/checkout` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | `guard({csrf:true})` |
 | POST | `/api/billing/ai-credits/checkout` | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | `guard({csrf:true, paid:true})` |
-| POST | `/api/billing/cancel` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | `guard({csrf:true})` |
+| POST | `/api/billing/cancel` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | `guard({csrf:true})` + fail-open documentado |
+| POST | `/api/auth/revoke-all-sessions` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | sessão própria, `signOut(global)` |
+| POST | `/api/support/cases` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | `guard({csrf:true})`, user_id da sessão |
+| POST | `/api/support/notes` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | `guard({csrf:true})`, caso próprio |
 | GET | `/api/checkout/result` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | `requireUser` |
 
 ---
@@ -117,17 +120,17 @@
 
 | Método | Rota | Auth | MFA | Admin | Paid | CSRF | Rate Limit | Mutação | Tenant | Guard Atual | Guard Necessário |
 |--------|------|------|-----|-------|------|------|------------|---------|--------|-------------|------------------|
-| GET | `/admin/*` | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `requireAdmin` | ✅ OK |
-| POST | `/api/admin/users/plan` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/users/status` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/credits/adjust` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/plans/toggle` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/team/role` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/support/cases` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/support/notes` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/search` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ❌ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| POST | `/api/admin/seo/targets` | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` | **ADICIONAR MFA** |
-| GET | `/api/dashboard-security` | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `getCurrentAdminUser` | **ADICIONAR MFA** |
+| GET | `/admin/*` | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `requireAdmin` (papel+MFA enrolado+aal2) | ✅ OK |
+| POST | `/api/admin/users/plan` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/users/status` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/credits/adjust` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/plans/toggle` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/team/role` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/support/cases` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/support/notes` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| GET | `/api/admin/search` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | Cross | `adminGuard` (aal2) | ✅ OK |
+| POST | `/api/admin/seo/targets` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
+| PATCH | `/api/admin/seo/targets` | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | Cross | `adminGuard` (aal2) | ✅ OK |
 
 ---
 
@@ -153,14 +156,16 @@
 
 ---
 
-## Resumo de Gaps Críticos
+## Resumo de Gaps Críticos (atualizado pós-correções)
 
-| Gap | Rotas Afetadas | Risco |
-|-----|----------------|-------|
-| MFA não exigido em `adminGuard` | Todas `/api/admin/*` (9 endpoints) | **CRÍTICO** - Admin sem MFA executa operações privilegiadas |
-| `/api/dashboard-security` sem `adminGuard` | 1 endpoint | **ALTO** - Usa `getCurrentAdminUser` direto |
-| `/api/auth/logout` sem revogação global | 1 endpoint | **MÉDIO** - Sessões persistem em outros dispositivos |
-| `/api/auth/signup` expõe tokens | 1 endpoint | **ALTO** - Tokens vazados no response |
+| Gap | Estado |
+|-----|--------|
+| MFA em `adminGuard` | ✅ Resolvido (`aal2`, `admin-guard.ts:30-33`); páginas via `requireAdmin` idem |
+| `dashboard-security` | ✅ Falso alarme: rota de usuário com `guard()`, não admin |
+| Logout sem revogação global | ✅ Endpoint `revoke-all-sessions` criado; logout padrão segue `local` por UX |
+| Signup expunha tokens | ✅ Resolvido (só `{user, hasSession}`) |
+| Papel admin desatualizado | ✅ Falso alarme: `getUser()` relê do servidor (sem janela de 1h) |
+| Origin obrigatório | ❌ Rejeitado com evidência: sem ganho anti-CSRF, quebra privacy-mode e GET search |
 
 ---
 

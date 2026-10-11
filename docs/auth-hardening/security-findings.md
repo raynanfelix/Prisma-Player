@@ -2,14 +2,15 @@
 
 ## Críticas (Devem ser corrigidas imediatamente)
 
-### FIND-001: MFA não exigido em APIs administrativas
+### FIND-001: MFA não exigido em APIs administrativas — ✅ CORRIGIDO
+- *(+ `requireAdmin` agora também exige `aal2` da sessão, não só fator cadastrado — consistência página×API.)*
 - **Arquivo:** `src/lib/api/admin-guard.ts:20-29`
 - **Evidência:** `adminGuard()` valida apenas `app_metadata.role === "admin"` via `getCurrentAdminUser()`. Não verifica `aal2` ou fator MFA verificado na sessão atual.
 - **Impacto:** Admin autenticado sem MFA pode executar operações privilegiadas via API (trocar planos, ajustar créditos, gerenciar suporte, alterar papéis).
 - **Exploração:** Login admin → chamar `/api/admin/*` diretamente sem passar pelo fluxo MFA da UI.
 - **Correção:** Adicionar validação `aal2` no `adminGuard` usando `supabase.auth.getClaims()` e verificar `claims.aal === "aal2"`.
 
-### FIND-002: Exposição de tokens de sessão no cadastro
+### FIND-002: Exposição de tokens de sessão no cadastro — ✅ CORRIGIDO (só `{user, hasSession}`)
 - **Arquivo:** `src/app/api/auth/signup/route.ts:43`
 - **Evidência:** `return NextResponse.json({ data: result.data, hasSession: Boolean(result.data.session) })` onde `result.data` contém `session: { access_token, refresh_token, user, ... }`
 - **Impacto:** Access token e refresh token expostos no response JSON desnecessariamente.
@@ -20,14 +21,14 @@
 
 ## Altas (Devem ser corrigidas antes de produção)
 
-### FIND-003: Logout não revoga sessões em outros dispositivos
+### FIND-003: Logout não revoga sessões em outros dispositivos — ✅ CORRIGIDO (endpoint + `signOut(others)` pós-senha)
 - **Arquivo:** `src/app/api/auth/logout/route.ts:10`
 - **Evidência:** `await supabase.auth.signOut({ scope: "local" })`
 - **Impacto:** Sessão continua válida em outros dispositivos após logout.
 - **Exploração:** Dispositivo comprometido permanece logado após logout no dispositivo principal.
 - **Correção:** Adicionar endpoint `/api/auth/revoke-all-sessions` com `scope: "global"`. Manter logout padrão como `local` para UX.
 
-### FIND-004: Validação de enum solta em `trial_status`
+### FIND-004: Validação de enum solta em `trial_status` — ✅ CORRIGIDO (validação estrita fail-closed)
 - **Arquivo:** `src/lib/access/service.ts:103`
 - **Evidência:** `trialStatus: (row?.trial_status as AccountAccess["trialStatus"]) ?? "used"`
 - **Impacto:** Valor inválido no banco (ex: `"active_xxx"`) seria aceito como trial ativo se truthy.
@@ -38,13 +39,15 @@
 
 ## Médias (Devem ser corrigidas no próximo sprint)
 
-### FIND-005: CSRF aceita Referer como fallback
+### FIND-005: CSRF aceita Referer como fallback — ❌ REJEITADO COM EVIDÊNCIA
+- *Análise: em ataque CSRF o browser fixa `Origin` no site atacante (não spoofável pela página); exigir `Origin` não ganha nada e quebra privacy-mode (só Referer), o typeahead `GET /api/admin/search` e fluxos legítimos. Política explícita mantida: Origin-primeiro + Referer-fallback + rejeição sem ambos. Risco residual aceito e documentado.*
 - **Arquivo:** `src/lib/security/csrf.ts:41-65`
 - **Evidência:** `validateOrigin()` checa `origin` primeiro, depois `referer`. `Referer` pode ser spoofado ou ausente em alguns proxies.
 - **Impacto:** Possível bypass CSRF em cenários onde `Origin` é removido.
 - **Correção:** Para APIs sensíveis (`/api/admin/*`, `/api/account/password`, `/api/auth/*`), exigir `Origin` header obrigatório.
 
-### FIND-006: Sessões admin com role desatualizado
+### FIND-006: Sessões admin com role desatualizado — ❌ REBAIXADO A INFORMATIVO
+- *`getCurrentAdminUser()` usa `getUser()` (servidor, sempre fresco): rebaixamento vale na próxima request. Sem janela de 1h nos caminhos reais.*
 - **Arquivo:** `src/app/api/admin/team/role/route.ts:39`
 - **Evidência:** `admin.auth.admin.updateUserById(userId, { app_metadata: { ...target.app_metadata, role } })` atualiza no Supabase mas JWTs existentes mantêm role antigo até refresh.
 - **Impacto:** Admin rebaixado continua com privilégios até expiração/refresh do JWT (até 1h).

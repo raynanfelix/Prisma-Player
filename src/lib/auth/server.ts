@@ -47,5 +47,12 @@ export async function requireAdmin() {
   if (!(await hasVerifiedMfaFactor())) {
     redirect("/dashboard/settings?section=security&adminMfa=required");
   }
+  // Consistência com as APIs (adminGuard exige aal2): página admin com sessão
+  // aal1 renderizaria um shell cujas ações falham. Sem fator desafiado na
+  // sessão atual, volta ao fluxo de verificação — nunca renderiza achando
+  // que está autorizado.
+  if ((await getAuthAssuranceLevel()) !== "aal2") {
+    redirect("/dashboard/settings?section=security&adminMfa=required");
+  }
   return user;
 }

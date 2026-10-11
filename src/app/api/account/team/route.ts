@@ -77,6 +77,12 @@ export async function POST(request: Request) {
   if (csrf) return csrf;
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // Throttle antes de qualquer lookup: o caminho de aceite não pode servir
+  // de oráculo/força-bruta de inviteId sem custo.
+  const acceptLimit = await rateLimit(request, `account-team-accept:${userId}`, { max: 15, windowMs: 10 * 60_000, failClosed: true });
+  if (acceptLimit) return acceptLimit;
+
   const parsed = await readJsonBody<{ email?: unknown; role?: unknown; action?: unknown; inviteId?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;

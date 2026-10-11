@@ -1,5 +1,11 @@
 # Resultados de Testes e Validações
 
+## Rodada pós-correções (código + testes novos)
+- `tests/admin-guard.test.ts`: admin ok / 401 / 403 não-admin / 403 CSRF / **403 `mfa_required` com aal1** (novo).
+- `tests/auth-signup-shape.test.ts` (novo): response sem `access_token`/`refresh_token`, só `{user, hasSession}`.
+- `tests/csrf-origin.test.ts` (novo): Origin própria, fallback Referer, rejeição sem ambos, isenção GET/HEAD/OPTIONS.
+- Execução real (`npm test`, `tsc`, build, lint): **pendente de ambiente com `node_modules`** — o CI do GitHub executa a cada push; TCs com manipulação de sessão real (TC-002/007/011/012/014/015) exigem staging e seguem pendentes.
+
 ## Testes Automatizados Existentes
 
 ```bash

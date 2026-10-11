@@ -48,6 +48,10 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const gate = await adminGuard(request);
   if (!gate.ok) return gate.response;
+
+  const limited = await rateLimit(request, `admin-seo:${gate.adminId}`, { max: 60, windowMs: 10 * 60_000, failClosed: true });
+  if (limited) return limited;
+
   const parsed = await readJsonBody<{ targetId?: unknown; isActive?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const targetId = String(parsed.body?.targetId ?? "");

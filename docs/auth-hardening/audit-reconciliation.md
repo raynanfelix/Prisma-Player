@@ -201,12 +201,12 @@ Duas auditorias independentes foram realizadas (OpenCode e Claude Code). Ambas i
 | ID | Status | Prioridade |
 |----|--------|------------|
 | A01 | Falso Positivo Parcial | Baixa (verificar matcher) |
-| A02 | **Confirmado e Reproduzido** | **Crítica** |
-| A03 | Confirmado por Inspeção | Média (documentar) |
+| A02 | **Confirmado e Corrigido** (`aal2` em `adminGuard` + `requireAdmin`) | **Crítica** |
+| A03 | Rebaixado: `getUser()` relê do servidor, sem janela residual | Baixa (documentar) |
 | A04/A05 | Confirmado por Inspeção | Baixa |
-| A06 | Confirmado por Inspeção | Média |
-| A07 | **Confirmado e Reproduzido** | **Alta** |
-| A08 | Dependente de Config Externa | Documentar |
+| A06 | Rejeitado com evidência (Referer fallback mantido; ver CSRF) | Informativa |
+| A07 | **Confirmado e Corrigido** (endpoint `revoke-all-sessions` + `signOut(others)` pós-senha) | **Alta** |
+| A08 | Dependente de Config Externa | Documentar (defaults HttpOnly/Lax/Secure verificados na doc; sem override — risco de quebrar `pp_embed` e chunking) |
 | A09 | Confirmado por Design | Média (ver A02) |
 | A10 | Confirmado por Inspeção | Média |
 | A11 | **Confirmado e Reproduzido** | **Alta** |

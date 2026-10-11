@@ -46,6 +46,9 @@ export async function PATCH(request: Request) {
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return NextResponse.json({ error: "password_update_failed" }, { status: 400 });
+  // A nova senha derruba as outras sessões, mas preserva a atual: quem roubou
+  // a sessão antiga perde o acesso sem deslogar o titular aqui.
+  await supabase.auth.signOut({ scope: "others" }).catch(() => undefined);
   await supabase.from("security_events").insert({ user_id: userId, event_type: "password_changed" });
   return NextResponse.json({ ok: true });
 }

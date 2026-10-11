@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -37,8 +37,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import BrandLogo from "@/components/BrandLogo";
+import { Logo } from "@/components/logo";
 import AdminSelect from "@/components/ui/custom/AdminSelect";
+import { Button } from "@/components/ui/button";
 import Dialog from "@/components/ui/Dialog";
 import { resolveAutoplayCover } from "@/lib/player/autoplay-cover";
 import { ToastSave } from "@/components/ui/toast-save";
@@ -267,8 +268,11 @@ export default function VslStudio() {
   const [autoplayActivated, setAutoplayActivated] = useState(false);
   const [restartWithSoundSignal, setRestartWithSoundSignal] = useState(0);
   const [resumePlaybackSignal, setResumePlaybackSignal] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const loadSeq = useRef(0);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string>();
@@ -287,6 +291,7 @@ export default function VslStudio() {
 
   const update = <K extends keyof StudioConfig>(key: K, value: StudioConfig[K]) => {
     dirtyConfigKeys.current.add(key);
+    setSaved(false);
     setConfig((current) => {
       const next = { ...current, [key]: value };
       // Update active preset card color if autoplay background changes
@@ -305,29 +310,30 @@ export default function VslStudio() {
     });
   };
 
-  useEffect(() => {
+  const loadConfig = useCallback(async () => {
     const id = video?.id;
-    if (!id) return;
-    let cancelled = false;
-    // Função interna: mantém o setState fora do corpo direto do efeito.
-    const run = () => {
-      setLoadError(null);
-      apiRequest<PlayerConfigResponse>(`/api/player-configs?videoId=${encodeURIComponent(id)}` as `/${string}`, { cache: "no-store" })
-        .then((payload) => {
-          if (cancelled) return;
-          if (payload.playerConfig?.id) setPlayerId(payload.playerConfig.id);
-          const saved = payload.playerConfig?.config;
-          if (saved && typeof saved === "object") setConfig({ ...initialConfig, ...saved });
-          else setConfig(initialConfig);
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setLoadError("Não foi possível carregar a configuração salva deste player.");
-        });
-    };
-    run();
-    return () => { cancelled = true; };
+    if (!id) return false;
+    const seq = ++loadSeq.current;
+    setLoadError(null);
+    try {
+      const payload = await apiRequest<PlayerConfigResponse>(`/api/player-configs?videoId=${encodeURIComponent(id)}` as `/${string}`, { cache: "no-store" });
+      if (seq !== loadSeq.current) return false;
+      if (payload.playerConfig?.id) setPlayerId(payload.playerConfig.id);
+      const savedCfg = payload.playerConfig?.config;
+      setConfig(savedCfg && typeof savedCfg === "object" ? { ...initialConfig, ...savedCfg } : initialConfig);
+      dirtyConfigKeys.current.clear();
+      setSaved(true);
+      return true;
+    } catch {
+      if (seq !== loadSeq.current) return false;
+      setLoadError("Não foi possível carregar a configuração salva deste player.");
+      return false;
+    }
   }, [video?.id]);
+
+  useEffect(() => {
+    void loadConfig();
+  }, [loadConfig]);
 
   useEffect(() => {
     const stage = previewStageRef.current;
@@ -386,7 +392,7 @@ export default function VslStudio() {
         localStorage.setItem("prisma-studio-config", JSON.stringify(config));
       }
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      dirtyConfigKeys.current.clear();
     } catch (error) {
       if (error instanceof ApiError) {
         setSaveError(playerConfigSaveErrors[error.code] ?? error.message);
@@ -398,8 +404,20 @@ export default function VslStudio() {
     }
   };
 
-  // Add Template Selection Function
-  const addAutoplayTemplate = (templateIndex: number) => {
+  // Descartar = voltar ao que está salvo no servidor, sem tocar no banco.
+  const discardConfig = async () => {
+    if (discarding) return;
+    setDiscarding(true);
+    setSaveError(null);
+    try {
+      await loadConfig();
+    } finally {
+      setDiscarding(false);
+      setDiscardOpen(false);
+    }
+  };
+
+  // Add Template Selection Function  const addAutoplayTemplate = (templateIndex: number) => {
     const templates = [
       { name: "Smart Autoplay 4", color: "#0066cc", bg: "#0066cc", text: "#ffffff", msg: "Seu vídeo já começou. Clique para ouvir.", badge: "🔴 AO VIVO" },
       { name: "Smart Autoplay 5", color: "#0066cc", bg: "#0066cc", text: "#ffffff", msg: "Clique para ouvir", badge: "🔊 ÁUDIO" },
@@ -440,7 +458,7 @@ export default function VslStudio() {
             <ArrowLeft size={16} />
           </Link>
           <div className="flex items-center gap-2">
-            <BrandLogo />
+            <Logo />
             <span className="text-xs font-bold text-[#191A23] dark:text-white">• Estúdio VSL</span>
           </div>
         </div>
@@ -452,12 +470,25 @@ export default function VslStudio() {
             </span>
           )}
           <ToastSave
-            state={saving ? "loading" : saved ? "success" : "initial"}
+            state={saving || discarding ? "loading" : saved ? "success" : "initial"}
             onSave={() => void saveConfig()}
-            onReset={() => setSaved(false)}
-            initialText={saving ? "Salvando" : "Alterações não salvas"}
+            onReset={() => setDiscardOpen(true)}
+            loadingText={discarding ? "Descartando" : "Salvando"}
+            successText="Tudo salvo"
+            initialText="Alterações não salvas"
             saveText="Salvar Player"
           />
+          <Dialog
+            open={discardOpen}
+            onClose={() => { if (!discarding) setDiscardOpen(false); }}
+            title="Descartar alterações"
+            footer={<>
+              <Button type="button" variant="outline" onClick={() => setDiscardOpen(false)} disabled={discarding}>Continuar editando</Button>
+              <Button type="button" onClick={() => void discardConfig()} disabled={discarding}>Descartar alterações</Button>
+            </>}
+          >
+            <p className="text-sm leading-6 themeable-text-ink-muted-48">As edições não salvas serão perdidas e o estúdio volta ao último estado salvo no servidor. Nada é apagado do banco.</p>
+          </Dialog>
         </div>
       </header>
 
