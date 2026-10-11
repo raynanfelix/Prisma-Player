@@ -410,19 +410,9 @@ export default function VslStudio() {
   }, []);
 
   const sources = useMemo(() => video ? [{ src: video.src, type: video.type }] : [], [video]);
-  // Fit real: mede o palco e calcula a largura para o vídeo inteiro caber sem
-  // scroll, em qualquer formato (vertical, YouTube deitado etc.). Reserva espaço
-  // para headline/CTA desativáveis; usa só flags (estáveis), nunca o tempo atual.
-  const stageFitWidth = useMemo(() => {
-    const w = previewStageSize.width, h = previewStageSize.height;
-    if (!w || !h) return undefined;
-    const reserve = 120 + (config.headlineEnabled ? 110 : 0) + (config.ctaEnabled && config.ctaPosition !== "middle" ? 120 : 0);
-    const ratio = videoSize.width / Math.max(1, videoSize.height);
-    return Math.max(200, Math.min(w, Math.floor(Math.max(220, h - reserve) * ratio)));
-  }, [previewStageSize, videoSize, config.headlineEnabled, config.ctaEnabled, config.ctaPosition]);
-  // Proporção real do arquivo (dos metadados): o preview enquadra igual ao
-  // player publicado, sem corte. Com fit calculado, sem trava fixa de altura.
-  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, ...(stageFitWidth ? { width: stageFitWidth } : { maxHeight: "75vh" }) }), [config.radius, videoSize, stageFitWidth]);
+  // Tamanho padrão: largura cheia + proporção real do arquivo (sem corte, sem
+  // encolher). Vídeo vertical fica alto e o palco rola (sem barrinha visível).
+  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}` }), [config.radius, videoSize]);
 
   const handleMetadata = (meta: { duration: number; width: number; height: number }) => {
     setDuration(meta.duration);
@@ -493,7 +483,7 @@ export default function VslStudio() {
       if (id) {
         const response = await apiRequest<PlayerConfigResponse>("/api/player-configs", {
           method: "PUT",
-          body: { videoId: id, config },
+          body: { videoId: id, config, domains: config.domainWhitelistEnabled ? config.domainWhitelist : [] },
         });
         if (response.playerConfig?.id) setPlayerId(response.playerConfig.id);
       } else {
@@ -721,7 +711,7 @@ export default function VslStudio() {
 
               {/* Smart Autoplay Overlay Preview */}
               {config.smartAutoplay && !autoplayActivated && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden bg-black/60 p-4 backdrop-blur-xs">
+                <div className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden p-4 backdrop-blur-xs" style={{ backgroundColor: `rgba(0,0,0,${Number(config.autoplayOverlayOpacity ?? 90) / 100})` }}>
                   {autoplayCover.type !== "standard" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={autoplayCover.url} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
@@ -737,7 +727,7 @@ export default function VslStudio() {
                       setRestartWithSoundSignal((prev) => prev + 1);
                     }}
                     className={`flex flex-col items-center justify-center gap-2 p-5 text-center transition-transform active:scale-95 cursor-pointer ${
-                      config.autoplayAnimation === "pulse" ? "animate-pulse" : ""
+                      config.autoplayAnimation === "pulse" ? "animate-pulse" : config.autoplayAnimation === "sound_bars" ? "studio-autoplay-sound" : config.autoplayAnimation === "cursor_click" ? "studio-autoplay-click" : config.autoplayAnimation === "play_glow" ? "studio-autoplay-glow" : ""
                     }`}
                     style={{
                       color: config.autoplayTextColor,
@@ -778,7 +768,7 @@ export default function VslStudio() {
               })()}
 
               {/* Continuar assistindo (retomada salva deste vídeo) */}
-              {resumePoint !== null && (
+              {config.resumeEnabled && resumePoint !== null && (
                 <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/75 p-5 text-center text-white backdrop-blur-sm">
                   <div>
                     <p className="mb-4 text-[16px] font-semibold">{config.resumeMessage || "Você já começou a assistir este vídeo"}</p>
@@ -1071,6 +1061,15 @@ export default function VslStudio() {
                       max={28}
                       suffix="px"
                       onChange={(v) => update("autoplayRadius", v)}
+                    />
+
+                    <Range
+                      label="Opacidade do fundo"
+                      value={config.autoplayOverlayOpacity}
+                      min={10}
+                      max={100}
+                      suffix="%"
+                      onChange={(v) => update("autoplayOverlayOpacity", v)}
                     />
                   </div>
                 </div>
