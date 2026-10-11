@@ -195,12 +195,12 @@ const defaultThumbnailPresetCards: PresetCardItem[] = [
 export type MiniHookType = "live_viewers" | "sound_indicator" | "fast_speed" | "geo" | "custom";
 
 /** Rótulos em linguagem natural + ícone + explicação de cada tipo de gancho. */
-export const HOOK_TYPE_META: Record<MiniHookType, { label: string; icon: string; hint: string }> = {
-  live_viewers: { label: "Pessoas assistindo", icon: "🔴", hint: "Mostra seu texto com o número de pessoas assistindo agora. Ideal para prova social no meio do vídeo." },
-  sound_indicator: { label: "Alerta de som", icon: "🔊", hint: "Mostra seu texto com ícone de som. Ideal para pedir que o espectador ative o áudio." },
-  fast_speed: { label: "Selo de velocidade", icon: "⚡", hint: "Mostra seu texto com selo de velocidade. Ideal para vídeos acelerados ou trechos rápidos." },
-  geo: { label: "Localização", icon: "📍", hint: "Mostra seu texto com selo de localização. Ideal para ofertas regionais ou eventos presenciais." },
-  custom: { label: "Texto livre", icon: "✏️", hint: "Mostra exatamente o texto que você escrever, sem selo automático." },
+export const HOOK_TYPE_META: Record<MiniHookType, { label: string; hint: string }> = {
+  live_viewers: { label: "Pessoas assistindo", hint: "Mostra seu texto com o número de pessoas assistindo agora. Ideal para prova social no meio do vídeo." },
+  sound_indicator: { label: "Alerta de som", hint: "Mostra seu texto com destaque de som. Ideal para pedir que o espectador ative o áudio." },
+  fast_speed: { label: "Selo de velocidade", hint: "Mostra seu texto com destaque de velocidade. Ideal para vídeos acelerados ou trechos rápidos." },
+  geo: { label: "Localização", hint: "Mostra seu texto com destaque de localização. Ideal para ofertas regionais ou eventos presenciais." },
+  custom: { label: "Texto livre", hint: "Mostra exatamente o texto que você escrever." },
 };
 
 const initialConfig: StudioConfig = {
@@ -601,7 +601,7 @@ export default function VslStudio() {
         </aside>
 
         {/* CENTER COLUMN: Live Player Preview Stage (Main Stage) */}
-        <main className="order-2 flex flex-1 flex-col overflow-hidden bg-[#f5f5f7] dark:bg-black p-4 sm:p-6">
+        <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#f5f5f7] dark:bg-black p-4 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
               <Sparkles size={14} className="text-[#B9FF66]" /> Prévia em Tempo Real
@@ -611,7 +611,9 @@ export default function VslStudio() {
             </span>
           </div>
 
-          <div ref={previewStageRef} className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
+          <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto">
+            {/* m-auto centraliza quando o conteúdo é curto e libera o scroll completo quando é alto (justify-center cortava o topo). */}
+            <div className="m-auto flex w-full flex-col items-center">
             {/* Headline Preview */}
             {config.headlineEnabled && (
               <HeadlinePreview config={config} desktopUrl={headlineDesktopUrl} mobileUrl={headlineMobileUrl} />
@@ -725,12 +727,10 @@ export default function VslStudio() {
 
               {/* Mini-Gancho Preview em tempo real (segue o currentTime do player) */}
               {config.miniHooksEnabled && currentTime >= Number(config.miniHookStart ?? 0) && currentTime < Number(config.miniHookStart ?? 0) + Number(config.miniHookDuration ?? 6) && (() => {
-                const hookMeta = HOOK_TYPE_META[config.miniHookType as MiniHookType] ?? HOOK_TYPE_META.custom;
                 const hookRemaining = Math.max(0, Math.ceil(Number(config.miniHookStart ?? 0) + Number(config.miniHookDuration ?? 6) - currentTime));
                 const hookPreviewText = String(config.miniHookText || "Continue assistindo").replace("{mm:ss}", `${Math.floor(hookRemaining / 60)}:${String(hookRemaining % 60).padStart(2, "0")}`);
                 return (
                   <div className="pointer-events-none absolute inset-x-4 top-4 z-20 mx-auto max-w-[520px] px-4 py-3 font-semibold shadow-lg backdrop-blur-md" style={{ color: String(config.miniHookTextColor ?? "#ffffff"), backgroundColor: `${String(config.miniHookBackground ?? "#111111")}e8`, fontSize: `${Number(config.miniHookSize ?? 16)}px`, borderRadius: `${Number(config.miniHookRadius ?? 10)}px`, textAlign: String(config.miniHookAlign ?? "center") as React.CSSProperties["textAlign"] }}>
-                    <span aria-hidden className="mr-1.5">{hookMeta.icon}</span>
                     {hookPreviewText}
                     {config.miniHookType === "live_viewers" && (
                       <span className="ml-1.5 font-extrabold" style={{ color: String(config.miniHookCounterColor ?? "#ff3b30") }}>
@@ -764,8 +764,8 @@ export default function VslStudio() {
               )}
             </div>
 
-            {/* CTA Button Preview */}
-            {config.ctaEnabled && (
+            {/* CTA Button Preview (obedece o mesmo horário do player publicado) */}
+            {config.ctaEnabled && currentTime >= Number(config.ctaStart ?? 0) && (Number(config.ctaEnd ?? 0) <= 0 || currentTime <= Number(config.ctaEnd ?? 0)) && (
               <div className="mt-5 text-center space-y-1.5">
                 <a
                   href={/^https?:\/\//i.test(config.ctaUrl) ? config.ctaUrl : undefined}
@@ -789,9 +789,13 @@ export default function VslStudio() {
                   {config.ctaSubtitle && (
                     <span className="text-[11px] font-normal opacity-90">{config.ctaSubtitle}</span>
                   )}
+                  {config.ctaBadges && (
+                    <span className="text-[10px] font-semibold opacity-75">{config.ctaBadges}</span>
+                  )}
                 </a>
               </div>
             )}
+            </div>
           </div>
         </main>
 
@@ -1641,7 +1645,7 @@ function renderPanel(
             onChange={(v) => u("miniHookType", v as StudioConfig["miniHookType"])}
           />
           <p className="rounded-xl border border-[#B9FF66]/40 bg-[#B9FF66]/10 p-3 text-xs font-medium leading-relaxed text-[#191A23] dark:text-[#B9FF66]">
-            {HOOK_TYPE_META[c.miniHookType as MiniHookType]?.icon} {HOOK_TYPE_META[c.miniHookType as MiniHookType]?.hint ?? "Escolha um tipo de gancho."}
+            {HOOK_TYPE_META[c.miniHookType as MiniHookType]?.hint ?? "Escolha um tipo de gancho."}
           </p>
         </div>
       </>
@@ -1738,6 +1742,8 @@ function renderPanel(
           <TextInput label="Subtítulo / Garantia abaixo do Botão" value={c.ctaSubtitle} placeholder="Ex: 🔒 Compra 100% Segura • Entrega Imediata" onChange={(v) => u("ctaSubtitle", v)} />
           <TextInput label="Selo de Segurança / Badges" value={c.ctaBadges} placeholder="Ex: 7 Dias de Garantia • Pix em 12x" onChange={(v) => u("ctaBadges", v)} />
           <TextInput label="Link de Destino" value={c.ctaUrl} onChange={(v) => u("ctaUrl", v)} />
+          <TimeRange label="Exibir botão a partir de" value={c.ctaStart} max={Math.max(1, Math.floor(c.videoDuration || 1))} onChange={(v) => u("ctaStart", v)} />
+          <TimeRange label="Ocultar botão em (0 = até o fim)" value={c.ctaEnd} max={Math.max(1, Math.floor(c.videoDuration || 1))} onChange={(v) => u("ctaEnd", v)} />
           <CheckRow label="Abrir em nova aba" checked={c.ctaNewTab} onChange={(v) => u("ctaNewTab", v)} />
           <CheckRow label="Persistir após fechar" checked={c.ctaPersist} onChange={(v) => u("ctaPersist", v)} />
           <CheckRow label="Auto-scroll ao aparecer" checked={c.ctaAutoScroll} onChange={(v) => u("ctaAutoScroll", v)} />
