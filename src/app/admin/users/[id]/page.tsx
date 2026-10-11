@@ -20,7 +20,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const { data: profile } = await admin.from("profiles").select("id,email,full_name,created_at").eq("id", id).maybeSingle();
   if (!profile) notFound();
 
-  const [subscription, access, wallet, videos, checkouts, events, ledger, logs, plans] = await Promise.all([
+  const [subscriptionRes, accessRes, walletRes, videosRes, checkoutsRes, eventsRes, ledgerRes, logsRes, plansRes] = await Promise.all([
     admin.from("subscriptions").select("status,billing_method,current_period_start,current_period_end,cancelled_at,plan:billing_plans(slug,name,amount_cents,storage_gb,included_plays,team_seats)").eq("user_id", id).maybeSingle(),
     admin.from("account_access").select("trial_status,trial_ends_at,onboarding_completed").eq("user_id", id).maybeSingle(),
     admin.from("ai_credit_wallets").select("balance,lifetime_purchased,lifetime_used").eq("user_id", id).maybeSingle(),
@@ -31,12 +31,21 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     admin.from("admin_audit_log").select("action,admin_user_id,details,created_at").eq("target_user_id", id).order("created_at", { ascending: false }).limit(20),
     admin.from("billing_plans").select("slug,name").eq("is_active", true).order("display_order"),
   ]);
+  const subscription = subscriptionRes.data;
+  const access = accessRes.data;
+  const wallet = walletRes.data;
+  const videos = videosRes.data ?? [];
+  const checkouts = checkoutsRes.data ?? [];
+  const ledger = ledgerRes.data ?? [];
+  const logs = logsRes.data ?? [];
+  const plans = plansRes.data ?? [];
+  const eventsCount = eventsRes.count ?? 0;
 
   const plan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan;
-  const storageBytes = (videos.data ?? []).reduce((sum, item) => sum + Number(item.size_bytes || 0), 0);
+  const storageBytes = videos.reduce((sum, item) => sum + Number(item.size_bytes || 0), 0);
   const storageGb = storageBytes / 1024 ** 3;
   const quotaGb = plan?.storage_gb ?? 5;
-  const adminIds = [...new Set((logs.data ?? []).map((log) => log.admin_user_id))];
+  const adminIds = [...new Set(logs.map((log) => log.admin_user_id))];
   const operators = adminIds.length ? await admin.from("profiles").select("id,email").in("id", adminIds) : { data: [] as Array<{ id: string; email: string }> };
   const operatorEmail = new Map((operators.data ?? []).map((item) => [item.id, item.email]));
   const actionLabel: Record<string, string> = { plan_change: "Troca de plano", subscription_suspend: "Suspensão", subscription_reactivate: "Reativação", trial_extend: "Trial estendido", trial_reset: "Trial resetado", credit_adjust: "Ajuste de créditos" };
@@ -46,23 +55,23 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <AdminMetric label="Assinatura" value={subscription?.status ?? "nenhuma"} detail={plan ? `${plan.name} · ${money(plan.amount_cents)}/mês` : "sem plano"} icon={CreditCard} tone={subscription?.status === "active" ? "green" : "red"} />
       <AdminMetric label="Trial" value={access?.trial_status ?? "—"} detail={access?.trial_ends_at ? `até ${new Date(access.trial_ends_at).toLocaleDateString("pt-BR")}` : "sem trial ativo"} icon={Video} />
-      <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`limite ${quotaGb} GB · ${(videos.data ?? []).length} vídeos`} icon={HardDrive} tone={storageGb > quotaGb ? "red" : "blue"} />
-      <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetime_used ?? 0).toLocaleString("pt-BR")} · eventos ${events.count ?? 0}`} icon={Wallet} />
+      <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`limite ${quotaGb} GB · ${videos.length} vídeos`} icon={HardDrive} tone={storageGb > quotaGb ? "red" : "blue"} />
+      <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetime_used ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
     </section>
 
-    <div className="mt-6"><AdminPanel title="Ações de suporte" description="Toda ação exige confirmação e motivo, e entra na trilha abaixo."><div className="max-w-xl p-5"><UserActions userId={id} email={profile.email} plans={plans.data ?? []} subStatus={subscription?.status ?? null} /></div></AdminPanel></div>
+    <div className="mt-6"><AdminPanel title="Ações de suporte" description="Toda ação exige confirmação e motivo, e entra na trilha abaixo."><div className="max-w-xl p-5"><UserActions userId={id} email={profile.email} plans={plans} subStatus={subscription?.status ?? null} /></div></AdminPanel></div>
 
     <div className="mt-6 grid gap-5 xl:grid-cols-2">
       <AdminPanel title="Assinatura e pagamentos" description="Ciclo, método e checkouts da conta."><div className="space-y-2 p-5 text-[12px]">
         <p className="themeable-text-ink">Status: {subscription?.status ? <StatusPill value={subscription.status} /> : "—"}</p>
         <p className="themeable-text-ink-muted-48">Método: {subscription?.billing_method ?? "—"} · Período: {subscription?.current_period_start ? new Date(subscription.current_period_start).toLocaleDateString("pt-BR") : "—"} → {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "—"}</p>
-        {(checkouts.data ?? []).map((checkout) => { const item = Array.isArray(checkout.plan) ? checkout.plan[0] : checkout.plan; return <div key={checkout.id} className="flex items-center justify-between gap-2 rounded-xl border p-3 themeable-border-hairline"><span className="themeable-text-ink">{item?.name ?? "?"} · {money(checkout.amount_cents)} · {checkout.checkout_type}</span><StatusPill value={checkout.status} /></div>; })}
-        {(checkouts.data ?? []).length === 0 && <p className="themeable-text-ink-muted-48">Nenhum checkout.</p>}
+        {(checkouts).map((checkout) => { const item = Array.isArray(checkout.plan) ? checkout.plan[0] : checkout.plan; return <div key={checkout.id} className="flex items-center justify-between gap-2 rounded-xl border p-3 themeable-border-hairline"><span className="themeable-text-ink">{item?.name ?? "?"} · {money(checkout.amount_cents)} · {checkout.checkout_type}</span><StatusPill value={checkout.status} /></div>; })}
+        {checkouts.length === 0 && <p className="themeable-text-ink-muted-48">Nenhum checkout.</p>}
       </div></AdminPanel>
-      <AdminPanel title="Vídeos e players" description={`${(videos.data ?? []).length} vídeos (50 recentes).`}><div className="max-h-80 space-y-2 overflow-y-auto p-5">{(videos.data ?? []).map((video) => <div key={video.id} className="flex items-center justify-between gap-2 text-[12px]"><span className="max-w-[60%] truncate font-semibold themeable-text-ink">{video.title}</span><StatusPill value={video.status} /></div>)}{(videos.data ?? []).length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhum vídeo.</p>}</div></AdminPanel>
-      <AdminPanel title="Créditos e ledger" description="Saldo e últimos 20 lançamentos."><div className="space-y-2 p-5 text-[12px]">{(ledger.data ?? []).map((entry, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="themeable-text-ink-muted-48">{entry.reason} · {new Date(entry.created_at).toLocaleDateString("pt-BR")}</span><span className={`font-bold ${entry.amount >= 0 ? "text-emerald-600" : "text-red-500"}`}>{entry.amount >= 0 ? "+" : ""}{entry.amount}</span></div>)}{(ledger.data ?? []).length === 0 && <p className="themeable-text-ink-muted-48">Sem movimentos.</p>}</div></AdminPanel>
-      <AdminPanel title="Auditoria da conta" description="Ações administrativas sobre esta conta. Somente leitura."><div className="space-y-2 p-5 text-[12px]">{(logs.data ?? []).map((log, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="font-semibold themeable-text-ink">{actionLabel[log.action] ?? log.action}</span><span className="themeable-text-ink-muted-48">{operatorEmail.get(log.admin_user_id) ?? "—"} · {new Date(log.created_at).toLocaleString("pt-BR")}</span></div>)}{(logs.data ?? []).length === 0 && <p className="themeable-text-ink-muted-48">Nenhuma ação registrada.</p>}</div></AdminPanel>
+      <AdminPanel title="Vídeos e players" description={`${videos.length} vídeos (50 recentes).`}><div className="max-h-80 space-y-2 overflow-y-auto p-5">{videos.map((video) => <div key={video.id} className="flex items-center justify-between gap-2 text-[12px]"><span className="max-w-[60%] truncate font-semibold themeable-text-ink">{video.title}</span><StatusPill value={video.status} /></div>)}{videos.length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhum vídeo.</p>}</div></AdminPanel>
+      <AdminPanel title="Créditos e ledger" description="Saldo e últimos 20 lançamentos."><div className="space-y-2 p-5 text-[12px]">{ledger.map((entry, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="themeable-text-ink-muted-48">{entry.reason} · {new Date(entry.created_at).toLocaleDateString("pt-BR")}</span><span className={`font-bold ${entry.amount >= 0 ? "text-emerald-600" : "text-red-500"}`}>{entry.amount >= 0 ? "+" : ""}{entry.amount}</span></div>)}{ledger.length === 0 && <p className="themeable-text-ink-muted-48">Sem movimentos.</p>}</div></AdminPanel>
+      <AdminPanel title="Auditoria da conta" description="Ações administrativas sobre esta conta. Somente leitura."><div className="space-y-2 p-5 text-[12px]">{logs.map((log, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="font-semibold themeable-text-ink">{actionLabel[log.action] ?? log.action}</span><span className="themeable-text-ink-muted-48">{operatorEmail.get(log.admin_user_id) ?? "—"} · {new Date(log.created_at).toLocaleString("pt-BR")}</span></div>)}{logs.length === 0 && <p className="themeable-text-ink-muted-48">Nenhuma ação registrada.</p>}</div></AdminPanel>
     </div>
-    <p className="mt-6 text-[12px] themeable-text-ink-muted-48"><Link href="/admin/users" className="font-semibold underline">← Voltar para contas</Link> · <Radio size={12} className="inline" /> {events.count ?? 0} eventos de reprodução vinculados.</p>
+    <p className="mt-6 text-[12px] themeable-text-ink-muted-48"><Link href="/admin/users" className="font-semibold underline">← Voltar para contas</Link> · <Radio size={12} className="inline" /> {eventsCount} eventos de reprodução vinculados.</p>
   </div>;
 }
