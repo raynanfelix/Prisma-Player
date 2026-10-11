@@ -80,6 +80,17 @@ export function isSubscriptionEffective(subscription: { status?: string | null; 
   return new Date(subscription.current_period_end).getTime() > Date.now();
 }
 
+/**
+ * Rótulo de verdade para telas: difere `active` vigente de linha vencida.
+ * Linha `active` com período passado/nulo exibe como vencida — foi exatamente
+ * essa divergência (admin verde x produto bloqueado) que gerou o chamado.
+ */
+export function subscriptionDisplayStatus(subscription: { status?: string | null; current_period_end?: string | null } | null): string {
+  if (!subscription?.status) return "none";
+  if (subscription.status === "active" && !isSubscriptionEffective(subscription)) return "expired";
+  return subscription.status;
+}
+
 function accessFrom(
   row: { onboarding_completed?: boolean; trial_status?: string | null; trial_ends_at?: string | null } | null,
   subscription: { status?: string | null; current_period_end?: string | null } | null,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminHeader, AdminMetric, AdminPanel, StatusPill } from "@/components/admin/AdminUi";
 import UserActions from "@/components/admin/UserActions";
+import { isSubscriptionEffective, subscriptionDisplayStatus } from "@/lib/access/service";
 import { CreditCard, HardDrive, Radio, Video, Wallet } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -53,7 +54,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   return <div>
     <AdminHeader title={profile.full_name || profile.email} description={`${profile.email} · desde ${new Date(profile.created_at).toLocaleDateString("pt-BR")} · ${id}`} />
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <AdminMetric label="Assinatura" value={subscription?.status ?? "nenhuma"} detail={plan ? `${plan.name} · ${money(plan.amount_cents)}/mês` : "sem plano"} icon={CreditCard} tone={subscription?.status === "active" ? "green" : "red"} />
+      <AdminMetric label="Assinatura" value={subscriptionDisplayStatus(subscription ?? null)} detail={plan ? `${plan.name} · ${money(plan.amount_cents)}/mês` : "sem plano"} icon={CreditCard} tone={isSubscriptionEffective(subscription ?? null) ? "green" : "red"} />
       <AdminMetric label="Trial" value={access?.trial_status ?? "—"} detail={access?.trial_ends_at ? `até ${new Date(access.trial_ends_at).toLocaleDateString("pt-BR")}` : "sem trial ativo"} icon={Video} />
       <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`limite ${quotaGb} GB · ${videos.length} vídeos`} icon={HardDrive} tone={storageGb > quotaGb ? "red" : "blue"} />
       <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetime_used ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
@@ -63,7 +64,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
     <div className="mt-6 grid gap-5 xl:grid-cols-2">
       <AdminPanel title="Assinatura e pagamentos" description="Ciclo, método e checkouts da conta."><div className="space-y-2 p-5 text-[12px]">
-        <p className="themeable-text-ink">Status: {subscription?.status ? <StatusPill value={subscription.status} /> : "—"}</p>
+        <p className="themeable-text-ink">Status: {subscription ? <StatusPill value={subscriptionDisplayStatus(subscription)} /> : "—"}</p>
         <p className="themeable-text-ink-muted-48">Método: {subscription?.billing_method ?? "—"} · Período: {subscription?.current_period_start ? new Date(subscription.current_period_start).toLocaleDateString("pt-BR") : "—"} → {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "—"}</p>
         {(checkouts).map((checkout) => { const item = Array.isArray(checkout.plan) ? checkout.plan[0] : checkout.plan; return <div key={checkout.id} className="flex items-center justify-between gap-2 rounded-xl border p-3 themeable-border-hairline"><span className="themeable-text-ink">{item?.name ?? "?"} · {money(checkout.amount_cents)} · {checkout.checkout_type}</span><StatusPill value={checkout.status} /></div>; })}
         {checkouts.length === 0 && <p className="themeable-text-ink-muted-48">Nenhum checkout.</p>}

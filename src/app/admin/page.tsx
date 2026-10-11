@@ -26,7 +26,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const prevStart = new Date(now - days * 2 * 86400000).toISOString();
 
   const admin = createAdminClient();
-  const [users, active, videos, paid, prevPaid, signups, prevSignups, wallets, webhooks, checkoutStatuses, stuck, pastDue, expiring, audit] = await Promise.all([
+  const [users, active, videos, paid, prevPaid, signups, prevSignups, wallets, webhooks, checkoutStatuses, stuck, pastDue, noPeriod, expiring, audit] = await Promise.all([
     admin.from("profiles").select("id", { count: "exact", head: true }),
     admin.from("subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
     admin.from("videos").select("id", { count: "exact", head: true }),
@@ -39,6 +39,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     admin.from("billing_checkouts").select("status").limit(5000),
     admin.from("videos").select("id,title,user_id,created_at").eq("status", "processing").lt("created_at", new Date(now - 86400000).toISOString()).order("created_at", { ascending: false }).limit(10),
     admin.from("subscriptions").select("user_id").eq("status", "past_due").limit(20),
+    admin.from("subscriptions").select("user_id", { count: "exact", head: true }).eq("status", "active").is("current_period_end", null),
     admin.from("subscriptions").select("user_id,current_period_end").eq("status", "active").lt("current_period_end", new Date(now + 7 * 86400000).toISOString()).order("current_period_end").limit(20),
     admin.from("admin_audit_log").select("action,target_user_id,admin_user_id,created_at").order("created_at", { ascending: false }).limit(10),
   ]);
@@ -68,6 +69,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const attention: Array<{ severity: "alta" | "media"; text: string; href: string }> = [];
   if (failedHooks.length > 0) attention.push({ severity: "alta", text: `${failedHooks.length} webhooks com falha entre os recentes`, href: "/admin/system" });
   if ((pastDue.data ?? []).length > 0) attention.push({ severity: "alta", text: `${pastDue.data?.length} assinaturas inadimplentes (past_due)`, href: "/admin/finance" });
+  if ((noPeriod.count ?? 0) > 0) attention.push({ severity: "alta", text: `${noPeriod.count} ativas sem período (higiene: reativar define +30d)`, href: "/admin/users" });
   if ((stuck.data ?? []).length > 0) attention.push({ severity: "media", text: `${stuck.data?.length} vídeos travados em processamento há +24h`, href: "/admin/content" });
   const expiringCount = (expiring.data ?? []).length;
   if (expiringCount > 0) attention.push({ severity: "media", text: `${expiringCount} assinaturas vencem em até 7 dias`, href: "/admin/finance" });

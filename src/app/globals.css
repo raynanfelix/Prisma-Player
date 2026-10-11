@@ -550,6 +550,50 @@ body {
 
 html { scroll-behavior: smooth; }
 
+/* Scrollbar própria em todo o app (nunca a nativa do navegador): fina,
+   temática, funcional com mouse e toque. Áreas com `.scrollbar-none` ou
+   `.hide-page-scrollbar` continuam sem barra (seletores mais específicos). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 128, 0.45) transparent;
+}
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 128, 0.45);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #B9FF66;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+/* Sem rolagem lateral na página: só áreas internas com overflow próprio rolam. */
+html, body {
+  overflow-x: clip;
+}
+@supports not (overflow: clip) {
+  html, body {
+    overflow-x: hidden;
+  }
+}
+
 .landing-page { overflow: clip; }
 .landing-hero-orb { display: none; }
 .landing-pill { display: inline-flex; align-items: center; gap: .65rem; border: 1px solid rgb(226 232 240); border-radius: 999px; background: rgba(255,255,255,.72); padding: .55rem .9rem; color: rgb(71 85 105); font-size: .75rem; font-weight: 600; box-shadow: 0 8px 30px rgba(30,64,175,.06); backdrop-filter: blur(16px); }

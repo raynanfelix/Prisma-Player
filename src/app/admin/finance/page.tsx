@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AdminHeader, AdminMetric, AdminPanel, StatusPill } from "@/components/admin/AdminUi";
+import OrphanActivateButton from "@/components/admin/OrphanActivateButton";
 import PlanToggle from "@/components/admin/PlanToggle";
+import { isSubscriptionEffective } from "@/lib/access/service";
 import { CircleDollarSign, TrendingDown, TrendingUp, Undo2, Users, Wallet } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -22,10 +24,11 @@ export default async function AdminFinancePage() {
     admin.from("profiles").select("id,created_at").order("created_at", { ascending: false }).limit(5000),
     admin.from("payment_webhook_events").select("status").in("status", ["failed", "received", "processing"]).limit(1000),
     admin.from("billing_plans").select("id,slug,name,amount_cents,is_active").order("display_order"),
-    admin.from("billing_checkouts").select("id,user_id,amount_cents,checkout_type,status,paid_at,created_at,plan:billing_plans(name)").order("created_at", { ascending: false }).limit(100),
+    admin.from("billing_checkouts").select("id,user_id,amount_cents,checkout_type,status,paid_at,created_at,plan:billing_plans(slug,name)").order("created_at", { ascending: false }).limit(100),
   ]);
+  const activeIds = new Set(active.map((item) => item.user_id));
 
-  const active = (subs.data ?? []).filter((item) => item.status === "active");
+  const active = (subs.data ?? []).filter((item) => isSubscriptionEffective({ status: item.status, current_period_end: item.current_period_end }));
   const mrr = active.reduce((sum, item) => {
     const plan = Array.isArray(item.plan) ? item.plan[0] : item.plan;
     return sum + (plan?.amount_cents ?? 0);
@@ -40,7 +43,13 @@ export default async function AdminFinancePage() {
   const arpu = active.length > 0 ? mrr / active.length : 0;
   const attention = (hooks.data ?? []).filter((item) => item.status === "failed").length;
 
-  const activeIds = new Set(active.map((item) => item.user_id));
+  // Pagos sem assinatura vigente: checkout pago e conta sem acesso = falha de
+  // entrega a corrigir com um clique (ativa +30d no plano do checkout).
+  const orphans = (recentCheckouts.data ?? []).filter((item) => item.status === "paid" && !activeIds.has(item.user_id));
+  const orphanIds = [...new Set(orphans.map((item) => item.user_id))];
+  const orphanProfiles = orphanIds.length ? await admin.from("profiles").select("id,email").in("id", orphanIds) : { data: [] as Array<{ id: string; email: string }> };
+  const orphanEmail = new Map((orphanProfiles.data ?? []).map((item) => [item.id, item.email]));
+
   const cohorts = new Map<string, { signups: number; paid: number }>();
   for (const profile of profiles.data ?? []) {
     const key = profile.created_at.slice(0, 7);
@@ -66,6 +75,9 @@ export default async function AdminFinancePage() {
     </div>
     <div className="mt-6 grid gap-5 xl:grid-cols-2">
       <AdminPanel title="Coortes mensais" description="Cadastros por mês e quantos seguem pagando hoje."><div className="overflow-x-auto"><table className="w-full min-w-[480px] text-left text-[12px]"><thead className="themeable-bg-surface-pearl themeable-text-ink-muted-48"><tr><th className="px-5 py-3 font-medium">Mês</th><th className="px-5 py-3 font-medium">Cadastros</th><th className="px-5 py-3 font-medium">Pagando hoje</th><th className="px-5 py-3 font-medium">Retenção paga</th></tr></thead><tbody>{[...cohorts.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 12).map(([month, row]) => <tr key={month} className="border-t themeable-border-hairline"><td className="px-5 py-3 font-semibold themeable-text-ink">{month}</td><td className="px-5 py-3 themeable-text-ink">{row.signups}</td><td className="px-5 py-3 themeable-text-ink">{row.paid}</td><td className="px-5 py-3 themeable-text-ink">{row.signups ? `${((row.paid / row.signups) * 100).toFixed(1)}%` : "—"}</td></tr>)}</tbody></table></div></AdminPanel>
+      <AdminPanel title={`Pagos sem assinatura (${orphans.length})`} description="Pagou e não está ativo: ative com um clique no plano do checkout."><div className="max-h-96 space-y-2 overflow-y-auto p-5">{orphans.map((checkout) => { const plan = Array.isArray(checkout.plan) ? checkout.plan[0] : checkout.plan; return <div key={checkout.id} className="flex items-center justify-between gap-2 text-[12px]"><Link href={`/admin/users/${checkout.user_id}`} className="truncate font-semibold themeable-text-ink hover:underline">{orphanEmail.get(checkout.user_id) ?? checkout.user_id.slice(0, 8)} · {plan?.name ?? "?"} · {money(checkout.amount_cents)}</Link>{plan?.slug ? <OrphanActivateButton userId={checkout.user_id} email={orphanEmail.get(checkout.user_id) ?? checkout.user_id} planSlug={plan.slug} planName={plan.name ?? plan.slug} /> : <StatusPill value={checkout.status} />}</div>; })}{orphans.length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhuma divergência: todo pago tem assinatura vigente.</p>}</div></AdminPanel>
+    </div>
+    <div className="mt-6 grid gap-5 xl:grid-cols-2">
       <AdminPanel title="Conciliação" description="Pagos precisam ter evento processado; atenção lista falhas abertas."><div className="space-y-3 p-5"><div className="rounded-[14px] border p-4 themeable-border-hairline"><p className="text-[13px] font-semibold themeable-text-ink">Pagos (30d): {money(paidCents)}</p><p className="mt-1 text-[11px] themeable-text-ink-muted-48">Confira contra o extrato da AbacatePay antes de fechar o mês.</p></div><div className="rounded-[14px] border p-4 themeable-border-hairline"><p className="text-[13px] font-semibold themeable-text-ink">Webhooks com falha: {attention}</p><p className="mt-1 text-[11px] themeable-text-ink-muted-48">Detalhes em Saúde do sistema.</p></div><StatusPill value={attention ? "attention" : "paid"} /></div></AdminPanel>
     </div>
   </div>;

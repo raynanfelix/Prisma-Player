@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSubscriptionEffective } from "@/lib/access/service";
+import { isSubscriptionEffective, subscriptionDisplayStatus } from "@/lib/access/service";
 
 const future = new Date(Date.now() + 86400000).toISOString();
 const past = new Date(Date.now() - 86400000).toISOString();
@@ -26,5 +26,13 @@ describe("ciclo de vida do plano", () => {
 
   it("linha inexistente não dá acesso", () => {
     expect(isSubscriptionEffective(null)).toBe(false);
+  });
+
+  it("rótulo de tela difere vigente de vencido", () => {
+    expect(subscriptionDisplayStatus({ status: "active", current_period_end: future })).toBe("active");
+    expect(subscriptionDisplayStatus({ status: "active", current_period_end: past })).toBe("expired");
+    expect(subscriptionDisplayStatus({ status: "active", current_period_end: null })).toBe("expired");
+    expect(subscriptionDisplayStatus({ status: "cancelled", current_period_end: future })).toBe("cancelled");
+    expect(subscriptionDisplayStatus(null)).toBe("none");
   });
 });

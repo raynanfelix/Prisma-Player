@@ -89,7 +89,7 @@ export default function AdminShell({ email, children }: { email: string; childre
   return (
     <div className="min-h-dvh themeable-bg-canvas-parchment themeable-text-ink">
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-selected focus:px-3 focus:py-2 focus:text-selected-foreground">Pular para o conteúdo</a>
-      <aside className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r bg-white themeable-border-hairline dark:bg-sidebar md:flex ${collapsed ? "w-16" : "w-[248px]"}`} aria-label="Navegação administrativa">
+      <aside className={`fixed inset-y-0 left-0 z-40 hidden flex-col overflow-x-hidden border-r bg-white themeable-border-hairline dark:bg-sidebar md:flex ${collapsed ? "w-16" : "w-[248px]"}`} aria-label="Navegação administrativa">
         <div className={`flex h-16 items-center border-b themeable-border-hairline ${collapsed ? "justify-center px-2" : "justify-between px-4"}`}>
           {collapsed ? <Link href="/admin" title="Prisma Player" aria-label="Visão geral"><Logo /></Link> : <Link href="/admin" aria-label="Prisma Player — Administração"><Logo /></Link>}
           {!collapsed && (
