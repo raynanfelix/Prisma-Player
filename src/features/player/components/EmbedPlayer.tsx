@@ -417,11 +417,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
             className="absolute z-50 w-max max-w-[280px] -translate-x-1/2 -translate-y-[115%] rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-center shadow-2xl backdrop-blur-xl transition-transform hover:scale-105"
             style={{ left: promoSpot.x, top: promoSpot.y, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
           >
-            <span className="flex items-center justify-center gap-1.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#B9FF66]">
-              <span aria-hidden className="inline-block size-1.5 rounded-full bg-[#B9FF66]" />
-              Prisma Player
-            </span>
-            <span className="mt-1 block text-[13px] font-bold leading-snug text-white">
+            <span className="block text-[13px] font-bold leading-snug text-white">
               Hospede sua VSL e aumente suas vendas
             </span>
           </a>

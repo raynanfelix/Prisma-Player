@@ -333,17 +333,17 @@ export default function VideosPage() {
                       </span>
                     </div>
                     <div className="flex justify-end gap-1 border-t border-slate-100 dark:border-zinc-800 pt-3 md:border-0 md:pt-0">
-                      <button disabled={item.status !== "ready"} onClick={() => router.push(`/dashboard/analytics/${item.id}`)} title="Analytics" aria-label="Ver Analytics" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white disabled:opacity-30">
+                      <button disabled={item.status !== "ready"} onClick={() => router.push(`/dashboard/analytics/${item.id}`)} title="Analytics" aria-label="Ver Analytics" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66] hover:text-[#191A23] dark:hover:bg-[#B9FF66] dark:hover:text-[#191A23] disabled:opacity-30 disabled:hover:bg-transparent">
                         <BarChart3 size={16} />
                       </button>
-                      <button disabled={item.status !== "ready"} onClick={() => void copyEmbed(item)} title="Copiar embed" aria-label="Copiar código embed" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white disabled:opacity-30">
+                      <button disabled={item.status !== "ready"} onClick={() => void copyEmbed(item)} title="Copiar embed" aria-label="Copiar código embed" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66] hover:text-[#191A23] dark:hover:bg-[#B9FF66] dark:hover:text-[#191A23] disabled:opacity-30 disabled:hover:bg-transparent">
                         <Code2 size={16} />
                       </button>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
-                            <button disabled={item.status === "processing"} aria-label="Mais ações" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white disabled:opacity-30"><MoreHorizontal size={17} /></button>
+                            <button disabled={item.status === "processing"} aria-label="Mais ações" className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 dark:text-zinc-400 hover:bg-[#B9FF66] hover:text-[#191A23] dark:hover:bg-[#B9FF66] dark:hover:text-[#191A23] disabled:opacity-30 disabled:hover:bg-transparent"><MoreHorizontal size={17} /></button>
                           }
                         />
                         <DropdownMenuContent align="end" className="w-[230px] border border-slate-200 bg-white rounded-xl p-1.5 dark:border-zinc-800 dark:bg-card">
@@ -356,7 +356,7 @@ export default function VideosPage() {
                             { label: "Mover para pasta", icon: Folder, action: () => startManage(item, "move") },
                             { label: "Duplicar", icon: Copy, action: () => void duplicateVideo(item) },
                           ].map((actionItem) => (
-                            <DropdownMenuItem key={actionItem.label} onClick={actionItem.action} className="flex items-center gap-2.5 rounded-lg cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white dark:text-zinc-200 dark:focus:bg-[#B9FF66]/10 dark:focus:text-white">
+                            <DropdownMenuItem key={actionItem.label} onClick={actionItem.action} className="flex items-center gap-2.5 rounded-lg cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-[#B9FF66] hover:text-[#191A23] focus:bg-[#B9FF66] focus:text-[#191A23] dark:text-zinc-200 dark:hover:bg-[#B9FF66] dark:hover:text-[#191A23] dark:focus:bg-[#B9FF66] dark:focus:text-[#191A23]">
                               <actionItem.icon size={15} />
                               <span>{actionItem.label}</span>
                             </DropdownMenuItem>

@@ -731,7 +731,7 @@ export default function VslStudio() {
                     <Switch checked={config.smartAutoplay} onChange={(v) => update("smartAutoplay", v)} />
                   </div>
 
-                  <button type="button" onClick={() => setLearnModule("autoplay")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+                  <button type="button" onClick={() => setLearnModule("autoplay")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
                     <Info size={13} /> Aprenda sobre Smart Autoplay™
                   </button>
 
@@ -795,7 +795,7 @@ export default function VslStudio() {
                   <button
                     type="button"
                     onClick={() => setTemplateModalOpen(true)}
-                    className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs"
+                    className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#191A23] dark:text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs"
                   >
                     + Adicionar outro Autoplay
                   </button>
@@ -1005,7 +1005,7 @@ export default function VslStudio() {
                     <Switch checked={config.turboEnabled} onChange={(v) => update("turboEnabled", v)} />
                   </div>
 
-                  <button type="button" onClick={() => setLearnModule("turbo")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+                  <button type="button" onClick={() => setLearnModule("turbo")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
                     <Info size={13} /> Aprenda sobre Turbo
                   </button>
 
@@ -1171,7 +1171,7 @@ function ProtectionPanel({ config: c, update: u }: { config: StudioConfig; updat
               className={`pb-2.5 px-3 border-b-2 transition-all cursor-pointer ${
                 isActive
                   ? "border-[#B9FF66] text-[#191A23] dark:text-[#B9FF66] font-extrabold"
-                  : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-[#B9FF66]"
+                  : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-[#191A23] dark:hover:text-[#B9FF66]"
               }`}
             >
               {tab.label}
@@ -1436,7 +1436,7 @@ function renderPanel(
       <>
         <p className="panel-help">Crie vários mini-ganchos para aparecerem em diferentes momentos do vídeo, igual ao Smart Autoplay.</p>
         <Switch checked={c.miniHooksEnabled} onChange={(v) => u("miniHooksEnabled", v)} />
-        <button type="button" onClick={() => extras?.setLearnModule("hooks")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+        <button type="button" onClick={() => extras?.setLearnModule("hooks")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
           <Info size={13} /> Aprenda sobre Mini-ganchos
         </button>
         <div className="space-y-2.5 pt-1">
@@ -1497,7 +1497,7 @@ function renderPanel(
           setHookPresets?.([...(hookPresets ?? []), newHook]);
           setActiveHookIndex?.((hookPresets ?? []).length);
           applyHook(newHook.data);
-        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
+        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#191A23] dark:text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
           + Adicionar outro Mini-gancho
         </button>
         <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">
@@ -1540,7 +1540,7 @@ function renderPanel(
       <>
         <p className="panel-help">Crie vários botões de ação (CTAs) com diferentes textos, links e estilos. Selecione qual usar no momento da publicação.</p>
         <Switch checked={c.ctaEnabled} onChange={(v) => u("ctaEnabled", v)} />
-        <button type="button" onClick={() => extras?.setLearnModule("actions")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+        <button type="button" onClick={() => extras?.setLearnModule("actions")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
           <Info size={13} /> Aprenda sobre Botões de Ação
         </button>
         <div className="space-y-2.5 pt-1">
@@ -1602,7 +1602,7 @@ function renderPanel(
           setCtaPresets?.([...(ctaPresets ?? []), newCta]);
           setActiveCtaIndex?.((ctaPresets ?? []).length);
           applyCta(newCta.data);
-        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
+        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#191A23] dark:text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
           + Adicionar outro Botão de Ação
         </button>
         <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">
@@ -1637,7 +1637,7 @@ function renderPanel(
       <>
         <p className="panel-help">Configure thumbnails diferentes para: inicial (antes do play), pausa (quando o usuário pausa) e final (quando o vídeo termina). O ThumbSniper troca automaticamente a capa baseada no estado do player.</p>
         <Switch checked={c.thumbnailEnabled} onChange={(v) => u("thumbnailEnabled", v)} />
-        <button type="button" onClick={() => extras?.setLearnModule("thumbnail")} className="text-xs font-semibold text-[#B9FF66] hover:underline flex items-center gap-1">
+        <button type="button" onClick={() => extras?.setLearnModule("thumbnail")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
           <Info size={13} /> Aprenda sobre ThumbSniper
         </button>
         <div className="space-y-2.5 pt-1">
@@ -1698,7 +1698,7 @@ function renderPanel(
           setThumbnailPresets?.([...(thumbnailPresets ?? []), newThumb]);
           setActiveThumbnailIndex?.((thumbnailPresets ?? []).length);
           applyThumb(newThumb.data);
-        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
+        }} className="flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-card text-xs font-bold text-[#191A23] dark:text-[#B9FF66] hover:bg-[#B9FF66]/10 hover:text-[#191A23] dark:hover:text-white cursor-pointer shadow-xs">
           + Adicionar Thumbnail Set
         </button>
         <div className="border-t border-slate-200 dark:border-zinc-800 pt-4 space-y-4">

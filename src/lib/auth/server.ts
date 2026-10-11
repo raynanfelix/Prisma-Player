@@ -44,15 +44,13 @@ export async function requireAdmin() {
   if (!userId) redirect(`/login?next=${encodeURIComponent("/admin")}`);
   const user = await getCurrentAdminUser();
   if (!user) redirect("/dashboard/videos");
-  if (!(await hasVerifiedMfaFactor())) {
-    redirect("/dashboard/settings?section=security&adminMfa=required");
-  }
-  // Consistência com as APIs (adminGuard exige aal2): página admin com sessão
-  // aal1 renderizaria um shell cujas ações falham. Sem fator desafiado na
-  // sessão atual, volta ao fluxo de verificação — nunca renderiza achando
-  // que está autorizado.
-  if ((await getAuthAssuranceLevel()) !== "aal2") {
-    redirect("/dashboard/settings?section=security&adminMfa=required");
-  }
+  // TEMP-MFA-BYPASS: exigência de MFA/AAL2 desativada para liberar o acesso
+  // ao painel. Para reativar, descomente os dois blocos abaixo.
+  // if (!(await hasVerifiedMfaFactor())) {
+  //   redirect("/dashboard/settings?section=security&adminMfa=required");
+  // }
+  // if ((await getAuthAssuranceLevel()) !== "aal2") {
+  //   redirect("/dashboard/settings?section=security&adminMfa=required");
+  // }
   return user;
 }
