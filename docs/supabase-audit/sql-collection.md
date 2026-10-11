@@ -67,8 +67,21 @@ order by 1;
 Se faltar algum UNIQUE: aplicar a migration correspondente (não inventar
 constraint na mão — a definição canônica está em `supabase/migrations/`).
 
-## Q5. Índices não usados (moderada, fora do pico)
+## Q6. Pós-migration 20261013 (leve)
 ```sql
+-- rollup populando? (esperado: linhas dos últimos dias após o cron)
+select count(*), min(day), max(day) from public.video_daily_stats;
+-- kinds de inbox aceitos (esperado: inclui tip, alert)
+select conname, pg_get_constraintdef(oid) from pg_constraint
+where conrelid = 'public.user_inbox'::regclass and contype = 'c';
+-- trava anti-duplicata do welcome
+select indexname from pg_indexes where tablename = 'user_inbox' and indexname = 'user_inbox_welcome_uidx';
+-- GRANT da função de teams (esperado: authenticated com EXECUTE)
+select grantee, privilege_type from information_schema.routine_privileges
+where routine_schema = 'private' and routine_name = 'is_account_team_member';
+```
+
+## Q5. Índices não usados (moderada, fora do pico)```sql
 select relname as tabela, indexrelname as indice, idx_scan as usos
 from pg_stat_user_indexes where schemaname='public' and idx_scan < 50
 order by pg_relation_size(indexrelid) desc limit 30;

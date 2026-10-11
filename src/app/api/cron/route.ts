@@ -69,6 +69,31 @@ export async function GET(request: Request) {
   const expired = await admin.from("subscriptions").update({ status: "expired", updated_at: now.toISOString() }).eq("status", "active").lt("current_period_end", now.toISOString());
   if (expired.error) result.errors.push(`subscriptions_expiry: ${expired.error.message}`);
 
+  // Rollup diário (insert-only, idempotente): alimenta video_daily_stats com
+  // os últimos 7 dias. Purges destrutivos SÓ com env explícita; sem env,
+  // nada é apagado.
+  const rollup = await admin.rpc("rollup_video_daily_stats", { p_days_back: 7 });
+  if (rollup.error) result.errors.push(`daily_rollup: ${rollup.error.message}`);
+  const retentionEnv = (name: string) => {
+    const value = Number(process.env[name]);
+    return Number.isInteger(value) && value > 0 ? value : 0;
+  };
+  const retentionJobs: Array<[string, string, number]> = [
+    ["video_events", "purge_old_video_events", retentionEnv("VIDEO_EVENTS_RETENTION_DAYS")],
+    ["player_events", "purge_old_player_events", retentionEnv("PLAYER_EVENTS_RETENTION_DAYS")],
+    ["security_events", "purge_old_security_events", retentionEnv("SECURITY_EVENTS_RETENTION_DAYS")],
+    ["webhook_payloads", "scrub_old_webhook_payloads", retentionEnv("WEBHOOK_PAYLOAD_RETENTION_DAYS")],
+  ];
+  for (const [label, fn, days] of retentionJobs) {
+    if (!days) continue;
+    const purged = await admin.rpc(fn, { p_days: days });
+    if (purged.error) result.errors.push(`${label}_retention: ${purged.error.message}`);
+  }
+
+  // Convites vencidos saem de pending: higiene idempotente, sem cron próprio.
+  const swept = await admin.from("account_team_invites").update({ status: "expired", updated_at: now.toISOString() }).eq("status", "pending").lt("expires_at", now.toISOString());
+  if (swept.error) result.errors.push(`invites_sweep: ${swept.error.message}`);
+
   const { data: configs, error } = await admin.from("intelligence_controls").select("user_id,automatic_reports_enabled,report_frequency,report_email,last_report_sent_at,conversion_alerts_enabled,conversion_drop_threshold,alert_webhook_enabled,alert_webhook_url").or("automatic_reports_enabled.eq.true,conversion_alerts_enabled.eq.true");
   if (error) return NextResponse.json({ error: "controls_unavailable" }, { status: 503 });
 

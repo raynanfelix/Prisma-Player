@@ -1,8 +1,10 @@
 # Recomendações priorizadas (Equipe F; nada implementado nesta fase)
 
 ## P0 — provar tamanho antes, mas desenhar agora
-- **P0-1 `video_events` sem retenção/partição.** Evidência: upsert por view
-  (`analytics-events:166`), zero `PARTITION BY`/TTL (`inventory.md`).
+- **P0-1 `video_events` sem retenção/partição.** → ENTREGUE em
+  `20261013000000` (`video_daily_stats` + `rollup_video_daily_stats`,
+  cron chama todo dia) + `purge_old_video_events` env-gated. Falta: rodar
+  a migration + validar totais rollup vs cru (Q6).
   Proposta: retenção 12–24m + rollup diário por vídeo (`video_daily_stats`
   via cron) + RANGE mensal quando >50M linhas. Benefício: trava crescimento
   infinito. Risco: médio (muda queries de analytics). Esforço: alto.
