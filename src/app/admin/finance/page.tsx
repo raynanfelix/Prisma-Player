@@ -26,9 +26,9 @@ export default async function AdminFinancePage() {
     admin.from("billing_plans").select("id,slug,name,amount_cents,is_active").order("display_order"),
     admin.from("billing_checkouts").select("id,user_id,amount_cents,checkout_type,status,paid_at,created_at,plan:billing_plans(slug,name)").order("created_at", { ascending: false }).limit(100),
   ]);
-  const activeIds = new Set(active.map((item) => item.user_id));
 
   const active = (subs.data ?? []).filter((item) => isSubscriptionEffective({ status: item.status, current_period_end: item.current_period_end }));
+  const activeIds = new Set(active.map((item) => item.user_id));
   const mrr = active.reduce((sum, item) => {
     const plan = Array.isArray(item.plan) ? item.plan[0] : item.plan;
     return sum + (plan?.amount_cents ?? 0);
