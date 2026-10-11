@@ -392,7 +392,9 @@ export default function VslStudio() {
   }, []);
 
   const sources = useMemo(() => video ? [{ src: video.src, type: video.type }] : [], [video]);
-  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px` }), [config.radius]);
+  // Proporção real do arquivo (dos metadados): o preview enquadra igual ao
+  // player publicado, sem corte. Trava a altura para caber na tela.
+  const playerStyle = useMemo(() => ({ borderRadius: `${config.radius}px`, aspectRatio: `${videoSize.width} / ${videoSize.height}`, maxHeight: "75vh" }), [config.radius, videoSize]);
 
   const handleMetadata = (meta: { duration: number; width: number; height: number }) => {
     setDuration(meta.duration);
@@ -568,11 +570,11 @@ export default function VslStudio() {
       {/* Main 3-Column Studio Workspace: Left Sidebar (Modules), Center Canvas (Video), Right Sidebar (Customization & Presets) */}
       <div className="grid flex-1 min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[240px_minmax(0,1fr)_380px]">
         {/* LEFT COLUMN: Modules Selection Drawer */}
-        <aside className="order-1 flex flex-col border-r border-black/10 bg-[#fafafa] dark:border-white/10 dark:bg-card">
+        <aside className="order-1 flex min-h-0 min-w-0 flex-col border-r border-black/10 bg-[#fafafa] dark:border-white/10 dark:bg-card">
           <div className="p-3.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 border-b border-black/5 dark:border-white/5">
             Módulos do Player
           </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-1">
             {modules.map((item) => {
               const isSelected = active === item.id;
               const IconComp = item.icon;
@@ -611,7 +613,7 @@ export default function VslStudio() {
             </span>
           </div>
 
-          <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto">
+          <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto overscroll-contain">
             {/* m-auto centraliza quando o conteúdo é curto e libera o scroll completo quando é alto (justify-center cortava o topo). */}
             <div className="m-auto flex w-full flex-col items-center">
             {/* Headline Preview */}
@@ -801,7 +803,7 @@ export default function VslStudio() {
 
         {/* RIGHT COLUMN: Customization Panel & Preset Manager Cards WITH FULL EDITABLE CONTROLS BELOW */}
         {active && (
-          <aside className="order-3 flex min-h-0 min-w-0 flex-col border-l border-black/10 bg-white dark:border-white/10 dark:bg-card overflow-y-auto">
+          <aside className="order-3 flex min-h-0 min-w-0 flex-col border-l border-black/10 bg-white dark:border-white/10 dark:bg-card overflow-y-auto overscroll-contain">
             <div className="p-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center gap-2">
                 {modules.find((m) => m.id === active)?.label}

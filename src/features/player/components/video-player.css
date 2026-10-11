@@ -15,7 +15,7 @@
   height: 100%;
   max-height: none;
   background: transparent;
-  object-fit: cover;
+  object-fit: contain;
   border: 0 !important;
   border-radius: 0 !important;
   outline: 0 !important;
@@ -37,7 +37,7 @@
   height: 100%;
   max-height: none;
   background: transparent;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .prisma-video-player.prisma-player--embed {
