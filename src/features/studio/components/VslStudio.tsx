@@ -44,6 +44,8 @@ import { resolveAutoplayCover } from "@/lib/player/autoplay-cover";
 import { hookLiveViewersCount } from "@/lib/player/mini-hooks";
 import { ToastSave } from "@/components/ui/toast-save";
 import { VideoPlayer } from "@/features/player/components";
+import AutoplayOverlay from "@/features/player/components/AutoplayOverlay";
+import HeadlineBlock from "@/features/player/components/HeadlineBlock";
 import { apiRequest, ApiError } from "@/services/http/client";
 import PixelTrackingPanel, { type PixelTrackingFields } from "./PixelTrackingPanel";
 import LearnModal, { type LearnModuleId } from "./LearnModal";
@@ -641,9 +643,20 @@ export default function VslStudio() {
           <div ref={previewStageRef} className="flex-1 flex flex-col items-center overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* m-auto centraliza quando o conteúdo é curto e libera o scroll completo quando é alto (justify-center cortava o topo). */}
             <div className="m-auto flex w-full flex-col items-center">
-            {/* Headline Preview (obedece horário configurado) */}
+            {/* Headline Preview (obedece horário configurado; mesmo componente do publicado) */}
             {config.headlineEnabled && currentTime >= Number(config.headlineStart ?? 0) && (Number(config.headlineDuration ?? 0) <= 0 || currentTime <= Number(config.headlineStart ?? 0) + Number(config.headlineDuration ?? 0)) && (
-              <HeadlinePreview config={config} desktopUrl={headlineDesktopUrl} mobileUrl={headlineMobileUrl} />
+              <HeadlineBlock
+                tagBadge={config.headlineTagBadge}
+                headline={config.headline || "Digite sua headline"}
+                color={config.headlineColor}
+                background={config.headlineBackground}
+                fontSize={config.headlineSize}
+                align={config.headlineAlign}
+                playerRadius={config.radius}
+                format={config.headlineFormat}
+                desktopUrl={headlineDesktopUrl}
+                mobileUrl={headlineMobileUrl}
+              />
             )}
 
             {/* Video Canvas Container */}
@@ -710,46 +723,23 @@ export default function VslStudio() {
                 </div>
               )}
 
-              {/* Smart Autoplay Overlay Preview */}
+              {/* Smart Autoplay Overlay Preview (mesmo componente do player publicado) */}
               {config.smartAutoplay && !autoplayActivated && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden p-4 backdrop-blur-xs" style={{ backgroundColor: `rgba(0,0,0,${Number(config.autoplayOverlayOpacity ?? 90) / 100})` }}>
-                  {autoplayCover.type !== "standard" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={autoplayCover.url} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                  ) : posterUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={posterUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStartTime(0);
-                      setAutoplayActivated(true);
-                      setRestartWithSoundSignal((prev) => prev + 1);
-                    }}
-                    className={`flex flex-col items-center justify-center gap-2 p-5 text-center transition-transform active:scale-95 cursor-pointer ${
-                      config.autoplayAnimation === "pulse" ? "animate-pulse" : config.autoplayAnimation === "sound_bars" ? "studio-autoplay-sound" : config.autoplayAnimation === "cursor_click" ? "studio-autoplay-click" : config.autoplayAnimation === "play_glow" ? "studio-autoplay-glow" : ""
-                    }`}
-                    style={{
-                      color: config.autoplayTextColor,
-                      backgroundColor: config.autoplayBackground,
-                      borderRadius: `${config.autoplayRadius}px`,
-                      boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-                    }}
-                  >
-                    {config.autoplayTagBadge && (
-                      <span className="rounded-full bg-black/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
-                        {config.autoplayTagBadge}
-                      </span>
-                    )}
-                    <span className="text-sm font-extrabold tracking-tight">
-                      {config.autoplayMessage}
-                    </span>
-                    <span className="text-[11px] opacity-80 flex items-center gap-1 font-semibold">
-                      <Volume2 size={13} /> toque para ativar o áudio
-                    </span>
-                  </button>
-                </div>
+                <AutoplayOverlay
+                  message={config.autoplayMessage}
+                  textColor={config.autoplayTextColor}
+                  background={config.autoplayBackground}
+                  radius={config.autoplayRadius}
+                  tagBadge={config.autoplayTagBadge}
+                  coverUrl={autoplayCover.type !== "standard" ? autoplayCover.url : posterUrl ?? null}
+                  overlayOpacity={config.autoplayOverlayOpacity}
+                  animClass={config.autoplayAnimation === "pulse" ? "animate-pulse" : config.autoplayAnimation === "sound_bars" ? "studio-autoplay-sound" : config.autoplayAnimation === "cursor_click" ? "studio-autoplay-click" : config.autoplayAnimation === "play_glow" ? "studio-autoplay-glow" : ""}
+                  onActivate={() => {
+                    setStartTime(0);
+                    setAutoplayActivated(true);
+                    setRestartWithSoundSignal((prev) => prev + 1);
+                  }}
+                />
               )}
 
               {/* Mini-Gancho Preview em tempo real (segue o currentTime do player) */}
@@ -1982,24 +1972,6 @@ function renderPanel(
 }
 
 function PanelTitle({ children }: { children: React.ReactNode }) { return <h3 className="border-t border-black/10 dark:border-white/10 pt-5 text-[15px] font-semibold">{children}</h3>; }
-
-function HeadlinePreview({ config, desktopUrl, mobileUrl }: { config: StudioConfig; desktopUrl?: string; mobileUrl?: string }) {
-  if (config.headlineFormat === "image" && (desktopUrl || mobileUrl)) {
-    return <picture className="mx-auto mb-3 block max-h-[112px] max-w-2xl shrink-0 overflow-hidden"><source media="(max-width: 767px)" srcSet={mobileUrl || desktopUrl} /><img src={desktopUrl || mobileUrl} alt="Prévia da headline" className="block h-full max-h-[112px] w-full object-contain" /></picture>;
-  }
-  return (
-    <div className="mb-4 flex flex-col items-center justify-center text-center space-y-1">
-      {config.headlineTagBadge && (
-        <span className="rounded-full bg-[#191A23] px-3 py-0.5 text-[10px] font-extrabold text-[#B9FF66] border border-[#B9FF66]">
-          {config.headlineTagBadge}
-        </span>
-      )}
-      <h2 className="mx-auto w-fit max-w-2xl px-4 py-2 font-extrabold leading-tight tracking-tight" style={{ color: config.headlineColor, backgroundColor: config.headlineBackground, fontSize: `${Math.min(config.headlineSize, 32)}px`, textAlign: config.headlineAlign, borderRadius: `${Math.min(config.radius, 16)}px` }}>
-        {config.headline || "Digite sua headline"}
-      </h2>
-    </div>
-  );
-}
 
 function Switch({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) { return <button type="button" onClick={() => onChange(!checked)} className={`ml-auto h-6 w-11 rounded-full p-1 cursor-pointer ${checked ? "bg-[#B9FF66]" : "bg-slate-300 dark:bg-zinc-700"}`}><span className={`block h-4 w-4 rounded-full bg-[#191A23] transition-transform ${checked ? "translate-x-5" : ""}`} /></button>; }
 function ControlIcon({ label }: { label: string }) {

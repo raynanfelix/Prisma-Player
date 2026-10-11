@@ -10,6 +10,7 @@ const analyticsKey='prisma-player:analytics-context:'+PLAYER_ID;
 const consentKey='prisma-player:advertising-consent:v1';
 const consentConfigKey='prisma-player:consent-config:'+PLAYER_ID;
 const frames=[];
+try{const preconnect=document.createElement('link');preconnect.rel='preconnect';preconnect.href=loaderOrigin;(document.head||document.documentElement).appendChild(preconnect)}catch{}
 const eventNames={
   meta:{impression:'ViewContent',play:'PrismaVideoPlay',progress:'PrismaVideoProgress',complete:'PrismaVideoComplete',cta_click:'Lead',conversion:'Purchase'},
   google:{impression:'view_item',play:'video_start',progress:'video_progress',complete:'video_complete',cta_click:'generate_lead',conversion:'purchase'},
@@ -59,7 +60,7 @@ addEventListener('message',event=>{
 },false);
 for(const root of [...document.querySelectorAll('[data-prisma-player="'+PLAYER_ID+'"]')].filter(element=>!element.dataset.prismaMounted)){
   root.dataset.prismaMounted='true';root.style.background='transparent';root.style.border='0';root.style.boxShadow='none';root.style.overflow='hidden';root.style.lineHeight='0';
-  const mobile=root.dataset.mobilePlayer;const selected=mobile&&matchMedia('(max-width: 767px)').matches?mobile:PLAYER_ID;const mode=root.dataset.mode==='ab'?'/embed/ab/':'/embed/';const frame=document.createElement('iframe');frame.src=loaderOrigin+mode+selected;frame.title=root.dataset.title||'Prisma Player';frame.loading=root.dataset.loading||'lazy';frame.allow='autoplay; fullscreen; picture-in-picture';frame.allowFullscreen=true;frame.scrolling='no';frame.referrerPolicy='strict-origin-when-cross-origin';frame.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0;display:block;overflow:hidden;background:transparent;color-scheme:normal';frames.push({root,frame,playerId:selected});root.replaceChildren(frame);
+  const mobile=root.dataset.mobilePlayer;const selected=mobile&&matchMedia('(max-width: 767px)').matches?mobile:PLAYER_ID;const mode=root.dataset.mode==='ab'?'/embed/ab/':'/embed/';const frame=document.createElement('iframe');frame.src=loaderOrigin+mode+selected;frame.title=root.dataset.title||'Prisma Player';frame.loading=root.dataset.loading||'lazy';try{frame.fetchPriority='high'}catch{}frame.allow='autoplay; fullscreen; picture-in-picture';frame.allowFullscreen=true;frame.scrolling='no';frame.referrerPolicy='strict-origin-when-cross-origin';frame.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0;display:block;overflow:hidden;background:transparent;color-scheme:normal';frames.push({root,frame,playerId:selected});root.replaceChildren(frame);
 }
 const previous=window.PrismaPlayer&&typeof window.PrismaPlayer==='object'?window.PrismaPlayer:{};
 window.PrismaPlayer={...previous,getConsent(){return readConsent()},setConsent(input={}){const granted=input===true||input?.advertising===true;return setConsent(granted)},resetConsent(){try{localStorage.removeItem(consentKey)}catch{}pendingProviderEvents=[];removeConsentBanner();return null},trackConversion(input={}){
@@ -79,7 +80,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return new NextResponse("/* Prisma Player: invalid id */", { status: 400, headers: { "content-type": "application/javascript; charset=utf-8" } });
   return new NextResponse(buildPlayerLoaderScript(id), { headers: {
     "content-type": "application/javascript; charset=utf-8",
-    "cache-control": "public, max-age=0, must-revalidate",
+    "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
     "access-control-allow-origin": "*",
     "cross-origin-resource-policy": "cross-origin",
     "x-content-type-options": "nosniff",

@@ -47,7 +47,7 @@ export default function AbTestsPage() {
   }
   async function createFolder() { if (!folderName.trim()) return; const response = await fetch("/api/ab-tests", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "folder", name: folderName.trim() }) }); if (response.ok) { setFolderName(""); setFolderOpen(false); await load(); } }
   async function removeTest(id: string) { if (!(await confirm({ title: "Excluir teste", description: "Excluir este teste e todas as métricas coletadas?" }))) return; const response = await fetch(`/api/ab-tests/${id}`, { method: "DELETE" }); if (response.ok) await load(); }
-  async function copyEmbed(id: string) { const origin = window.location.origin; await navigator.clipboard.writeText(`<prisma-player data-prisma-player="${id}" data-mode="ab" data-title="Teste A/B Prisma" style="display:block;margin:0 auto;width:100%;position:relative;padding-top:56.25%;background:#000;overflow:hidden"></prisma-player>\n<script async src="${origin}/api/player-loader/${id}" data-prisma-loader="${id}"></script>`); setCopied(id); setTimeout(() => setCopied(null), 1600); }
+  async function copyEmbed(id: string) { const origin = window.location.origin; await navigator.clipboard.writeText(`<prisma-player data-prisma-player="${id}" data-mode="ab" data-title="Teste A/B Prisma" style="display:block;margin:0 auto;width:100%;position:relative;padding-top:56.25%;background:#000;overflow:hidden"></prisma-player>\n<script async src="${origin}/api/player-loader/${id}?v=4" data-prisma-loader="${id}"></script>`); setCopied(id); setTimeout(() => setCopied(null), 1600); }
 
   const headerActions = [
     { label: "Nova pasta", icon: <FolderPlus size={15} />, primary: false, onClick: () => setFolderOpen(true) },

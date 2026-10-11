@@ -145,7 +145,7 @@ export default function VideosPage() {
     const playerId = await ensurePlayer(video); if (!playerId) return;
     const origin = window.location.origin;
     const title = video.title.replace(/"/g, "&quot;");
-    await navigator.clipboard.writeText(`<prisma-player data-prisma-player="${playerId}" data-title="${title}" style="display:block;margin:0 auto;width:100%;height:1px;position:relative;background:transparent;border:0;overflow:hidden"></prisma-player>\n<script async src="${origin}/api/player-loader/${playerId}?v=3" data-prisma-loader="${playerId}"></script>`);
+    await navigator.clipboard.writeText(`<prisma-player data-prisma-player="${playerId}" data-title="${title}" style="display:block;margin:0 auto;width:100%;height:1px;position:relative;background:transparent;border:0;overflow:hidden"></prisma-player>\n<script async src="${origin}/api/player-loader/${playerId}?v=4" data-prisma-loader="${playerId}"></script>`);
     notify("Código de embed copiado");
   }
 
