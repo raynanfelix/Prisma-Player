@@ -8,7 +8,7 @@ import {
   LifeBuoy, LogOut, Menu, PanelLeftClose, PanelLeftOpen, TrendingUp,
   Users, Video, CreditCard, ShieldCheck, X,
 } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { Logo, LogoIcon } from "@/components/logo";
 import AdminTopbarSearch from "@/components/admin/AdminTopbarSearch";
 
 const groups: Array<{ label: string; items: Array<{ href: string; label: string; icon: typeof Users }> }> = [
@@ -91,7 +91,7 @@ export default function AdminShell({ email, children }: { email: string; childre
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-selected focus:px-3 focus:py-2 focus:text-selected-foreground">Pular para o conteúdo</a>
       <aside className={`fixed inset-y-0 left-0 z-40 hidden flex-col overflow-x-hidden border-r bg-white themeable-border-hairline dark:bg-sidebar md:flex ${collapsed ? "w-16" : "w-[248px]"}`} aria-label="Navegação administrativa">
         <div className={`flex h-16 items-center border-b themeable-border-hairline ${collapsed ? "justify-center px-2" : "justify-between px-4"}`}>
-          {collapsed ? <Link href="/admin" title="Prisma Player" aria-label="Visão geral"><Logo /></Link> : <Link href="/admin" aria-label="Prisma Player — Administração"><Logo /></Link>}
+          {collapsed ? <Link href="/admin" title="Prisma Player" aria-label="Visão geral"><LogoIcon className="size-8" /></Link> : <Link href="/admin" aria-label="Prisma Player — Administração"><Logo /></Link>}
           {!collapsed && (
             <button type="button" onClick={() => setCollapsed(true)} aria-label="Recolher barra lateral" className="grid h-9 w-9 place-items-center rounded-lg themeable-text-ink-muted-48 hover:bg-black/5 dark:hover:bg-transparent"><PanelLeftClose size={18} /></button>
           )}
