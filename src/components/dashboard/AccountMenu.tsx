@@ -114,7 +114,7 @@ export default function AccountMenu() {
             className="min-h-10 rounded-xl px-2.5 cursor-pointer"
             render={<Link href="/dashboard/settings" />}
           >
-            <Settings />
+            <Settings className="text-primary" />
             <span>{t("account")}</span>
           </DropdownMenuItem>
 

@@ -31,7 +31,7 @@ export default function AdminTopbarSearch() {
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timer: number | undefined;
     const onInput = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {

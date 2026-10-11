@@ -131,7 +131,7 @@ export default function InboxButton() {
             <Link
               href="/dashboard/inbox"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center gap-1.5 py-1 text-xs font-bold text-[#191A23] dark:text-[#B9FF66] hover:underline"
+              className="inline-flex items-center gap-1.5 py-1 text-xs font-bold text-[#B9FF66] hover:underline"
             >
               <span>Ver todas as mensagens no Inbox</span>
               <ArrowRight size={13} />
