@@ -48,6 +48,25 @@ where n.nspname='private' and prosecdef and 'search_path=' <> ANY(string_to_arra
 ```
 Nota: a última é aproximada; `proconfig` nulo também é aceitável fora de DEFINER.
 
+## Q4b. Banco aplicado == migrations? (decisivo, 1 min)
+```sql
+-- UNIQUEs críticos que os upserts onConflict exigem (esperado: 8 linhas)
+select conrelid::regclass as tabela, pg_get_constraintdef(oid) as definicao
+from pg_constraint
+where contype = 'u' and conrelid::regclass::text in (
+  'player_configs','video_events','player_events','ai_credit_ledger',
+  'billing_checkouts','ai_credit_checkouts','account_team_members',
+  'account_team_invites')
+order by 1, 2;
+-- Cascatas que o código pressupõe (esperado: player_configs→videos CASCADE)
+select conrelid::regclass as tabela, pg_get_constraintdef(oid) as definicao
+from pg_constraint
+where contype = 'f' and conrelid::regclass::text in ('player_configs','videos')
+order by 1;
+```
+Se faltar algum UNIQUE: aplicar a migration correspondente (não inventar
+constraint na mão — a definição canônica está em `supabase/migrations/`).
+
 ## Q5. Índices não usados (moderada, fora do pico)
 ```sql
 select relname as tabela, indexrelname as indice, idx_scan as usos

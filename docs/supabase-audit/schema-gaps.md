@@ -43,3 +43,16 @@ Validar tamanhos no `sql-collection.md`.
    pública, mas expõe o projeto).
 10. **CI usa `NEXT_PUBLIC_SUPABASE_*` que o código nunca lê** (só `SUPABASE_*`
     server-side): alinhar ou documentar.
+
+## G3. Schema real enviado pelo dono × migrations (2026-10-11)
+O dump veio com aviso ("for context only"): comparado item a item, ele
+**omite constraints que as migrations provadamente contêm** —
+`unique(video_id)` em `player_configs` (`20260715220249:51`), FK composta
+com `ON DELETE CASCADE` (`:52`, que apaga o config ao excluir o vídeo: o
+código nunca deleta config porque a cascata cuida disso), e os UNIQUEs de
+`video_events`/`player_events`/`ledger.reference`/`checkouts.external_id`.
+Conclusão: o dump é parcial e **não serve para afirmar falta de constraint**.
+As 2 checagens que decidem (1 min no SQL Editor, Q4b em `sql-collection.md`)
+confirmam se o banco aplicado == migrations. Se algum UNIQUE crítico faltar
+de verdade, os upserts `onConflict` correspondentes falham alto (fail-closed,
+sem corrupção silenciosa) — exceto ledger duplicado, que seria silencioso.
