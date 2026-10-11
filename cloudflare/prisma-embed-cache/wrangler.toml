@@ -1,0 +1,41 @@
+name = "prisma-embed-cache"
+main = "src/index.ts"
+compatibility_date = "2025-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ============================================================
+# IMPORTANTE: este arquivo NAO deve ser editado a mao depois de provisionado.
+# O ID do KV e os secrets sao injetados pelos comandos abaixo (uma vez por ambiente).
+#
+# Provisionamento (uma vez):
+#   1. Criar o namespace KV (gera o id automaticamente neste arquivo):
+#        npx wrangler kv:namespace create PLAYER_CACHE
+#   2. Definir o secret de purge (mesmo valor usado na Vercel como CLOUDFLARE_PURGE_SECRET):
+#        npx wrangler secret put SHARED_PURGE_SECRET
+#   3. Ajustar [vars] ORIGIN/ORIGIN_HOST para o seu dominio real (apenas na primeira vez).
+#   4. Deploy:
+#        npx wrangler deploy
+#
+# Roteamento:
+#   - No painel Cloudflare, aponte o custom hostname do app para este Worker.
+#   - O Worker faz proxy transparente para a Vercel (ORIGIN) em todos os paths
+#     exceto /api/embed/:id/manifest e /__purge, que ele trata localmente.
+# ============================================================
+
+[vars]
+# Altere pelo hostname real do seu deploy Vercel (CNAME do projeto).
+ORIGIN = "prisma-player.vercel.app"
+# Host que o Worker envia no header `host` ao bater na origem.
+ORIGIN_HOST = "prisma-player.vercel.app"
+# Limites de rate-limit na borda (janela deslizante simples por IP no KV).
+MANIFEST_PER_MINUTE_PER_IP = "600"
+EMBED_CONFIG_PER_MINUTE_PER_IP = "300"
+
+# O bloco [[kv_namespaces]] abaixo e ESCREVIDO pelo comando
+# `npx wrangler kv:namespace create PLAYER_CACHE`.
+# Nao preencha o id a mao; rode o comando e ele ajustara este arquivo.
+
+[[kv_namespaces]]
+binding = "PLAYER_CACHE"
+id = "446a630735654645a88b48be1ad00e3a"
+preview_id = "446a630735654645a88b48be1ad00e3a"

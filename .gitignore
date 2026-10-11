@@ -1,0 +1,101 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env.*
+!.env.example
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Cloudflare Workers
+cloudflare/**/.wrangler/
+cloudflare/**/node_modules/
+cloudflare/**/.dev.vars
+cloudflare/**/dist/
+
+# IDEs
+.vscode/
+.idea/
+.claude/settings.local.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.c9/
+.DS_Store
+
+# OS
+Thumbs.db
+
+# Temp & Secrets
+workspace/
+VERCEL_ENVS.txt
+.mantis_snapshot_id
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.key
+*.crt
+*.cer
+.secrets/
+.sentryclirc
+.tokens
+*.env.secret
+
+# Agent/skill tooling (third-party, not project code)
+.claude/
+.claude-flow/
+.opencode/
+.agents/
+.codex/
+.superpowers/
+# impeccable-hook-ignore-start .
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/config.local.json
+# impeccable-hook-ignore-end .
+
+# Local tool artifacts / junk
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db
+nul
+

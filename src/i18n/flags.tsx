@@ -1,0 +1,8 @@
+import type { AppLocale } from "./types";
+
+export function LocaleFlag({ locale, className = "h-6 w-6" }: { locale: AppLocale; className?: string }) {
+  const id = `flag-${locale.replace(/[^a-z]/gi, "")}`;
+  if (locale === "pt-BR") return <svg viewBox="0 0 40 40" className={className} aria-hidden="true"><defs><clipPath id={id}><circle cx="20" cy="20" r="19" /></clipPath></defs><g clipPath={`url(#${id})`}><rect width="40" height="40" fill="#009739"/><path d="M20 4 37 20 20 36 3 20Z" fill="#ffdf00"/><circle cx="20" cy="20" r="8" fill="#002776"/></g><circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" strokeOpacity=".12"/></svg>;
+  if (locale === "en-US") return <svg viewBox="0 0 40 40" className={className} aria-hidden="true"><defs><clipPath id={id}><circle cx="20" cy="20" r="19" /></clipPath></defs><g clipPath={`url(#${id})`}><rect width="40" height="40" fill="#fff"/>{[0,6,12,18,24,30,36].map((y)=><rect key={y} y={y} width="40" height="3" fill="#bf0a30"/>)}<rect width="18" height="21" fill="#002868"/><g fill="#fff">{[4,9,14].flatMap((x)=>[4,9,14].map((y)=><circle key={`${x}-${y}`} cx={x} cy={y} r="1"/>))}</g></g><circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" strokeOpacity=".12"/></svg>;
+  return <svg viewBox="0 0 40 40" className={className} aria-hidden="true"><defs><clipPath id={id}><circle cx="20" cy="20" r="19" /></clipPath></defs><g clipPath={`url(#${id})`}><rect width="40" height="40" fill="#aa151b"/><rect y="10" width="40" height="20" fill="#f1bf00"/></g><circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" strokeOpacity=".12"/></svg>;
+}

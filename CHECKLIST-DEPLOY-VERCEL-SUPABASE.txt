@@ -1,0 +1,325 @@
+================================================================================
+ PRISMA PLAYER — CHECKLIST DE DEPLOY (Vercel + Supabase + AbacatePay)
+ Baseado no estado atual do código e nas correções RH-01 a RM-05
+================================================================================
+
+--------------------------------------------------------------------------------
+ 0. ORDEM RECOMENDADA
+--------------------------------------------------------------------------------
+  1) Aplicar as migrations no Supabase (a API depende das tabelas/RPCs).
+  2) Rodar o seed (planos + créditos IA) — sem isso o billing quebra.
+  3) Configurar o webhook do AbacatePay (com signing secret, SEM ?webhookSecret=).
+  4) Configurar as variáveis de ambiente na Vercel.
+  5) Deploy + verificação pós-deploy.
+
+  IMPORTANTE: o EMBED_ORIGIN_SECRET agora é OBRIGATÓRIO. Sem ele, todos os
+  embeds falham com 403 invalid_origin_token (fail-closed). Documentado no
+  .env.example:14.
+
+--------------------------------------------------------------------------------
+ 1. SUPABASE — RODAR NO SQL EDITOR / supabase CLI
+--------------------------------------------------------------------------------
+  1.1 Aplicar as migrations (todas, em ordem cronológica):
+
+      Pasta: supabase/migrations/
+      A forma mais segura é linkar o projeto e dar push:
+        supabase link --project-ref SEU_REF
+        supabase db push
+
+      Se já existir um banco rodando migrations antigas, vale conferir quais já
+      foram aplicadas antes de dar push, para não duplicar (a CLI acompanha o
+      histórico pela pasta migrations).
+
+      Migrations CRÍTICAS para as correções de ontem (RH-01 a RM-05):
+
+        - 20260810000000_revoke_ai_credit_purchase.sql
+            Cria a RPC revoke_ai_credit_purchase(uuid):
+            * SECURITY DEFINER, search_path vazio, lock for update (sem corrida);
+            * só reverte créditos se checkout estava 'paid' e existir lançamento
+              de compra em ai_credit_ledger (referência 'ai-credit:<checkout_id>');
+            * idempotente, com UNIQUE na reversão;
+            * decrementa a carteira com piso 0 e marca o checkout 'refunded';
+            * EXECUTE só para service_role — o webhook e o reconciliador usam
+              createAdminClient (service_role), então não quebra fluxo real.
+
+        - 20260810120000_harden_video_quota_failed.sql
+            RM-04: impede fuga de cota de storage via status='failed'.
+            Parte 1: guard_video_status_transitions — fora do service_role
+                     bloqueia criar/mover para 'failed' e devolver 'failed'
+                     para estado contável (forbidden_status_transition).
+            Parte 2: enforce_video_storage_quota soma TODOS os bytes (sem
+                     excluir failed) e vale para todos os status.
+
+        Outras recentes que também precisam estar aplicadas:
+        - 20260808190000_viewer_id_attribution.sql
+        - 20260809000000_bandwidth_and_overview_indexes.sql
+        - 20260801100000_atomic_plan_quota_guards.sql
+        - 20260801170000_pixel_conversion_delivery.sql
+        - 20260805000000_drop_orphan_better_auth_tables.sql
+        - 20260729120000_ai_credit_refund_and_analytics_indexes.sql
+        - 20260724204734_rls_hardening_and_storage_backend.sql
+        - 20260724210652_fix_policy_syntax_and_rls_auto_enable.sql
+        - 20260721120000_atomic_rate_limit.sql
+        - 20260719210000_operational_intelligence_hardening.sql
+        - 20260719200000_video_events_traffic_columns.sql
+        - 20260718120000_security_and_rate_limiting.sql
+
+      (A pasta migrations contém cerca de 30 arquivos. O normal é aplicar TODOS,
+       do primeiro ao último; a lista acima só destaca os que importam para o
+       que foi corrigido ontem.)
+
+  1.2 Rodar o seed (obrigatório para billing):
+      supabase db seed
+      — ou colar supabase/seed.sql no SQL Editor.
+      Cria em billing_plans: starter / professional / enterprise.
+      Cria em ai_credit_products: credits-50 / credits-100 / credits-300.
+      (on conflict do nothing → é seguro rodar de novo.)
+
+  1.3 Conferir o resultado das migrations:
+      SELECT proname FROM pg_proc
+       WHERE proname IN ('revoke_ai_credit_purchase',
+                         'enforce_video_storage_quota',
+                         'guard_video_status_transitions',
+                         'create_bound_embed_event_token');
+      — deve retornar as RPCs existentes.
+
+  1.4 RLS:
+      As migrations já habilitam RLS e criam as policies (incluindo a
+      auto-enable em 20260724210652). Se aplicar manualmente migrations avulsas,
+      conferir que o RLS está ENABLED nas tabelas public e que as policies das
+      migrations de hardening estão criadas.
+
+  1.5 Supabase Auth — URL Configuration:
+      Dashboard > Authentication > URL Configuration:
+        * Site URL        = https://SEU-DOMINIO (produção)
+        * Redirect URLs   = adicionar https://SEU-DOMINIO/** e
+                            http://localhost:3000/** (para dev/testar)
+      (O app usa NEXT_PUBLIC_SITE_URL e a rota /api/auth/* para redirects.)
+
+  1.6 (Opcional) Storage:
+      Se usar o backend de storage do próprio Supabase (e não R2), garantir que
+      o bucket do backend de vídeos existe e as policies de acesso estão OK.
+      O R2 é o caminho principal (ver env abaixo).
+
+  1.7 (Opcional) Edge Function:
+      supabase/functions/health existe como healthcheck. Só é necessário se você
+      quiser o endpoint de health; não é crítico para o funcionamento.
+
+  1.8 Conferir que não sobrou nada da migração antiga do Better Auth:
+      A segurança está em não usar tabelas user/session/account/verification
+      legadas do Better Auth. As migrations
+      (20260127000000_better_auth_tables.sql e as de drop posteriores) já
+      removeram isso. Não reintroduzir qualquer BETTER_AUTH_* ou DATABASE_URL
+      no ambiente (o código atual NÃO lê essas variáveis, conforme .env.example).
+
+--------------------------------------------------------------------------------
+ 2. ABACATEPAY — WEBHOOK
+--------------------------------------------------------------------------------
+  2.1 Endpoint a cadastrar no painel da AbacatePay:
+        POST  https://SEU-DOMINIO/api/webhooks/abacatepay
+
+  2.2 Cadastre SEM o parâmetro ?webhookSecret= na URL (recomendado):
+      O fluxo novo usa ABACATEPAY_WEBHOOK_SIGNING_SECRET como chave HMAC-SHA256
+      que NUNCA viaja na URL. É a única chave aceita quando definida.
+
+  2.3 Assinatura:
+      - Verificação: HMAC-SHA256 do corpo cru, header
+        x-webhook-signature (ou x-abacate-signature / x-signature).
+      - Aceita hex, base64 e prefixo 'sha256='.
+      - Teto de 500 chars na assinatura (BILLING.WEBHOOK_SIGNATURE_MAX_LENGTH).
+
+  2.4 Eventos que o código processa:
+        checkout.completed
+        checkout.refunded
+        checkout.disputed
+        checkout.lost
+        subscription.completed
+        subscription.renewed
+        subscription.cancelled
+      Quaisquer outros eventos são ignorados com 200 {ok:true, ignored:true}.
+
+  2.5 Em produção a assinatura HMAC é EXIGIDA por padrão (fail-closed), mesmo
+      sem flags. Para garantir não-retrocesso, defina:
+        ABACATEPAY_REQUIRE_HMAC=true
+        ABACATEPAY_ALLOW_URL_SECRET=false
+      (essas duas já matam o fallback legado de ?webhookSecret= na URL).
+
+  Observação RM-01: antes qualquer fator autenticava (URL-secret OU assinatura).
+  Agora a assinatura HMAC é a única via quando ABACATEPAY_WEBHOOK_SIGNING_SECRET
+  está setada. Não volte o ?webhookSecret= de volta na URL do webhook.
+
+--------------------------------------------------------------------------------
+ 3. VARIÁVEIS DE AMBIENTE — VERcel (Project Settings > Environment Variables)
+--------------------------------------------------------------------------------
+  Legenda: [OBR] obrigatória · [REC] recomendada · [OPC] opcional.
+
+  ------------------------------------------------------------------
+  3.1 Núcleo / Supabase
+  ------------------------------------------------------------------
+  SUPABASE_URL                                  [OBR]  https://SEU-PROJETO.supabase.co
+  SUPABASE_PUBLISHABLE_KEY                      [OBR]  sb_publishable_*** (nova
+                                                       chave publicável do painel)
+  SUPABASE_SECRET_KEY                           [OBR]  service role / secret key
+                                                       do painel (server-side).
+                                                       (Fallback aceito:
+                                                       SUPABASE_SERVICE_ROLE_KEY.)
+  EMBED_ORIGIN_SECRET                           [OBR]  segredo longo, INDEPENDENTE
+                                                       do Supabase. Assina os tokens
+                                                       de embed. Sem ele: 403
+                                                       invalid_origin_token em
+                                                       todos os embeds.
+  NEXT_PUBLIC_SITE_URL                          [OBR]  https://SEU-DOMINIO
+
+  ------------------------------------------------------------------
+  3.2 Cron (vercel.json já define o cron diário 12:00 UTC -> /api/cron)
+  ------------------------------------------------------------------
+  CRON_SECRET                                   [OBR]  segredo longo. A Vercel
+                                                       envia Authorization:
+                                                       Bearer <CRON_SECRET>.
+                                                       Sem ele /api/cron devolve
+                                                       503 cron_secret_not_configured.
+
+  ------------------------------------------------------------------
+  3.3 AbacatePay (billing)
+  ------------------------------------------------------------------
+  ABACATEPAY_API_KEY                            [OBR se vender]
+  ABACATEPAY_WEBHOOK_SIGNING_SECRET             [REC]  a única chave Aceita no
+                                                       header (nunca viaja em URL).
+  ABACATEPAY_WEBHOOK_SECRET                     [OPC]  legado (fallback) — mantido
+                                                       só como compat; com o signing
+                                                       secret setado, não é usado
+                                                       para verificar header.
+  ABACATEPAY_REQUIRE_HMAC                       [REC]  true
+  ABACATEPAY_ALLOW_URL_SECRET                   [REC]  false (nunca true em prod)
+
+  ------------------------------------------------------------------
+  3.4 Rate limit do embed (padrões já estão no .env.example)
+  ------------------------------------------------------------------
+  EMBED_CONFIG_RATE_LIMIT_MAX=300
+  EMBED_CONFIG_RATE_LIMIT_WINDOW_MS=60000
+  EMBED_MANIFEST_RATE_LIMIT_MAX=600
+  EMBED_MANIFEST_RATE_LIMIT_WINDOW_MS=60000
+  TRUST_CLOUDFLARE_IP_HEADER=false         [OBR]  false, a menos que o Cloudflare
+                                               esteja realmente na frente (senão
+                                               o header cf-connecting-ip é forjável
+                                               e burla o rate limiting).
+
+  ------------------------------------------------------------------
+  3.5 Storage de vídeo — Cloudflare R2 (caminho principal)
+  ------------------------------------------------------------------
+  CLOUDFLARE_R2_ACCOUNT_ID                       [OPC]
+  CLOUDFLARE_R2_ENDPOINT                         [OPC]  só se o bucket exigir
+                                                       endpoint jurisdicional (ex: UE)
+  CLOUDFLARE_R2_ACCESS_KEY_ID                    [OPC]
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY                [OPC]
+  CLOUDFLARE_R2_BUCKET=prisma-videos             [OPC]
+  R2_MAX_UPLOAD_BYTES=21474836480                [OPC]  (20 GiB)
+
+  ------------------------------------------------------------------
+  3.6 Purge de cache do embed (Phase 1 — Worker prisma-embed-cache)
+  ------------------------------------------------------------------
+  CLOUDFLARE_PURGE_URL                           [OPC]  POST /__purge do Worker
+  CLOUDFLARE_PURGE_SECRET                        [OPC]  deve ser idêntico ao
+                                                       SHARED_PURGE_SECRET do Worker.
+
+  ------------------------------------------------------------------
+  3.7 Anúncios (eventos server-side / CAPI)
+  ------------------------------------------------------------------
+  META_CAPI_TOKENS_JSON={}                       [OPC]  JSON indexado pelo pixel ID
+  META_GRAPH_API_VERSION=v23.0                   [OPC]
+  TIKTOK_EVENTS_TOKENS_JSON={}                   [OPC]
+  TIKTOK_EVENTS_API_URL=                         [OPC]  vazio = endpoint oficial
+
+  ------------------------------------------------------------------
+  3.8 IA (Prisma IA / sumários)
+  ------------------------------------------------------------------
+  NVIDIA_API_KEY                                 [OPC]
+  NVIDIA_AI_MODEL=meta/llama-3.1-70b-instruct    [OPC]
+  NVIDIA_AI_BASE_URL=https://integrate.api.nvidia.com/v1/chat/completions [OPC]
+
+  ------------------------------------------------------------------
+  3.9 E-mail / relatórios operacionais
+  ------------------------------------------------------------------
+  RESEND_API_KEY                                 [OPC]
+  REPORT_EMAIL_FROM="Prisma Player <relatorios@seudominio.com>" [OPC]
+
+  ------------------------------------------------------------------
+  3.10 PostHog (opcional — sem token o cliente vira noop, sem erro)
+  ------------------------------------------------------------------
+  NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN              [OPC]
+  NEXT_PUBLIC_POSTHOG_HOST                       [OPC]
+
+  IMPORTANTES QUE NÃO PODEM SER ADICIONADAS:
+  - NADA de BETTER_AUTH_*  (a migração para Better Auth foi revertida).
+  - NÃO usar NEXT_PUBLIC_ nas chaves secretas (SUPABASE_SECRET_KEY, API keys,
+    secrets). O Supabase oficial do projeto é: URL + publishable + secret no
+    servidor; a chave secreta nunca pode embarcar no bundle do navegador.
+
+---------------------------------------------------------------------
+ 4. VERcel — AJUSTES DO PROJETO
+---------------------------------------------------------------------
+  4.1 Framework Preset: Next.js (detectado automaticamente).
+  4.2 Build Command: next build   |  Install: npm install | Output: .next
+  4.3 Node.js: definir versão >= 20.9 (Next 16 recomenda 20.x/22.x estáveis).
+      Se não configurar, usar a padrão do Vercel (que atende).
+  4.4 Cron: o vercel.json já contém
+        { "path": "/api/cron", "schedule": "0 12 * * *" }
+      A Vercel vai invocar /api/cron diariamente às 12:00 UTC. Confirme que o
+      projeto tem o plano/flag de crons habilitado e CRON_SECRET definido.
+  4.5 (Opcional) Regiões: o app usa Node runtime no webhook/cron. Deixar como
+      padrão; se quiser forçar, "Node.js Serverless" sem Streaming fica ok.
+  4.6 Domínio: apontar o domínio de produção (o NEXT_PUBLIC_SITE_URL e o
+      csrf/embed-origin usam VERCEL_PROJECT_PRODUCTION_URL automaticamente em
+      ambiente Vercel).
+
+--------------------------------------------------------------------------------
+ 5. VERIFICAÇÃO PÓS-DEPLOY (smoke test)
+--------------------------------------------------------------------------------
+  5.1 Health básico:
+        curl -I https://SEU-DOMINIO/          -> 200
+        curl -I https://SEU-DOMINIO/robots.txt (deve existir, usa SITE_URL)
+
+  5.2 Cron protegido:
+        curl -H "Authorization: Bearer CRON_SECRET"
+             https://SEU-DOMINIO/api/cron     -> 200 (JSON com contadores)
+        curl https://SEU-DOMINIO/api/cron     -> 401/503 (sem o segredo falha)
+
+  5.3 Webhook AbacatePay:
+        - Sem assinatura/secret  -> 401 invalid_webhook_signature
+        - Com JSON inválido      -> 400
+        - Evento não suportado   -> 200 {ok:true, ignored:true}
+        - Testar fluxo real com devMode=true -> 200 {ok:true, ignored:true}
+        - Testar checkout.completed pago (sem devMode) -> 200 {ok:true} e
+          linhas em subscriptions + payment_webhook_events processadas.
+
+  5.4 Embed:
+        - /api/embed/:id e /api/embed/:id/manifest respondem 200 com token.
+        - Sem EMBED_ORIGIN_SECRET configurada -> 403 invalid_origin_token.
+        - Encher o rate limit até os máximos configurados e ver 429.
+
+  5.5 Billing / créditos IA (RH-01):
+        - Comprar créditos IA -> verifica ai_credit_ledger com lançamento
+          'ai-credit:<checkout_id>'.
+        - Estornar via AbacatePay (checkout.refunded) -> revoke_ai_credit_purchase
+          reverte a entrega, wallet nunca negativa, registro 'refunded'.
+        - Reenviar o mesmo evento (duplicado) -> processa uma vez (idempotente).
+
+  5.6 Quota de storage (RM-04):
+        - Tentar criar vídeo com status='failed' via cliente não-admin deve
+          ser bloqueado com forbidden_status_transition.
+        - O cálculo de cota soma também os videos 'failed'.
+
+--------------------------------------------------------------------------------
+ 6. LIMITAÇÃO CONHECIDA (risco residual documentado na revisão)
+--------------------------------------------------------------------------------
+  O fluxo de conversão cross-site (trackConversion no player-loader + fetch
+  cross-site para a API) depende de cookie de terceiros (pp_embed, SameSite=None
+  em iframe). Navegadores que bloqueiam cookies de terceiros (Safari ITP,
+  Firefox ETP strict, Chrome pós-phaseout de 3PC) perdem a conversão e, por
+  consequência, deliverServerPurchase/webhook de conversão não disparam. É
+  comportamento esperado até uma estratégia de fallback sem cookies (ex: token
+  no postMessage) ser implementada.
+
+--------------------------------------------------------------------------------
+ FIM DO CHECKLIST
+--------------------------------------------------------------------------------
