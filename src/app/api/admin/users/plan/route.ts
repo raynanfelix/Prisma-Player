@@ -18,11 +18,12 @@ export async function POST(request: Request) {
   const limited = await rateLimit(request, `admin-plan:${gate.adminId}`, { max: 30, windowMs: 10 * 60_000, failClosed: true });
   if (limited) return limited;
 
-  const parsed = await readJsonBody<{ userId?: unknown; planSlug?: unknown }>(request);
+  const parsed = await readJsonBody<{ userId?: unknown; planSlug?: unknown; reason?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const userId = String(parsed.body?.userId ?? "");
   const planSlug = String(parsed.body?.planSlug ?? "").trim().toLowerCase().slice(0, 80);
-  if (!uuid.test(userId) || !planSlug) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  const reason = String(parsed.body?.reason ?? "").trim().replace(/\s+/g, " ").slice(0, 280);
+  if (!uuid.test(userId) || !planSlug || !reason) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
   const admin = createAdminClient();
   const [profile, plan, current] = await Promise.all([
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     admin_user_id: gate.adminId,
     action: "plan_change",
     target_user_id: userId,
-    details: { plan_slug: plan.data.slug, previous_status: current.data?.status ?? null, provider_warning: "cobranca no provedor nao alterada" },
+    details: { plan_slug: plan.data.slug, previous_status: current.data?.status ?? null, reason, provider_warning: "cobranca no provedor nao alterada" },
   });
 
   return NextResponse.json({

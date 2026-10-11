@@ -1,30 +1,74 @@
+import Link from "next/link";
 import { AdminHeader, AdminPanel, StatusPill } from "@/components/admin/AdminUi";
-import UserActions from "@/components/admin/UserActions";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-export default async function AdminUsersPage() {
+const PAGE_SIZE = 25;
+
+type Search = { q?: string; plan?: string; status?: string; trial?: string; page?: string };
+
+/** Contas com busca, filtros e paginação no servidor. Filtros vivem na URL. */
+export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const params = await searchParams;
+  const query = (params.q ?? "").trim().slice(0, 80);
+  const planFilter = (params.plan ?? "").trim();
+  const statusFilter = (params.status ?? "").trim();
+  const trialFilter = (params.trial ?? "").trim();
+  const page = Math.max(1, Number(params.page ?? 1) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const admin = createAdminClient();
-  const [profiles, subscriptions, wallets, plans, logs] = await Promise.all([
-    admin.from("profiles").select("id,email,full_name,created_at").order("created_at", { ascending: false }).limit(200),
-    admin.from("subscriptions").select("user_id,status,current_period_end,plan:billing_plans(name,slug)").limit(500),
-    admin.from("ai_credit_wallets").select("user_id,balance").limit(500),
+  let profilesQuery = admin.from("profiles").select("id,email,full_name,created_at", { count: "exact" }).order("created_at", { ascending: false });
+  if (query) {
+    const like = `%${query.replace(/[%_]/g, "")}%`;
+    profilesQuery = profilesQuery.or(`email.ilike.${like},full_name.ilike.${like}`);
+  }
+  const [profiles, subscriptions, wallets, plans, trials] = await Promise.all([
+    profilesQuery.range(from, to),
+    admin.from("subscriptions").select("user_id,status,plan:billing_plans(slug,name)").limit(5000),
+    admin.from("ai_credit_wallets").select("user_id,balance").limit(5000),
     admin.from("billing_plans").select("slug,name").eq("is_active", true).order("display_order"),
-    admin.from("admin_audit_log").select("action,target_user_id,admin_user_id,details,created_at").order("created_at", { ascending: false }).limit(30),
+    admin.from("account_access").select("user_id,trial_status").limit(5000),
   ]);
+
+  const total = profiles.count ?? 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const subscriptionMap = new Map((subscriptions.data ?? []).map((item) => [item.user_id, item]));
   const walletMap = new Map((wallets.data ?? []).map((item) => [item.user_id, item.balance]));
-  const involved = [...new Set((logs.data ?? []).flatMap((log) => [log.admin_user_id, log.target_user_id]).filter(Boolean))] as string[];
-  const involvedProfiles = involved.length
-    ? await admin.from("profiles").select("id,email").in("id", involved)
-    : { data: [] as Array<{ id: string; email: string }> };
-  const emailOf = new Map((involvedProfiles.data ?? []).map((item) => [item.id, item.email]));
-  const actionLabel: Record<string, string> = {
-    plan_change: "Troca de plano", subscription_suspend: "Suspensão", subscription_reactivate: "Reativação",
-    trial_extend: "Trial estendido", trial_reset: "Trial resetado", credit_adjust: "Ajuste de créditos",
+  const trialMap = new Map((trials.data ?? []).map((item) => [item.user_id, item.trial_status]));
+
+  const rows = (profiles.data ?? []).filter((profile) => {
+    const sub = subscriptionMap.get(profile.id);
+    const plan = Array.isArray(sub?.plan) ? sub.plan[0] : sub?.plan;
+    if (planFilter && plan?.slug !== planFilter) return false;
+    if (statusFilter && (sub?.status ?? "none") !== statusFilter) return false;
+    if (trialFilter && (trialMap.get(profile.id) ?? "none") !== trialFilter) return false;
+    return true;
+  });
+
+  const href = (extra: Record<string, string>) => {
+    const current = new URLSearchParams({ ...(query ? { q: query } : {}), ...(planFilter ? { plan: planFilter } : {}), ...(statusFilter ? { status: statusFilter } : {}), ...(trialFilter ? { trial: trialFilter } : {}), ...extra });
+    return `/admin/users?${current.toString()}`;
   };
-  return <div><AdminHeader title="Contas" description="Assinatura, saldo Prisma IA e identificação dos clientes sem misturar dados entre contas." />
-    <AdminPanel title={`${profiles.data?.length ?? 0} contas recentes`} description="A listagem é limitada às 200 contas mais recentes para manter o painel leve."><div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left text-[12px]"><thead className="themeable-bg-surface-pearl themeable-text-ink-muted-48"><tr><th className="px-5 py-3 font-medium">Cliente</th><th className="px-5 py-3 font-medium">Plano</th><th className="px-5 py-3 font-medium">Status</th><th className="px-5 py-3 font-medium">Créditos</th><th className="px-5 py-3 font-medium">Cadastro</th><th className="px-5 py-3 font-medium">Suporte</th></tr></thead><tbody>{(profiles.data ?? []).map((profile) => { const subscription = subscriptionMap.get(profile.id); const plan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan; return <tr key={profile.id} className="border-t themeable-border-hairline"><td className="px-5 py-4"><p className="font-semibold themeable-text-ink">{profile.full_name || "Sem nome"}</p><p className="mt-0.5 themeable-text-ink-muted-48">{profile.email}</p></td><td className="px-5 py-4 themeable-text-ink">{plan?.name ?? "Sem plano"}</td><td className="px-5 py-4">{subscription?.status ? <StatusPill value={subscription.status} /> : <span className="themeable-text-ink-muted-48">—</span>}</td><td className="px-5 py-4 font-semibold text-prisma-blue">{(walletMap.get(profile.id) ?? 0).toLocaleString("pt-BR")}</td><td className="px-5 py-4 themeable-text-ink-muted-48">{new Date(profile.created_at).toLocaleDateString("pt-BR")}</td><td className="px-5 py-4"><UserActions userId={profile.id} plans={plans.data ?? []} subStatus={subscription?.status ?? null} /></td></tr>; })}</tbody></table></div></AdminPanel>
-    <div className="mt-6"><AdminPanel title="Trilha de auditoria" description="Últimas 30 ações manuais do suporte."><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-[12px]"><thead className="themeable-bg-surface-pearl themeable-text-ink-muted-48"><tr><th className="px-5 py-3 font-medium">Ação</th><th className="px-5 py-3 font-medium">Conta afetada</th><th className="px-5 py-3 font-medium">Operador</th><th className="px-5 py-3 font-medium">Quando</th></tr></thead><tbody>{(logs.data ?? []).map((log, index) => <tr key={index} className="border-t themeable-border-hairline"><td className="px-5 py-3 font-semibold themeable-text-ink">{actionLabel[log.action] ?? log.action}</td><td className="px-5 py-3 themeable-text-ink-muted-48">{log.target_user_id ? (emailOf.get(log.target_user_id) ?? log.target_user_id) : "—"}</td><td className="px-5 py-3 themeable-text-ink-muted-48">{emailOf.get(log.admin_user_id) ?? log.admin_user_id}</td><td className="px-5 py-3 themeable-text-ink-muted-48">{new Date(log.created_at).toLocaleString("pt-BR")}</td></tr>)}</tbody></table></div></AdminPanel></div>
+  const input = "h-9 rounded-xl border border-slate-200 bg-white px-3 text-[12px] dark:border-zinc-800 dark:bg-card";
+
+  return <div><AdminHeader title="Contas" description="Busca, filtros e paginação no servidor. Clique na conta para o perfil 360." />
+    <form method="get" action="/admin/users" className="mb-4 flex flex-wrap gap-2">
+      <input name="q" defaultValue={query} placeholder="Nome, email ou UUID" maxLength={80} className={`${input} min-w-52 flex-1`} aria-label="Buscar conta" />
+      <select name="plan" defaultValue={planFilter} className={input} aria-label="Plano"><option value="">Todos os planos</option>{(plans.data ?? []).map((plan) => <option key={plan.slug} value={plan.slug}>{plan.name}</option>)}</select>
+      <select name="status" defaultValue={statusFilter} className={input} aria-label="Assinatura"><option value="">Qualquer assinatura</option>{["active", "past_due", "suspended", "cancelled", "expired", "pending"].map((status) => <option key={status} value={status}>{status}</option>)}<option value="none">Sem assinatura</option></select>
+      <select name="trial" defaultValue={trialFilter} className={input} aria-label="Trial"><option value="">Qualquer trial</option>{["available", "active", "used", "expired"].map((status) => <option key={status} value={status}>{status}</option>)}</select>
+      <button type="submit" className="h-9 rounded-xl bg-selected px-4 text-[12px] font-bold text-selected-foreground">Filtrar</button>
+      {(query || planFilter || statusFilter || trialFilter) && <Link href="/admin/users" className="grid h-9 place-items-center rounded-xl border border-slate-200 px-4 text-[12px] font-semibold dark:border-zinc-800">Limpar</Link>}
+    </form>
+    <AdminPanel title={`${total.toLocaleString("pt-BR")} contas`} description={`Página ${page} de ${pages}. Filtros aplicados no banco; plano/status/trial refinam a página.`}><div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left text-[12px]"><thead className="themeable-bg-surface-pearl themeable-text-ink-muted-48"><tr><th className="px-5 py-3 font-medium">Cliente</th><th className="px-5 py-3 font-medium">Plano</th><th className="px-5 py-3 font-medium">Status</th><th className="px-5 py-3 font-medium">Trial</th><th className="px-5 py-3 font-medium">Créditos</th><th className="px-5 py-3 font-medium">Cadastro</th></tr></thead><tbody>{rows.map((profile) => { const subscription = subscriptionMap.get(profile.id); const plan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan; return <tr key={profile.id} className="border-t themeable-border-hairline hover:bg-black/[0.02] dark:hover:bg-transparent"><td className="px-5 py-4"><Link href={`/admin/users/${profile.id}`} className="font-semibold themeable-text-ink hover:underline">{profile.full_name || "Sem nome"}</Link><p className="mt-0.5 themeable-text-ink-muted-48">{profile.email}</p></td><td className="px-5 py-4 themeable-text-ink">{plan?.name ?? "Sem plano"}</td><td className="px-5 py-4">{subscription?.status ? <StatusPill value={subscription.status} /> : <span className="themeable-text-ink-muted-48">—</span>}</td><td className="px-5 py-4 themeable-text-ink-muted-48">{trialMap.get(profile.id) ?? "—"}</td><td className="px-5 py-4 font-semibold text-prisma-blue">{(walletMap.get(profile.id) ?? 0).toLocaleString("pt-BR")}</td><td className="px-5 py-4 themeable-text-ink-muted-48">{new Date(profile.created_at).toLocaleDateString("pt-BR")}</td></tr>; })}{rows.length === 0 && <tr><td colSpan={6} className="px-5 py-8 text-center themeable-text-ink-muted-48">Nenhuma conta com esses filtros. <Link href="/admin/users" className="font-semibold underline">Limpar filtros</Link></td></tr>}</tbody></table></div>
+      <div className="flex items-center justify-between border-t px-5 py-3 themeable-border-hairline">
+        <span className="text-[12px] themeable-text-ink-muted-48">Página {page} de {pages}</span>
+        <div className="flex gap-2">
+          {page > 1 ? <Link href={href({ page: String(page - 1) })} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-semibold dark:border-zinc-800">Anterior</Link> : <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] opacity-40 dark:border-zinc-800">Anterior</span>}
+          {page < pages ? <Link href={href({ page: String(page + 1) })} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-semibold dark:border-zinc-800">Próxima</Link> : <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] opacity-40 dark:border-zinc-800">Próxima</span>}
+        </div>
+      </div></AdminPanel>
   </div>;
 }

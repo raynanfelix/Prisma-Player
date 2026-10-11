@@ -95,3 +95,8 @@ ignorados para autorização. UUID identifica, não autoriza.
   valem a partir da escrita no banco + triggers de quota.
 - SEO: `seo_targets` + `visibility_checks` (taxa = citados ÷ execuções);
   base técnica verificada em runtime (robots, sitemap, llms.txt, pricing).
+- Suporte: `support_cases` + `support_notes` (internas, sem envio externo);
+  toda mudança de status/prioridade é auditada.
+- Admin UI: `/admin` tem shell próprio (sidebar colapsível + topbar com
+  busca global + drawer mobile); confirmações via `AdminConfirm`
+  (alertdialog acessível) — nunca `window.confirm`.

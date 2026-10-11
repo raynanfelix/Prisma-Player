@@ -19,11 +19,12 @@ export async function POST(request: Request) {
   const limited = await rateLimit(request, `admin-status:${gate.adminId}`, { max: 30, windowMs: 10 * 60_000, failClosed: true });
   if (limited) return limited;
 
-  const parsed = await readJsonBody<{ userId?: unknown; action?: unknown; days?: unknown }>(request);
+  const parsed = await readJsonBody<{ userId?: unknown; action?: unknown; days?: unknown; reason?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const userId = String(parsed.body?.userId ?? "");
   const action = String(parsed.body?.action ?? "");
-  if (!uuid.test(userId) || !actions.has(action)) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  const reason = String(parsed.body?.reason ?? "").trim().replace(/\s+/g, " ").slice(0, 280);
+  if (!uuid.test(userId) || !actions.has(action) || !reason) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
   const admin = createAdminClient();
   const { data: profile } = await admin.from("profiles").select("id").eq("id", userId).maybeSingle();
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     admin_user_id: gate.adminId,
     action: auditAction,
     target_user_id: userId,
-    details: action === "trial_extend" ? { days: Math.trunc(Number(parsed.body?.days ?? 0)) } : {},
+    details: action === "trial_extend" ? { days: Math.trunc(Number(parsed.body?.days ?? 0)), reason } : { reason },
   });
 
   return NextResponse.json(result, { headers: { "cache-control": "no-store" } });

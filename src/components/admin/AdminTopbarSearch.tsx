@@ -1,0 +1,73 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { Search } from "lucide-react";
+
+type Result = { kind: "account" | "video" | "checkout"; id: string; title: string; subtitle: string };
+
+function hrefFor(item: Result): string {
+  if (item.kind === "account") return `/admin/users/${item.id}`;
+  if (item.kind === "video") return `/admin/content?video=${item.id}`;
+  return `/admin/billing?checkout=${item.id}`;
+}
+
+const kindLabel = { account: "Conta", video: "VSL", checkout: "Checkout" } as const;
+
+/** Busca global do admin com debounce. Sem tokens ou segredos nos resultados. */
+export default function AdminTopbarSearch() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Result[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); setLoading(false); return; }
+    setLoading(true);
+    const timer = setTimeout(() => {
+      fetch(`/api/admin/search?q=${encodeURIComponent(query)}`, { cache: "no-store" })
+        .then((response) => response.json())
+        .then((data: { results?: Result[] }) => { setResults(data.results ?? []); setOpen(true); })
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => { if (!boxRef.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  return (
+    <div ref={boxRef} className="relative w-full max-w-md">
+      <div className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 themeable-border-hairline dark:bg-card">
+        <Search size={15} className="shrink-0 themeable-text-ink-muted-48" aria-hidden />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => { if (results.length) setOpen(true); }}
+          placeholder="Buscar conta, VSL, checkout…"
+          aria-label="Busca global do admin"
+          className="w-full bg-transparent text-[13px] outline-none themeable-text-ink placeholder:text-slate-400"
+        />
+        {loading && <span className="text-[11px] themeable-text-ink-muted-48">…</span>}
+      </div>
+      {open && results.length > 0 && (
+        <div role="listbox" aria-label="Resultados" className="absolute inset-x-0 top-12 z-50 overflow-hidden rounded-xl border bg-white shadow-2xl themeable-border-hairline dark:bg-card">
+          {results.map((item) => (
+            <Link key={`${item.kind}-${item.id}`} href={hrefFor(item)} onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-black/5 dark:hover:bg-transparent dark:hover:text-white">
+              <span className="w-16 shrink-0 text-[10px] font-bold uppercase themeable-text-ink-muted-48">{kindLabel[item.kind]}</span>
+              <span className="min-w-0"><span className="block truncate text-[13px] font-semibold themeable-text-ink">{item.title}</span><span className="block truncate text-[11px] themeable-text-ink-muted-48">{item.subtitle}</span></span>
+            </Link>
+          ))}
+        </div>
+      )}
+      {open && query.trim().length >= 2 && !loading && results.length === 0 && (
+        <div className="absolute inset-x-0 top-12 z-50 rounded-xl border bg-white p-4 text-[12px] shadow-2xl themeable-border-hairline themeable-text-ink-muted-48 dark:bg-card">Nada encontrado para “{query.trim()}”.</div>
+      )}
+    </div>
+  );
+}

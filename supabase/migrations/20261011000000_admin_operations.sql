@@ -6,7 +6,9 @@ create table public.admin_audit_log (
   admin_user_id uuid not null references auth.users(id) on delete cascade,
   action text not null check (action in (
     'plan_change', 'subscription_suspend', 'subscription_reactivate',
-    'trial_extend', 'trial_reset', 'credit_adjust'
+    'trial_extend', 'trial_reset', 'credit_adjust',
+    'support_case_opened', 'support_case_updated', 'support_note_added',
+    'team_role_changed'
   )),
   target_user_id uuid references auth.users(id) on delete set null,
   details jsonb not null default '{}'::jsonb,
