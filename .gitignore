@@ -84,9 +84,14 @@ VERCEL_ENVS.txt
 .claude/
 .claude-flow/
 .opencode/
+.opencode.json
 .agents/
 .codex/
 .superpowers/
+opencode.json
+.github/agents/
+.github/hooks/
+.github/skills/
 # impeccable-hook-ignore-start .
 .impeccable/hook.cache.json
 .impeccable/hook.pending.json
