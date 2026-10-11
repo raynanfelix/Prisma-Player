@@ -7,7 +7,7 @@ import { serverConnectionAvailable } from "@/services/ads/server-events";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function GET(request: Request) {
-  const gate = await guard(request);
+  const gate = await guard(request, { paid: true });
   if (!gate.ok) return gate.response;
   const videoId = new URL(request.url).searchParams.get("videoId") ?? "";
   if (!uuid.test(videoId)) return NextResponse.json({ error: "invalid_video_id" }, { status: 400 });

@@ -30,7 +30,8 @@ function buildObjectPath(fileNameHint: unknown, prefixUserId: string): string {
 export async function GET(request: Request) {
   const gate = await guard(request);
   if (!gate.ok) return gate.response;
-  const { account } = gate;
+  const { account, plan } = gate;
+  const canView = plan.access.hasAccess;
 
   const limited = await rateLimit(request, `videos-list:${account.accountOwnerId}`, { max: 120, windowMs: 60_000 });
   if (limited) return limited;
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
   // para contar sessões únicas em JavaScript. Como o upsert de eventos já é
   // único por (video_id, session_id, event_type, progress_percent), contar as
   // linhas no Postgres com `head: true` dá o mesmo número sem trafegar nada.
-  const [playCounts, configs] = ids.length
+  const [playCounts, configs] = ids.length && canView
     ? await Promise.all([
         Promise.all(ids.map(async (videoId) => {
           const { count } = await supabase.from("video_events").select("session_id", { count: "exact", head: true }).eq("video_id", videoId).eq("event_type", "play");
@@ -64,14 +65,18 @@ export async function GET(request: Request) {
 
   const playsByVideo = new Map(playCounts);
   const configByVideo = new Map(configs.map((config) => [config.video_id, config]));
+  // Sem acesso pago, a lista continua visível (exportar/excluir/LGPD), mas
+  // nada de valor é entregue: sem URL assinada e sem plays. Antes, um trial
+  // expirado renovava a entrega do vídeo com um re-poll a cada 15 minutos,
+  // contornando o 402 do embed.
   const videos = await Promise.all((data ?? []).map(async (video) => {
-    const signedUrl = video.status === "ready"
+    const signedUrl = video.status === "ready" && canView
       ? video.storage_provider === "r2"
         ? await signR2ReadUrl(video.object_path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null)
         : (await supabase.storage.from("videos").createSignedUrl(video.object_path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS)).data?.signedUrl ?? null
       : null;
     const player = configByVideo.get(video.id);
-    return { ...video, signed_url: signedUrl, plays: playsByVideo.get(video.id) ?? 0, player_id: player?.id ?? null, published: Boolean(player?.published) };
+    return { ...video, signed_url: signedUrl, plays: canView ? (playsByVideo.get(video.id) ?? 0) : 0, player_id: player?.id ?? null, published: Boolean(player?.published) };
   }));
   return NextResponse.json({ videos, nextCursor: data?.at(-1)?.created_at ?? null }, { headers: { "cache-control": "private, no-store" } });
 }

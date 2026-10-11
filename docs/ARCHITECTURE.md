@@ -84,6 +84,21 @@ ignorados para autorização. UUID identifica, não autoriza.
    (ver `docs/apple-DESIGN.md` + tokens em `globals.css`).
 5. Teste: comportamento em `tests/` + `npm test` + `tsc --noEmit` + build.
 
+## Ciclo de vida do plano (fonte única)
+
+- Verdade de acesso = `hasAccess` (`trialAtivo || assinaturaEfetiva`).
+- Assinatura efetiva = `isSubscriptionEffective()` (`status=active` E
+  `current_period_end` futuro; nulo = sem acesso, fail-closed).
+- Trial é uso único: `activate` só com `trial_status='available'` (409 senão);
+  admin pode estender (≤60d) ou resetar, com motivo + auditoria.
+- Expiração: cron marca `expired` todo dia; UI nunca usa status cru
+  (billing usa `isSubscriptionEffective`; AccessGate e welcome têm
+  mensagens por estado — trial elegível vê trial, resto vê planos).
+- Sem acesso: lista visível (LGPD), mas sem URL assinada/plays/config/
+  diagnósticos; suporte (`/api/support/*`, ajuda) sempre livre, sem `paid`.
+- Quotas: vídeos+assets somam no `storage_gb` (API + trigger atômico);
+  plays = overage cobrado; créditos IA debitados antes do provedor.
+
 ## Admin (`/admin`, `/api/admin/*`)
 
 - Layout exige `requireAdmin()` (papel + MFA); proxy também barra `/admin`.

@@ -68,14 +68,25 @@ type PlanRow = Partial<PlanCapabilities> & {
   team_seats?: number | null;
 };
 
+/**
+ * Assinatura efetiva: status active E período vigente. `current_period_end`
+ * nulo com status active é tratado como SEM acesso (fail-closed): todas as
+ * escritas legítimas (webhook, ativação, admin) definem o fim do período, e
+ * período aberto seria acesso vitalício silencioso — vetor de burla.
+ */
+export function isSubscriptionEffective(subscription: { status?: string | null; current_period_end?: string | null } | null): boolean {
+  if (!subscription || subscription.status !== "active") return false;
+  if (!subscription.current_period_end) return false;
+  return new Date(subscription.current_period_end).getTime() > Date.now();
+}
+
 function accessFrom(
   row: { onboarding_completed?: boolean; trial_status?: string | null; trial_ends_at?: string | null } | null,
   subscription: { status?: string | null; current_period_end?: string | null } | null,
 ): AccountAccess {
   const now = Date.now();
   const trialActive = row?.trial_status === "active" && Boolean(row.trial_ends_at) && new Date(row.trial_ends_at!).getTime() > now;
-  const subscriptionActive = subscription?.status === "active"
-    && (!subscription.current_period_end || new Date(subscription.current_period_end).getTime() > now);
+  const subscriptionActive = isSubscriptionEffective(subscription);
   return {
     onboardingCompleted: row?.onboarding_completed ?? true,
     trialStatus: (row?.trial_status as AccountAccess["trialStatus"]) ?? "used",

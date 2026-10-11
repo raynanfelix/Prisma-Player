@@ -10,7 +10,7 @@ import { rateLimit } from "@/lib/security/rate-limit";
 const MAX_CONFIG_BYTES = 100_000;
 
 export async function GET(request: Request) {
-  const gate = await guard(request);
+  const gate = await guard(request, { paid: true });
   if (!gate.ok) return gate.response;
   const { account } = gate;
 
@@ -19,14 +19,9 @@ export async function GET(request: Request) {
   const supabase = createAdminClient();
   const { data, error } = await supabase.from("player_configs").select("id, config, allowed_domains, published, updated_at").eq("video_id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
   if (error) return NextResponse.json({ error: "config_load_failed" }, { status: 400 });
-  if (data && data.config && typeof data.config === "object" && Number((data.config as Record<string, unknown>).radius) === 12) {
-    const config = { ...(data.config as Record<string, unknown>), radius: 0 };
-    if (account.canEditContent) {
-      await supabase.from("player_configs").update({ config, updated_at: new Date().toISOString() }).eq("id", data.id).eq("user_id", account.accountOwnerId);
-      void purgeEmbedManifest(data.id);
-    }
-    return NextResponse.json({ playerConfig: { ...data, config } });
-  }
+  // Leitura pura: a normalização legada de `radius` acontece no PUT e no
+  // embed em leitura. Escrever aqui transformava um GET autenticado numa
+  // mutação sem CSRF e sem paywall.
   return NextResponse.json({ playerConfig: data });
 }
 

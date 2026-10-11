@@ -49,10 +49,12 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
             <LockKeyhole size={26} />
           </div>
           <h1 className="mt-5 text-[26px] font-semibold themeable-text-ink">
-            Ative seu acesso para continuar
+            {state.trial ? "Ative seu acesso para continuar" : "Seu acesso terminou"}
           </h1>
           <p className="mt-2 text-[14px] leading-relaxed themeable-text-ink-muted-48">
-            Seu projeto continua seguro. Ative os 14 dias gratis ou escolha um plano para liberar esta area.
+            {state.trial
+              ? "Seu projeto continua seguro. Ative os 14 dias gratis ou escolha um plano para liberar esta area."
+              : "Seu teste gratuito ou plano terminou. Escolha um plano para voltar a publicar e veicular suas VSLs."}
           </p>
           <Link
             href={state.trial ? "/welcome" : "/dashboard/billing"}

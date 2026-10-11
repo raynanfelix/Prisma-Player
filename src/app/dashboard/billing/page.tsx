@@ -7,7 +7,7 @@ import AiCreditCheckoutButton from "@/features/billing/components/AiCreditChecko
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatBRL, formatPlayOverage, formatStorageOverage, getPlanBenefits, type BillingPlan } from "@/lib/billing/catalog";
-import { getAccountAccess } from "@/lib/access/service";
+import { getAccountAccess, isSubscriptionEffective } from "@/lib/access/service";
 import { reconcilePendingAiCreditCheckouts } from "@/lib/billing/ai-credit-reconcile";
 
 export const dynamic = "force-dynamic";
@@ -24,8 +24,11 @@ export default async function BillingPage() {
   ]);
   const subscription = subscriptionResult.data;
   const plan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan;
+  // Verdade efetiva, não status cru: linha `active` com período vencido é
+  // plano terminado (o cron marca `expired`, mas a tela não pode mentir).
+  const subActive = isSubscriptionEffective(subscription ? { status: subscription.status, current_period_end: subscription.current_period_end } : null);
   const planOrder = ["prisma-prime", "prisma-growth", "prisma-scale"];
-  const currentPlanIndex = plan ? planOrder.indexOf(plan.slug) : -1;
+  const currentPlanIndex = plan && subActive ? planOrder.indexOf(plan.slug) : -1;
 
   return (
     <main className="dashboard-content pb-16 space-y-6">
@@ -35,7 +38,7 @@ export default async function BillingPage() {
       />
 
       <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 sm:p-7 shadow-xs">
-        {subscription?.status === "active" ? (
+        {subActive ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="rounded-full bg-[#B9FF66] px-3 py-0.5 text-xs font-bold text-[#191A23]">
@@ -43,16 +46,26 @@ export default async function BillingPage() {
               </span>
               <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{plan?.name ?? "Plano Prisma Pro"}</h2>
               <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
-                Válido até {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "a próxima renovação"}
+                Válido até {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "a próxima renovação"}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-card px-3.5 py-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
-                {subscription.billing_method === "card" ? <CreditCard size={15} /> : <QrCode size={15} />}
-                {subscription.billing_method === "card" ? "Cartão recorrente" : "Pix 30 dias"}
+                {subscription?.billing_method === "card" ? <CreditCard size={15} /> : <QrCode size={15} />}
+                {subscription?.billing_method === "card" ? "Cartão recorrente" : "Pix 30 dias"}
               </span>
-              {subscription.billing_method === "card" && <CancelSubscriptionButton />}
+              {subscription?.billing_method === "card" && <CancelSubscriptionButton />}
             </div>
+          </div>
+        ) : subscription?.status === "active" ? (
+          <div>
+            <span className="rounded-full bg-amber-500/10 px-3 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+              Plano terminado
+            </span>
+            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{plan?.name ?? "Plano Prisma Pro"} terminou em {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "—"}</h2>
+            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
+              Escolha um plano abaixo para reativar. Sem taxa de reativação.
+            </p>
           </div>
         ) : access.trialStatus === "active" ? (
           <div>
@@ -128,7 +141,7 @@ export default async function BillingPage() {
                     ))}
                 </div>
 
-                {isCurrentPlan ? (
+                {isCurrentPlan && subActive ? (
                   <div className="mt-5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 p-2.5 text-center text-xs font-bold text-emerald-800 dark:text-emerald-300">
                     Seu plano atual
                   </div>

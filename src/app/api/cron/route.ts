@@ -63,6 +63,12 @@ export async function GET(request: Request) {
   const cleanup = await admin.from("video_live_sessions").delete().lt("last_seen_at", new Date(Date.now() - 10 * 60_000).toISOString());
   if (cleanup.error) result.errors.push(`live_sessions_cleanup: ${cleanup.error.message}`);
 
+  // Expira assinaturas vencidas: sem isto a linha ficava `active` para sempre
+  // e o painel de billing mostrava "Plano ativo" para conta bloqueada.
+  // Idempotente e auditável pelo próprio status.
+  const expired = await admin.from("subscriptions").update({ status: "expired", updated_at: now.toISOString() }).eq("status", "active").lt("current_period_end", now.toISOString());
+  if (expired.error) result.errors.push(`subscriptions_expiry: ${expired.error.message}`);
+
   const { data: configs, error } = await admin.from("intelligence_controls").select("user_id,automatic_reports_enabled,report_frequency,report_email,last_report_sent_at,conversion_alerts_enabled,conversion_drop_threshold,alert_webhook_enabled,alert_webhook_url").or("automatic_reports_enabled.eq.true,conversion_alerts_enabled.eq.true");
   if (error) return NextResponse.json({ error: "controls_unavailable" }, { status: 503 });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guard } from "@/lib/api/guard";
+import { getStorageUsedBytes } from "@/lib/access/service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PLAYER_ASSET_KINDS } from "@/lib/player/assets";
 import { rateLimit } from "@/lib/security/rate-limit";
@@ -30,7 +31,7 @@ function contentMatchesMime(buffer: Buffer, contentType: string): boolean {
 export async function POST(request: Request) {
   const gate = await guard(request, { csrf: true, role: "edit", paid: true });
   if (!gate.ok) return gate.response;
-  const { account } = gate;
+  const { account, plan } = gate;
 
   const limited = await rateLimit(request, `asset-upload:${account.accountOwnerId}`, { max: 60, windowMs: 60_000 });
   if (limited) return limited;
@@ -54,6 +55,19 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: ownedVideo } = await admin.from("videos").select("id").eq("id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
   if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+
+  // Assets contam na quota do plano: sem isto, o storage de thumbnails e
+  // legendas crescia fora do limite contratado.
+  const { data: siblings } = await admin.storage.from("player-assets").list(`${account.accountOwnerId}/${videoId}`, { limit: 100 });
+  let assetsBytes = 0;
+  for (const item of siblings ?? []) {
+    const size = Number((item.metadata as { size?: unknown } | null)?.size ?? 0);
+    if (Number.isFinite(size) && size > 0) assetsBytes += size;
+  }
+  const usedBytes = await getStorageUsedBytes(account.accountOwnerId);
+  if (usedBytes + assetsBytes + file.size > plan.quotas.storageBytes) {
+    return NextResponse.json({ error: "storage_quota_exceeded", usedBytes: usedBytes + assetsBytes, limitBytes: plan.quotas.storageBytes }, { status: 413 });
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   if (!contentMatchesMime(buffer, contentType)) return NextResponse.json({ error: "file_content_mismatch" }, { status: 415 });

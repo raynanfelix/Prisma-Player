@@ -19,6 +19,12 @@ export default async function WelcomePage() {
   if (access.onboardingCompleted && access.trialStatus !== "available") {
     redirect("/dashboard/videos");
   }
+  // Trial de uso único: usado/expirado não volta para ativação (a API nega
+  // com 409). Sem este desvio, a página prometia "14 dias" para quem não tem
+  // mais direito e o botão falhava.
+  if (access.trialStatus === "used" || access.trialStatus === "expired") {
+    redirect("/dashboard/billing");
+  }
 
   return (
     <main className="grid min-h-dvh place-items-center bg-muted/35 p-5">
