@@ -34,6 +34,7 @@ const PRIVILEGED = [
   "lib/billing/provider-payable.ts",
   "lib/ai/nvidia.ts",
   "lib/api/guard.ts",
+  "lib/api/admin-guard.ts",
   "lib/api/request.ts",
   "lib/player/assets.ts",
   "services/ads/server-events.ts",

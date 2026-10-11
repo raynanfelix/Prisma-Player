@@ -9,6 +9,13 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: ["/api/", "/admin/", "/dashboard/", "/studio", "/embed/", "/checkout/", "/welcome", "/login", "/signup", "/reset-password"],
       },
+      // Bots de busca e citação por IA: explícitos para que o painel admin
+      // (SEO e IA) consiga verificar a permissão e as IAs possam citar.
+      {
+        userAgent: ["GPTBot", "ChatGPT-User", "PerplexityBot", "ClaudeBot", "anthropic-ai", "Google-Extended"],
+        allow: "/",
+        disallow: ["/api/", "/admin/", "/dashboard/", "/studio", "/embed/", "/checkout/", "/welcome", "/login", "/signup", "/reset-password"],
+      },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
   };

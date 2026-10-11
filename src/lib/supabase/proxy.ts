@@ -19,7 +19,7 @@ export async function updateSession(request: NextRequest, requestHeaders?: Heade
 
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims?.sub);
-  const protectedRoute = request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/studio");
+  const protectedRoute = request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/studio") || request.nextUrl.pathname.startsWith("/admin");
   const authRoute = request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/signup";
 
   if (protectedRoute && !signedIn) {

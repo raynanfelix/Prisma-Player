@@ -83,3 +83,15 @@ ignorados para autorização. UUID identifica, não autoriza.
 4. Novo estado selecionado/hover? Usar `--color-selected` e hovers neutros
    (ver `docs/apple-DESIGN.md` + tokens em `globals.css`).
 5. Teste: comportamento em `tests/` + `npm test` + `tsc --noEmit` + build.
+
+## Admin (`/admin`, `/api/admin/*`)
+
+- Layout exige `requireAdmin()` (papel + MFA); proxy também barra `/admin`.
+- APIs admin usam `adminGuard()` (sessão + papel, CSRF, rate limit
+  `failClosed`) e operam cross-tenant por desenho.
+- Toda mutação de suporte grava `admin_audit_log` (quem, o quê, em quem).
+- Ações manuais (plano, status, trial, créditos) NÃO tocam o provedor
+  (AbacatePay): conciliar cobrança lá. Avanços de plano/assim por diante
+  valem a partir da escrita no banco + triggers de quota.
+- SEO: `seo_targets` + `visibility_checks` (taxa = citados ÷ execuções);
+  base técnica verificada em runtime (robots, sitemap, llms.txt, pricing).
