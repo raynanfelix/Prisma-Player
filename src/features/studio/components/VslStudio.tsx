@@ -17,7 +17,6 @@ import {
   LockKeyhole,
   Maximize,
   MonitorPlay,
-  MoreVertical,
   MousePointerClick,
   Palette,
   PauseCircle,
@@ -42,6 +41,7 @@ import AdminSelect from "@/components/ui/custom/AdminSelect";
 import { Button } from "@/components/ui/button";
 import Dialog from "@/components/ui/Dialog";
 import { resolveAutoplayCover } from "@/lib/player/autoplay-cover";
+import { hookLiveViewersCount } from "@/lib/player/mini-hooks";
 import { ToastSave } from "@/components/ui/toast-save";
 import { VideoPlayer } from "@/features/player/components";
 import { apiRequest, ApiError } from "@/services/http/client";
@@ -192,6 +192,17 @@ const defaultThumbnailPresetCards: PresetCardItem[] = [
   { id: "thumb-1", name: "Thumbnail Padrão", color: "#B9FF66", badge: "Ativo", data: { thumbnailEnabled: true, thumbnailStartName: "thumb_start.jpg", thumbnailPauseName: "thumb_pause.jpg", thumbnailEndName: "thumb_end.jpg" } },
 ];
 
+export type MiniHookType = "live_viewers" | "sound_indicator" | "fast_speed" | "geo" | "custom";
+
+/** Rótulos em linguagem natural + ícone + explicação de cada tipo de gancho. */
+export const HOOK_TYPE_META: Record<MiniHookType, { label: string; icon: string; hint: string }> = {
+  live_viewers: { label: "Pessoas assistindo", icon: "🔴", hint: "Mostra seu texto com o número de pessoas assistindo agora. Ideal para prova social no meio do vídeo." },
+  sound_indicator: { label: "Alerta de som", icon: "🔊", hint: "Mostra seu texto com ícone de som. Ideal para pedir que o espectador ative o áudio." },
+  fast_speed: { label: "Selo de velocidade", icon: "⚡", hint: "Mostra seu texto com selo de velocidade. Ideal para vídeos acelerados ou trechos rápidos." },
+  geo: { label: "Localização", icon: "📍", hint: "Mostra seu texto com selo de localização. Ideal para ofertas regionais ou eventos presenciais." },
+  custom: { label: "Texto livre", icon: "✏️", hint: "Mostra exatamente o texto que você escrever, sem selo automático." },
+};
+
 const initialConfig: StudioConfig = {
   accent: "#0066cc", background: "#000000", gradientEnd: "#2997ff", colorStyle: "solid", radius: 0, bigPlay: true, playPause: true, disablePause: false, progressBar: true, time: true, seekBackward: false, seekForward: false, volume: true, fullscreen: true, pictureInPicture: true, speedControl: true,
   smartProgress: true, progressColor: "#0066cc", progressHeight: 6,
@@ -341,6 +352,21 @@ export default function VslStudio() {
       setConfig(savedCfg && typeof savedCfg === "object" ? { ...initialConfig, ...savedCfg } : initialConfig);
       dirtyConfigKeys.current.clear();
       setSaved(true);
+      // Resolve as capas/legendas salvas para a prévia (URLs assinadas de 1h).
+      const savedAssets = (savedCfg && typeof savedCfg === "object" ? (savedCfg as Partial<StudioConfig>).assets : undefined) as Record<string, string> | undefined;
+      if (savedAssets && Object.keys(savedAssets).length > 0) {
+        try {
+          const signed = await apiRequest<{ signedUrls?: Record<string, string> }>("/api/studio/asset-sign", { method: "POST", body: { videoId: id, assets: savedAssets } });
+          if (seq !== loadSeq.current) return false;
+          const urls = signed.signedUrls ?? {};
+          if (urls.thumbnailStart) setPosterUrl(urls.thumbnailStart);
+          if (urls.thumbnailPause) setPausePosterUrl(urls.thumbnailPause);
+          if (urls.thumbnailEnd) setEndPosterUrl(urls.thumbnailEnd);
+          if (urls.captions) setCaptionTrack({ src: urls.captions, kind: "subtitles", label: "Legendas", srclang: "pt-BR", default: true });
+        } catch {
+          // Prévia segue sem as capas salvas; o player publicado não é afetado.
+        }
+      }
       return true;
     } catch {
       if (seq !== loadSeq.current) return false;
@@ -387,11 +413,39 @@ export default function VslStudio() {
     if (kind === "start") setPosterUrl(url);
     else if (kind === "pause") setPausePosterUrl(url);
     else setEndPosterUrl(url);
+    // Sobe o arquivo para o servidor para valer no player publicado;
+    // a prévia local (object URL) aparece na hora, sem esperar o upload.
+    const assetKind = kind === "start" ? "thumbnailStart" : kind === "pause" ? "thumbnailPause" : "thumbnailEnd";
+    void uploadAsset(file, assetKind);
   };
 
   const handleCaption = (file: File) => {
     const url = URL.createObjectURL(file);
     setCaptionTrack({ src: url, kind: "subtitles", label: config.captionName || "Legendas", srclang: "pt-BR", default: true });
+    void uploadAsset(file, "captions");
+  };
+
+  const updateAssets = (kind: string, path: string) => {
+    dirtyConfigKeys.current.add("assets");
+    setSaved(false);
+    setConfig((current) => ({ ...current, assets: { ...current.assets, [kind]: path } }));
+  };
+
+  const uploadAsset = async (file: File, kind: "thumbnailStart" | "thumbnailPause" | "thumbnailEnd" | "captions") => {
+    const id = video?.id;
+    if (!id) return;
+    try {
+      const form = new FormData();
+      form.set("videoId", id);
+      form.set("kind", kind);
+      form.set("file", file);
+      const response = await fetch("/api/studio/asset-upload", { method: "POST", credentials: "same-origin", body: form });
+      const payload = await response.json().catch(() => null) as { path?: string; error?: string } | null;
+      if (!response.ok || !payload?.path) throw new Error(payload?.error ?? "upload_failed");
+      updateAssets(kind, payload.path);
+    } catch {
+      setSaveError("Não foi possível enviar o arquivo para o servidor. A prévia local continua valendo.");
+    }
   };
 
   const saveConfig = async () => {
@@ -570,7 +624,7 @@ export default function VslStudio() {
                   key={`${posterUrl ?? "video"}-${config.smartAutoplay}`}
                   className="w-full"
                   sources={sources}
-                  poster={config.thumbnailEnabled && !config.smartAutoplay ? posterUrl : undefined}
+                  poster={config.thumbnailEnabled && posterUrl ? posterUrl : undefined}
                   textTracks={config.captionsEnabled && captionTrack ? [captionTrack] : []}
                   autoplay={config.smartAutoplay && resumePoint === null && !posterPreviewActive}
                   muted={config.muted || (config.smartAutoplay && !autoplayActivated)}
@@ -585,6 +639,9 @@ export default function VslStudio() {
                   resumePlaybackSignal={resumePlaybackSignal}
                   onLoadedMetadata={handleMetadata}
                   onTimeUpdate={handleTimeUpdate}
+                  onPlay={() => setThumbnailOverlay(null)}
+                  onPause={() => { if (config.thumbnailEnabled && pausePosterUrl) setThumbnailOverlay("pause"); }}
+                  onEnded={() => { if (config.thumbnailEnabled && endPosterUrl && !config.loop) setThumbnailOverlay("end"); }}
                 />
               ) : (
                 <div className="flex aspect-video w-full items-center justify-center text-center text-slate-400">
@@ -627,10 +684,13 @@ export default function VslStudio() {
               {/* Smart Autoplay Overlay Preview */}
               {config.smartAutoplay && !autoplayActivated && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden bg-black/60 p-4 backdrop-blur-xs">
-                  {autoplayCover.type !== "standard" && (
+                  {autoplayCover.type !== "standard" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={autoplayCover.url} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                  )}
+                  ) : posterUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={posterUrl} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => {
@@ -661,6 +721,46 @@ export default function VslStudio() {
                     </span>
                   </button>
                 </div>
+              )}
+
+              {/* Mini-Gancho Preview em tempo real (segue o currentTime do player) */}
+              {config.miniHooksEnabled && currentTime >= Number(config.miniHookStart ?? 0) && currentTime < Number(config.miniHookStart ?? 0) + Number(config.miniHookDuration ?? 6) && (() => {
+                const hookMeta = HOOK_TYPE_META[config.miniHookType as MiniHookType] ?? HOOK_TYPE_META.custom;
+                const hookRemaining = Math.max(0, Math.ceil(Number(config.miniHookStart ?? 0) + Number(config.miniHookDuration ?? 6) - currentTime));
+                const hookPreviewText = String(config.miniHookText || "Continue assistindo").replace("{mm:ss}", `${Math.floor(hookRemaining / 60)}:${String(hookRemaining % 60).padStart(2, "0")}`);
+                return (
+                  <div className="pointer-events-none absolute inset-x-4 top-4 z-20 mx-auto max-w-[520px] px-4 py-3 font-semibold shadow-lg backdrop-blur-md" style={{ color: String(config.miniHookTextColor ?? "#ffffff"), backgroundColor: `${String(config.miniHookBackground ?? "#111111")}e8`, fontSize: `${Number(config.miniHookSize ?? 16)}px`, borderRadius: `${Number(config.miniHookRadius ?? 10)}px`, textAlign: String(config.miniHookAlign ?? "center") as React.CSSProperties["textAlign"] }}>
+                    <span aria-hidden className="mr-1.5">{hookMeta.icon}</span>
+                    {hookPreviewText}
+                    {config.miniHookType === "live_viewers" && (
+                      <span className="ml-1.5 font-extrabold" style={{ color: String(config.miniHookCounterColor ?? "#ff3b30") }}>
+                        {hookLiveViewersCount(video?.id ?? "preview")} assistindo
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ThumbSniper Preview: pausa/fim mostram a capa enviada */}
+              {thumbnailOverlay && (thumbnailOverlay === "pause" ? pausePosterUrl : endPosterUrl) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const paused = thumbnailOverlay === "pause";
+                    setThumbnailOverlay(null);
+                    if (paused) setResumePlaybackSignal((prev) => prev + 1);
+                    else setRestartWithSoundSignal((prev) => prev + 1);
+                  }}
+                  className="absolute inset-0 z-50 bg-cover bg-center cursor-pointer"
+                  style={{ backgroundImage: `url(${thumbnailOverlay === "pause" ? pausePosterUrl : endPosterUrl})` }}
+                  aria-label={thumbnailOverlay === "pause" ? "Continuar vídeo" : "Assistir novamente"}
+                >
+                  <span className="absolute inset-0 grid place-items-center bg-black/20">
+                    <span className="rounded-full bg-black/70 px-5 py-3 text-[13px] font-semibold text-white backdrop-blur-md">
+                      {thumbnailOverlay === "pause" ? "Continuar assistindo" : "Assistir novamente"}
+                    </span>
+                  </span>
+                </button>
               )}
             </div>
 
@@ -697,7 +797,7 @@ export default function VslStudio() {
 
         {/* RIGHT COLUMN: Customization Panel & Preset Manager Cards WITH FULL EDITABLE CONTROLS BELOW */}
         {active && (
-          <aside className="order-3 flex flex-col border-l border-black/10 bg-white dark:border-white/10 dark:bg-card overflow-y-auto">
+          <aside className="order-3 flex min-h-0 min-w-0 flex-col border-l border-black/10 bg-white dark:border-white/10 dark:bg-card overflow-y-auto">
             <div className="p-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center gap-2">
                 {modules.find((m) => m.id === active)?.label}
@@ -782,9 +882,11 @@ export default function VslStudio() {
                               setAutoplayPresets(next);
                               setActiveAutoplayIndex(Math.max(0, idx - 1));
                             }}
-                            className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                            title="Excluir este autoplay"
+                            aria-label="Excluir este autoplay"
+                            className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#B9FF66]/15 text-[#191A23] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-[#B9FF66] dark:hover:bg-red-950/30 dark:hover:text-red-400"
                           >
-                            <MoreVertical size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       );
@@ -933,9 +1035,11 @@ export default function VslStudio() {
                               setHeadlinePresets(next);
                               setActiveHeadlineIndex(Math.max(0, idx - 1));
                             }}
-                            className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                            title="Excluir esta headline"
+                            aria-label="Excluir esta headline"
+                            className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#B9FF66]/15 text-[#191A23] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-[#B9FF66] dark:hover:bg-red-950/30 dark:hover:text-red-400"
                           >
-                            <MoreVertical size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       );
@@ -1435,7 +1539,15 @@ function renderPanel(
     return (
       <>
         <p className="panel-help">Crie vários mini-ganchos para aparecerem em diferentes momentos do vídeo, igual ao Smart Autoplay.</p>
-        <Switch checked={c.miniHooksEnabled} onChange={(v) => u("miniHooksEnabled", v)} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-[#0066cc] dark:text-[#B9FF66]" />
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#191A23] dark:text-white">
+              Mini-ganchos
+            </h4>
+          </div>
+          <Switch checked={c.miniHooksEnabled} onChange={(v) => u("miniHooksEnabled", v)} />
+        </div>
         <button type="button" onClick={() => extras?.setLearnModule("hooks")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
           <Info size={13} /> Aprenda sobre Mini-ganchos
         </button>
@@ -1479,9 +1591,11 @@ function renderPanel(
                     setHookPresets?.(next);
                     setActiveHookIndex?.(Math.max(0, idx - 1));
                   }}
-                  className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                  title="Excluir este gancho"
+                  aria-label="Excluir este gancho"
+                  className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#B9FF66]/15 text-[#191A23] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-[#B9FF66] dark:hover:bg-red-950/30 dark:hover:text-red-400"
                 >
-                  <MoreVertical size={16} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             );
@@ -1523,9 +1637,12 @@ function renderPanel(
           <Select
             label="Tipo de Gancho"
             value={c.miniHookType}
-            options={["live_viewers", "sound_indicator", "fast_speed", "geo", "custom"]}
+            options={(Object.keys(HOOK_TYPE_META) as MiniHookType[]).map((type) => ({ value: type, label: HOOK_TYPE_META[type].label }))}
             onChange={(v) => u("miniHookType", v as StudioConfig["miniHookType"])}
           />
+          <p className="rounded-xl border border-[#B9FF66]/40 bg-[#B9FF66]/10 p-3 text-xs font-medium leading-relaxed text-[#191A23] dark:text-[#B9FF66]">
+            {HOOK_TYPE_META[c.miniHookType as MiniHookType]?.icon} {HOOK_TYPE_META[c.miniHookType as MiniHookType]?.hint ?? "Escolha um tipo de gancho."}
+          </p>
         </div>
       </>
     );
@@ -1539,7 +1656,15 @@ function renderPanel(
     return (
       <>
         <p className="panel-help">Crie vários botões de ação (CTAs) com diferentes textos, links e estilos. Selecione qual usar no momento da publicação.</p>
-        <Switch checked={c.ctaEnabled} onChange={(v) => u("ctaEnabled", v)} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MousePointerClick size={16} className="text-[#0066cc] dark:text-[#B9FF66]" />
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#191A23] dark:text-white">
+              Botões de Ação
+            </h4>
+          </div>
+          <Switch checked={c.ctaEnabled} onChange={(v) => u("ctaEnabled", v)} />
+        </div>
         <button type="button" onClick={() => extras?.setLearnModule("actions")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
           <Info size={13} /> Aprenda sobre Botões de Ação
         </button>
@@ -1584,9 +1709,11 @@ function renderPanel(
                     setCtaPresets?.(next);
                     setActiveCtaIndex?.(Math.max(0, idx - 1));
                   }}
-                  className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                  title="Excluir este botão"
+                  aria-label="Excluir este botão"
+                  className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#B9FF66]/15 text-[#191A23] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-[#B9FF66] dark:hover:bg-red-950/30 dark:hover:text-red-400"
                 >
-                  <MoreVertical size={16} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             );
@@ -1636,7 +1763,15 @@ function renderPanel(
     return (
       <>
         <p className="panel-help">Configure thumbnails diferentes para: inicial (antes do play), pausa (quando o usuário pausa) e final (quando o vídeo termina). O ThumbSniper troca automaticamente a capa baseada no estado do player.</p>
-        <Switch checked={c.thumbnailEnabled} onChange={(v) => u("thumbnailEnabled", v)} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ImageIcon size={16} className="text-[#0066cc] dark:text-[#B9FF66]" />
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#191A23] dark:text-white">
+              ThumbSniper
+            </h4>
+          </div>
+          <Switch checked={c.thumbnailEnabled} onChange={(v) => u("thumbnailEnabled", v)} />
+        </div>
         <button type="button" onClick={() => extras?.setLearnModule("thumbnail")} className="text-xs font-semibold text-[#191A23] dark:text-[#B9FF66] hover:underline flex items-center gap-1">
           <Info size={13} /> Aprenda sobre ThumbSniper
         </button>
@@ -1680,9 +1815,11 @@ function renderPanel(
                     setThumbnailPresets?.(next);
                     setActiveThumbnailIndex?.(Math.max(0, idx - 1));
                   }}
-                  className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-lg"
+                  title="Excluir este conjunto"
+                  aria-label="Excluir este conjunto"
+                  className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#B9FF66]/15 text-[#191A23] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-[#B9FF66] dark:hover:bg-red-950/30 dark:hover:text-red-400"
                 >
-                  <MoreVertical size={16} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             );
@@ -1766,5 +1903,5 @@ function formatPlayerTime(value: number) { const seconds = Math.max(0, Math.floo
 function TimeRange({ label, value, max, onChange }: { label: string; value: number; max: number; onChange: (value: number) => void }) { const safeValue = Math.min(Math.max(0, value), max); return <label className="block text-[14px] font-semibold">{label}<span className="float-right rounded-full bg-[#B9FF66] px-2.5 py-0.5 text-[11px] font-bold text-[#191A23]">{formatPlayerTime(safeValue)} / {formatPlayerTime(max)}</span><input type="range" min={0} max={max} step={1} value={safeValue} onChange={(e) => onChange(Number(e.target.value))} className="mt-4 w-full accent-[#B9FF66]" /></label>; }
 function TextInput({ label, value, placeholder, onChange }: { label: string; value?: string; placeholder?: string; onChange?: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<input value={value ?? ""} placeholder={placeholder} onChange={(e) => onChange?.(e.target.value)} className="studio-input mt-1.5 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" /></label>; }
 function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="block text-[14px] font-semibold">{label}<textarea rows={3} value={value} onChange={(e) => onChange(e.target.value)} className="studio-input mt-1.5 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card p-3 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" /></label>; }
-function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <div className="block text-[14px] font-semibold"><span className="mb-1.5 block">{label}</span><AdminSelect label={label} value={value} onChange={onChange} options={options.map((option) => ({ value: option, label: option }))} /></div>; }
+function Select({ label, value, options, onChange }: { label: string; value: string; options: Array<string | { value: string; label: string }>; onChange: (value: string) => void }) { return <div className="block text-[14px] font-semibold"><span className="mb-1.5 block">{label}</span><AdminSelect label={label} value={value} onChange={onChange} options={options.map((option) => (typeof option === "string" ? { value: option, label: option } : option))} /></div>; }
 function UploadBox({ label, selectedName, accept, onFile }: { label: string; selectedName?: string; accept: string; onFile: (file: File) => void }) { return <label className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 text-center transition-colors ${selectedName ? "border-[#B9FF66] bg-[#B9FF66]/10" : "border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-card"}`}><Subtitles size={24} className={`mb-2 ${selectedName ? "text-[#191A23] dark:text-[#B9FF66]" : "text-slate-400"}`} /><span className="text-[13px] font-bold">{label}</span>{selectedName ? <span className="mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">✓ {selectedName}</span> : <span className="mt-1 text-[11px] text-slate-400">Clique para selecionar</span>}<input type="file" accept={accept} className="sr-only" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} /></label>; }
