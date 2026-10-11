@@ -20,16 +20,18 @@ export default async function AdminSupportDetailPage({ params }: { params: Promi
   const authorIds = [...new Set((notes.data ?? []).map((note) => note.author_admin_id).filter(Boolean))] as string[];
   const authors = authorIds.length ? await admin.from("profiles").select("id,email").in("id", authorIds) : { data: [] as Array<{ id: string; email: string }> };
   const authorEmail = new Map((authors.data ?? []).map((entry) => [entry.id, entry.email]));
+  const handledBy = [...(notes.data ?? [])].reverse().find((note) => note.author_admin_id)?.author_admin_id;
+  const handledByEmail = handledBy ? authorEmail.get(handledBy) : null;
 
   return <div>
     <AdminHeader title={item.subject} description={`Aberto em ${new Date(item.created_at).toLocaleString("pt-BR")} · atualizado ${new Date(item.updated_at).toLocaleString("pt-BR")}`} />
     <div className="mb-5 flex flex-wrap items-center gap-3">
       <StatusPill value={item.status} />
-      <span className="text-[12px] themeable-text-ink-muted-48">{item.category} · prioridade {item.priority}</span>
+      <span className="text-[12px] themeable-text-ink-muted-48">{item.category} · prioridade {item.priority}{handledByEmail ? ` · atendido por ${handledByEmail}` : ""}</span>
       {account.data && <Link href={`/admin/users/${account.data.id}`} className="text-[12px] font-semibold underline">{account.data.full_name || account.data.email}</Link>}
       <span className="ml-auto"><SupportCaseControls caseId={item.id} status={item.status} priority={item.priority} /></span>
     </div>
-    <AdminPanel title="Conversa" description="Visível ao cliente e notas internas. Responder move o caso para em andamento."><div className="space-y-3 p-5">{(notes.data ?? []).map((note) => <div key={note.id} className="rounded-[14px] border p-4 themeable-border-hairline"><p className="text-[13px] leading-relaxed themeable-text-ink">{note.body}</p><p className="mt-2 text-[11px] themeable-text-ink-muted-48">{note.author_admin_id ? (authorEmail.get(note.author_admin_id) ?? "equipe") : "cliente"} · {note.is_internal ? "nota interna" : "visível ao cliente"} · {new Date(note.created_at).toLocaleString("pt-BR")}</p></div>)}
+    <AdminPanel title="Conversa" description="Visível ao cliente e notas internas. Responder move o caso para em andamento."><div className="space-y-3 p-5">{(notes.data ?? []).map((note) => <div key={note.id} className={`rounded-[14px] border p-4 ${note.is_internal ? "border-amber-500/30 bg-amber-500/[0.04] themeable-border-hairline" : "themeable-border-hairline"}`}><p className="text-[13px] leading-relaxed themeable-text-ink">{note.body}</p><p className="mt-2 text-[11px] themeable-text-ink-muted-48">{note.author_admin_id ? (authorEmail.get(note.author_admin_id) ?? "equipe") : "cliente"} · {note.is_internal ? "nota interna (só equipe)" : "visível ao cliente"} · {new Date(note.created_at).toLocaleString("pt-BR")}</p></div>)}
       {(notes.data ?? []).length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Sem mensagens ainda.</p>}</div><SupportReplyForm caseId={item.id} /><SupportNoteForm caseId={item.id} /></AdminPanel>
     <p className="mt-6 text-[12px] themeable-text-ink-muted-48"><Link href="/admin/support" className="font-semibold underline">← Voltar para suporte</Link></p>
   </div>;

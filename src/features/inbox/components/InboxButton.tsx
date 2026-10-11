@@ -32,8 +32,15 @@ export default function InboxButton() {
   }
 
   async function dismiss(id: string) {
-    const response = await fetch("/api/account/inbox", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
-    if (response.ok) setItems((current) => current.filter((item) => item.id !== id));
+    setItems((current) => current.filter((item) => item.id !== id));
+    const response = await fetch("/api/account/inbox", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
+    if (!response?.ok) {
+      // Devolve à lista se o servidor recusar.
+      void fetch("/api/account/inbox", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => setItems(data?.items ?? []))
+        .catch(() => undefined);
+    }
   }
 
   const unread = items.filter((item) => !item.read_at).length;

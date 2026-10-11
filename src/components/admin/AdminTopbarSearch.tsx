@@ -14,26 +14,58 @@ function hrefFor(item: Result): string {
 
 const kindLabel = { account: "Conta", video: "VSL", checkout: "Checkout" } as const;
 
-/** Busca global do admin com debounce. Sem tokens ou segredos nos resultados. */
+/**
+ * Busca global do admin. Input não-controlado (digitação nunca re-renderiza
+ * por tecla) + debounce + abort da request anterior: sem engasgo e sem
+ * resposta fora de ordem.
+ */
 export default function AdminTopbarSearch() {
-  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const boxRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); setLoading(false); return; }
-    setLoading(true);
-    const timer = setTimeout(() => {
-      fetch(`/api/admin/search?q=${encodeURIComponent(query)}`, { cache: "no-store" })
-        .then((response) => response.json())
-        .then((data: { results?: Result[] }) => { setResults(data.results ?? []); setOpen(true); })
-        .catch(() => setResults([]))
-        .finally(() => setLoading(false));
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [query]);
+    const input = inputRef.current;
+    if (!input) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onInput = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const term = input.value;
+        setQuery(term);
+        abortRef.current?.abort();
+        if (term.trim().length < 2) {
+          setResults([]);
+          setLoading(false);
+          return;
+        }
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setLoading(true);
+        fetch(`/api/admin/search?q=${encodeURIComponent(term)}`, { cache: "no-store", signal: controller.signal })
+          .then((response) => response.json())
+          .then((data: { results?: Result[] }) => {
+            if (controller.signal.aborted) return;
+            setResults(data.results ?? []);
+            setOpen(true);
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (!controller.signal.aborted) setLoading(false);
+          });
+      }, 350);
+    };
+    input.addEventListener("input", onInput);
+    return () => {
+      input.removeEventListener("input", onInput);
+      window.clearTimeout(timer);
+      abortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => { if (!boxRef.current?.contains(event.target as Node)) setOpen(false); };
@@ -46,8 +78,8 @@ export default function AdminTopbarSearch() {
       <div className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 themeable-border-hairline dark:bg-card">
         <Search size={15} className="shrink-0 themeable-text-ink-muted-48" aria-hidden />
         <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          ref={inputRef}
+          defaultValue=""
           onFocus={() => { if (results.length) setOpen(true); }}
           placeholder="Buscar conta, VSL, checkout…"
           aria-label="Busca global do admin"

@@ -417,7 +417,8 @@ export default function VslStudio() {
     }
   };
 
-  // Add Template Selection Function  const addAutoplayTemplate = (templateIndex: number) => {
+  // Add Template Selection Function
+  const addAutoplayTemplate = (templateIndex: number) => {
     const templates = [
       { name: "Smart Autoplay 4", color: "#0066cc", bg: "#0066cc", text: "#ffffff", msg: "Seu vídeo já começou. Clique para ouvir.", badge: "🔴 AO VIVO" },
       { name: "Smart Autoplay 5", color: "#0066cc", bg: "#0066cc", text: "#ffffff", msg: "Clique para ouvir", badge: "🔊 ÁUDIO" },

@@ -51,8 +51,11 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: "inbox_failed" }, { status: 500 });
 
-  // Seed default messages if empty
+  // Seed uma única vez na vida da conta: se só olhássemos as não-dispensadas,
+  // dispensar as 4 padrões ressuscitava todas no próximo GET.
   if (!data || data.length === 0) {
+    const { count: ever } = await admin.from("user_inbox").select("id", { count: "exact", head: true }).eq("user_id", userId);
+    if ((ever ?? 0) > 0) return NextResponse.json({ items: [] }, { headers: { "cache-control": "no-store" } });
     const toInsert = defaultMessages.map((item) => ({
       user_id: userId,
       ...item,

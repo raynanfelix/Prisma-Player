@@ -17,17 +17,39 @@ export default async function SupportDetailPage({ params }: { params: Promise<{ 
   if (!item) notFound();
   const { data: notes } = await admin.from("support_notes").select("id,author_admin_id,body,created_at").eq("case_id", id).eq("is_internal", false).order("created_at", { ascending: true }).limit(200);
   const statusLabel: Record<string, string> = { aberto: "Aguardando atendimento", em_andamento: "Em atendimento pela equipe", aguardando_cliente: "Aguardando você", resolvido: "Resolvido" };
+  const teamReplies = (notes ?? []).filter((note) => note.author_admin_id);
+  const lastReply = teamReplies.length ? new Date(teamReplies[teamReplies.length - 1].created_at) : null;
+
+  const dayLabel = (iso: string) => {
+    const day = new Date(iso);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (day.toDateString() === today.toDateString()) return "Hoje";
+    if (day.toDateString() === yesterday.toDateString()) return "Ontem";
+    return day.toLocaleDateString("pt-BR");
+  };
+  let lastDay = "";
 
   return <main className="mx-auto w-full max-w-3xl space-y-5 pb-16">
-    <header><p className="text-[11px] font-semibold uppercase tracking-[.14em] text-prisma-blue dark:text-white">Ticket</p><h1 className="mt-1 text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">{item.subject}</h1><p className="mt-1 text-[12px] themeable-text-ink-muted-48">{statusLabel[item.status] ?? item.status} · {item.category} · prioridade {item.priority}</p></header>
+    <header><p className="text-[11px] font-semibold uppercase tracking-[.14em] text-prisma-blue dark:text-white">Ticket</p><h1 className="mt-1 text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">{item.subject}</h1><p className="mt-1 text-[12px] themeable-text-ink-muted-48">{statusLabel[item.status] ?? item.status} · {item.category} · prioridade {item.priority}{lastReply ? ` · equipe respondeu em ${lastReply.toLocaleString("pt-BR")}` : ""}</p></header>
     <section aria-label="Conversa" className="space-y-3">
-      {(notes ?? []).map((note) => {
+      {(notes ?? []).flatMap((note) => {
+        const day = dayLabel(note.created_at);
+        const divider = day !== lastDay ? [{ divider: (lastDay = day) }] : [];
+        return [...divider, { note }];
+      }).map((entry, index) => {
+        if ("divider" in entry) return <p key={`day-${index}`} className="pt-1 text-center text-[11px] font-semibold themeable-text-ink-muted-48">{entry.divider}</p>;
+        const note = entry.note;
         const mine = !note.author_admin_id;
-        return <div key={note.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+        return <div key={note.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+          {!mine && <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-[#B9FF66] text-[11px] font-bold text-[#191A23]">P</span>}
           <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? "bg-selected text-selected-foreground" : "border bg-white themeable-border-hairline dark:bg-card"}`}>
+            {!mine && <p className="mb-1 text-[10px] font-bold uppercase tracking-wide themeable-text-ink-muted-48">Equipe Prisma</p>}
             <p className="text-[13px] leading-relaxed">{note.body}</p>
-            <p className={`mt-1 text-[10px] ${mine ? "opacity-70" : "themeable-text-ink-muted-48"}`}>{mine ? "Você" : "Equipe Prisma"} · {new Date(note.created_at).toLocaleTimeString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+            <p className={`mt-1 text-[10px] ${mine ? "opacity-70" : "themeable-text-ink-muted-48"}`}>{mine ? "Você" : "Suporte"} · {new Date(note.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
           </div>
+          {mine && <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-200 text-[11px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">V</span>}
         </div>;
       })}
       {(notes ?? []).length === 0 && <p className="rounded-2xl border p-5 text-center text-[13px] themeable-border-hairline themeable-text-ink-muted-48">Recebemos seu ticket. A equipe responde aqui mesmo — pode escrever abaixo se lembrar de mais detalhes.</p>}
