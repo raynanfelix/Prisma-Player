@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import { getCurrentAdminUser, getCurrentUserId } from "@/lib/auth/server";
 import { csrfGuard } from "@/lib/security/csrf";
 
+// Contrato framework-neutral com as rotas admin (mesma razão do guard):
+// `Response` nativo; `deny` segue construindo NextResponse internamente.
 export type AdminGuardResult =
   | { ok: true; adminId: string }
-  | { ok: false; response: NextResponse };
+  | { ok: false; response: Response };
 
 function deny(error: string, status: number, message?: string): AdminGuardResult {
   return { ok: false, response: NextResponse.json(message ? { error, message } : { error }, { status, headers: { "cache-control": "no-store" } }) };

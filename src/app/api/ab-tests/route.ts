@@ -4,6 +4,7 @@ import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
 import { db, schema } from "@/lib/db";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { AB } from "@/lib/constants";
 
 const { abTests, abTestFolders, abTestVariants, playerEvents, videos } = schema;
 
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     // inteiro da conta a cada abertura da tela.
     const variantIdList = variants.map((variant) => variant.id);
     events = variantIdList.length
-      ? await db.select({ variantId: playerEvents.variantId, sessionId: playerEvents.sessionId, eventType: playerEvents.eventType, progressPercent: playerEvents.progressPercent }).from(playerEvents).where(inArray(playerEvents.variantId, variantIdList)).limit(100_000)
+      ? await db.select({ variantId: playerEvents.variantId, sessionId: playerEvents.sessionId, eventType: playerEvents.eventType, progressPercent: playerEvents.progressPercent }).from(playerEvents).where(inArray(playerEvents.variantId, variantIdList)).limit(AB.MAX_EVENTS_PER_TEST_READ)
       : [];
   } catch {
     return NextResponse.json({ error: "tests_load_failed" }, { status: 500 });

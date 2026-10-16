@@ -1,5 +1,4 @@
 import "server-only";
-import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { lt, sql } from "drizzle-orm";
 
@@ -62,12 +61,15 @@ function limitHeaders(max: number, remaining: number, resetEpochSeconds: number)
   };
 }
 
-function limitedResponse(max: number, retryAfterSeconds: number, resetEpochSeconds: number): NextResponse {
-  return NextResponse.json(
-    { error: "rate_limited", retryAfterSeconds: Math.max(1, retryAfterSeconds) },
+// Módulo de segurança não conhece o framework: `Response` nativo (Web
+// standard), não `NextResponse`. Headers e corpo preservados byte a byte.
+function limitedResponse(max: number, retryAfterSeconds: number, resetEpochSeconds: number): Response {
+  return new Response(
+    JSON.stringify({ error: "rate_limited", retryAfterSeconds: Math.max(1, retryAfterSeconds) }),
     {
       status: 429,
       headers: {
+        "content-type": "application/json",
         ...limitHeaders(max, 0, resetEpochSeconds),
         "Retry-After": String(Math.max(1, retryAfterSeconds)),
       },
@@ -83,7 +85,7 @@ export function hashRateLimitIdentifier(value: string): string {
 }
 
 export type RateLimitResult =
-  | { limited: true; response: NextResponse }
+  | { limited: true; response: Response }
   | { limited: false; headers: Record<string, string> };
 
 /**
@@ -133,7 +135,7 @@ export async function consumeRateLimit(request: Request, scope: string, options:
   }
 }
 
-export async function rateLimit(request: Request, scope: string, options: RateLimitOptions): Promise<NextResponse | null> {
+export async function rateLimit(request: Request, scope: string, options: RateLimitOptions): Promise<Response | null> {
   const result = await consumeRateLimit(request, scope, options);
   return result.limited ? result.response : null;
 }

@@ -1,5 +1,4 @@
 import "server-only";
-import { NextResponse } from "next/server";
 import { buildConfiguredSelfOrigins } from "@/lib/security/self-origins";
 
 const CONFIGURED_ORIGINS = buildConfiguredSelfOrigins();
@@ -42,10 +41,15 @@ export function validateOrigin(request: Request): boolean {
   return false;
 }
 
-export function csrfGuard(request: Request): NextResponse | null {
+// Módulo de segurança não conhece o framework: devolve `Response` nativo
+// (Web standard), não `NextResponse`. Os callers apenas o retornam.
+export function csrfGuard(request: Request): Response | null {
   if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") return null;
   if (!validateOrigin(request)) {
-    return NextResponse.json({ error: "csrf_validation_failed" }, { status: 403 });
+    return new Response(JSON.stringify({ error: "csrf_validation_failed" }), {
+      status: 403,
+      headers: { "content-type": "application/json" },
+    });
   }
   return null;
 }

@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/security/rate-limit";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { isoOrNull } from "@/lib/datetime";
+import { TRIAL } from "@/lib/constants";
 
 const { accountAccess, userInbox } = schema;
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     onboardingCompleted: true,
     trialStatus: "active" as const,
     trialStartedAt: now,
-    trialEndsAt: new Date(now.getTime() + 14 * 86400000),
+    trialEndsAt: new Date(now.getTime() + TRIAL.DURATION_MS),
     updatedAt: now,
   } : { onboardingCompleted: true, updatedAt: now };
   // Ativar só é permitido com trial 'available'; o RETURNING vazio (nenhuma

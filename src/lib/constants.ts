@@ -52,3 +52,15 @@ export const BILLING = {
   MAX_PROVIDER_SUBSCRIPTION_ID_LENGTH: 200,
   WEBHOOK_SIGNATURE_MAX_LENGTH: 500,
 } as const;
+
+// Duração do teste gratuito (ativado em /welcome; checado em getAccountAccess).
+export const TRIAL = {
+  DURATION_DAYS: 14,
+  DURATION_MS: 14 * 24 * 60 * 60 * 1000,
+} as const;
+
+// Teto de leitura de player_events por teste A/B ao carregar as variantes
+// para o dashboard — evita puxar a tabela inteira para a memória.
+export const AB = {
+  MAX_EVENTS_PER_TEST_READ: 100_000,
+} as const;

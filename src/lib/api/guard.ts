@@ -25,11 +25,14 @@ export type GuardOptions = {
   paid?: boolean;
 };
 
+// O contrato com as rotas é framework-neutral: `Response` (Web standard).
+// csrfGuard/rateLimit devolvem Response nativo; `deny` constrói NextResponse
+// internamente (adaptador), que é atribuível a Response.
 export type GuardResult =
   | { ok: true; userId: string; account: TeamAccountContext; plan: AccountPlan }
-  | { ok: false; response: NextResponse };
+  | { ok: false; response: Response };
 
-function deny(error: string, status: number, message?: string): { ok: false; response: NextResponse } {
+function deny(error: string, status: number, message?: string): { ok: false; response: Response } {
   return { ok: false, response: NextResponse.json(message ? { error, message } : { error }, { status, headers: { "cache-control": "no-store" } }) };
 }
 
