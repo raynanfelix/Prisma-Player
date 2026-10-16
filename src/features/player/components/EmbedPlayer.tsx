@@ -39,6 +39,11 @@ function embedErrorMessage(code: string, status: number): string {
 
 export default function EmbedPlayer({ playerId, tracking, originToken }: { playerId: string; tracking?: Tracking; originToken?: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
+  // Boot em duas fases (Plano A de escala): config pública do manifest —
+  // cacheável na borda — pinta o shell de apresentação antes de a config
+  // dinâmica chegar. O playerId viaja junto para nunca pintar o shell de um
+  // player por outro.
+  const [manifestShell, setManifestShell] = useState<{ playerId: string; config: Record<string, unknown> } | null>(null);
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -200,6 +205,22 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     // testId + claim `abTest`). A API precisa do id do teste para verificar o
     // token no escopo certo — sem ele, o consumo do player variante rejeita.
     if (trackingTestId) params.set("abTestId", trackingTestId);
+    // FAST-PATH do manifest (Plano A): busca em PARALELO à config dinâmica o
+    // manifest público (cacheável na borda) que pinta o shell instantâneo.
+    // O embed A/B (trackingTestId) NÃO usa manifest — o fluxo dele fica como
+    // está. Sem token/sessão no query: a URL é a mesma para todos os
+    // visitantes (chave única de cache na CDN). Qualquer falha (rede/4xx/5xx)
+    // é engolida em silêncio — o shell é otimização, nunca dependência.
+    if (!trackingTestId) {
+      fetch(`/api/embed/${encodeURIComponent(playerId)}/manifest`)
+        .then(async (response) => {
+          if (!response.ok) return null;
+          const manifest = await response.json().catch(() => null) as { config?: unknown } | null;
+          return manifest?.config && typeof manifest.config === "object" ? manifest.config as Record<string, unknown> : null;
+        })
+        .then((config) => { if (config && !payloadRef.current) setManifestShell({ playerId, config }); })
+        .catch(() => { /* fast-path falhou: segue o fluxo atual */ });
+    }
     fetch(`/api/embed/${encodeURIComponent(playerId)}${params.size ? `?${params.toString()}` : ""}`, { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json().catch(() => null) as (Payload & { error?: string }) | null;
@@ -391,7 +412,43 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   }, [currentTime, payload]);
 
   if (error) return <main className="grid min-h-dvh place-items-center bg-transparent p-6 text-center text-[#6e6e73]"><section role="alert" className="max-w-sm"><h1 className="mb-2 text-base font-semibold text-[#1d1d1f]">Reprodução indisponível</h1><p className="text-sm leading-6">{error}</p></section></main>;
-  if (!payload) return <main className="grid min-h-dvh place-items-center bg-transparent p-4"><div className="w-full max-w-3xl"><div className="grid aspect-video w-full place-items-center overflow-hidden rounded-2xl bg-black"><span className="flex flex-col items-center gap-3"><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden className="animate-pulse"><circle cx="22" cy="22" r="21" fill="rgba(255,255,255,0.08)" /><path d="M18 14.5v15l12-7.5z" fill="rgba(255,255,255,0.85)" /></svg><span className="animate-pulse text-[12px] font-semibold text-white/70">Carregando VSL…</span></span></div></div></main>;
+  if (!payload) {
+    const shell = manifestShell && manifestShell.playerId === playerId ? manifestShell.config : null;
+    // Sem manifest ainda (ou de outro player): placeholder neutro de hoje.
+    if (!shell) return <main className="grid min-h-dvh place-items-center bg-transparent p-4"><div className="w-full max-w-3xl"><div className="grid aspect-video w-full place-items-center overflow-hidden rounded-2xl bg-black"><span className="flex flex-col items-center gap-3"><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden className="animate-pulse"><circle cx="22" cy="22" r="21" fill="rgba(255,255,255,0.08)" /><path d="M18 14.5v15l12-7.5z" fill="rgba(255,255,255,0.85)" /></svg><span className="animate-pulse text-[12px] font-semibold text-white/70">Carregando VSL…</span></span></div></div></main>;
+    // SHELL do manifest (boot em duas fases): pintura instantânea de
+    // apresentação com as cosmetics públicas — headline + moldura do player
+    // (fundo preto como o primeiro paint real, radius e proporção 16:9) —
+    // enquanto a config dinâmica chega. SEM botões, SEM CTA e SEM <video>:
+    // interativos existem só no payload final (nada de listener duplicado).
+    // O payload substitui este bloco inteiro; headlineVariants/turbo/A-B
+    // continuam aplicando só sobre o payload dinâmico, nunca sobre o shell.
+    const shellHeadlineRaw = shell.headline;
+    // Gate idêntico ao player real (Boolean(c.headlineEnabled), linha do
+    // payload): sem isso, player com headline preenchida mas DESATIVADA a
+    // exibia no shell pela janela sub-segundo de boot.
+    const shellHeadline = Boolean(shell.headlineEnabled) && typeof shellHeadlineRaw === "string" ? shellHeadlineRaw.trim() : "";
+    return (
+      <main data-prisma-embed className="flex min-h-0 select-none justify-center bg-transparent">
+        <div className="flex w-full flex-col" style={{ width: "100%" }}>
+          {shellHeadline && (
+            <HeadlineBlock
+              headline={shellHeadline}
+              color={String(shell.headlineColor ?? "#1d1d1f")}
+              background={String(shell.headlineBackground ?? "#ffffff")}
+              fontSize={30}
+              align={String(shell.headlineAlign ?? "center")}
+              playerRadius={Number(shell.radius ?? 0)}
+              format="text"
+            />
+          )}
+          <div className="relative order-2 mx-auto grid aspect-video w-full place-items-center overflow-hidden bg-black" style={{ borderRadius: `${Number(shell.radius ?? 0)}px` }}>
+            <span role="status" aria-label="Carregando vídeo" className="block h-7 w-7 animate-spin rounded-full border-2 border-white/25 border-t-white motion-reduce:animate-none" />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const c = payload.config;
   const style = { "--player-accent": String(c.progressColor ?? c.accent ?? "#0066cc"), "--player-progress-height": `${Number(c.progressHeight ?? 6)}px` } as CSSProperties;

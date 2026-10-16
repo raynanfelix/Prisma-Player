@@ -4,7 +4,7 @@ import { PgDialect, type PgTable } from "drizzle-orm/pg-core";
 import { currentFakeDb, insertedValues, resetFakeDb, updatedSets, type FakeDb } from "./helpers/fake-db";
 import { videos as videosTable } from "../drizzle/schema";
 
-const { gateState, quotaState, updateResults, capturedWheres, failingDeletes } = vi.hoisted(() => ({
+const { gateState, quotaState, updateResults, capturedWheres, failingDeletes, faststartState } = vi.hoisted(() => ({
   // userId (sessão) difere do accountOwnerId (titular) de propósito: toda
   // escrita tem que usar o TITULAR da conta, nunca um id vindo do corpo.
   gateState: {
@@ -25,6 +25,8 @@ const { gateState, quotaState, updateResults, capturedWheres, failingDeletes } =
   capturedWheres: [] as Array<{ op: "update" | "delete"; table: string; arg: unknown }>,
   // Falha isolada só do delete (failingTables derrubaria o select anterior).
   failingDeletes: {} as Record<string, boolean>,
+  // Resultado controlado do detector de faststart (true/false/null).
+  faststartState: { value: true as boolean | null },
 }));
 
 vi.mock("@/lib/api/guard", () => ({
@@ -66,6 +68,10 @@ vi.mock("@/lib/storage/r2", async (importOriginal) => {
     completeR2MultipartUpload: vi.fn(async () => ({ ContentLength: 1000 })),
   };
 });
+
+vi.mock("@/lib/storage/faststart", () => ({
+  detectMp4Faststart: vi.fn(async () => faststartState.value),
+}));
 
 vi.mock("@/lib/db", async () => {
   const { installFakeDb } = await import("./helpers/fake-db");
@@ -189,6 +195,7 @@ import {
   r2MaxUploadBytes,
   signR2ReadUrl,
 } from "@/lib/storage/r2";
+import { detectMp4Faststart } from "@/lib/storage/faststart";
 
 const OWNER = "user-owner";
 const VIDEO_ID = "11111111-1111-4111-8111-111111111111";
@@ -261,6 +268,7 @@ beforeEach(() => {
   gateState.storageBytes = 5 * 1024 ** 3;
   gateState.denyStatus = 401;
   quotaState.usedBytes = 0;
+  faststartState.value = true;
   for (const key of Object.keys(updateResults)) delete updateResults[key];
   for (const key of Object.keys(failingDeletes)) delete failingDeletes[key];
   capturedWheres.length = 0;
@@ -609,10 +617,13 @@ describe("PATCH /api/videos/[id]", () => {
   });
 
   it("promover a ready grava status/duração e reafirma o player (idempotente)", async () => {
-    fake().state.selectRows["videos"] = [{ objectPath: `${OWNER}/v.mp4`, status: "processing" }];
+    fake().state.selectRows["videos"] = [{ objectPath: `${OWNER}/v.mp4`, status: "processing", mimeType: "video/mp4" }];
     updateResults["videos"] = [{ id: VIDEO_ID, title: "VSL Principal", folderId: null }];
     const response = await patch({ status: "ready", durationSeconds: 42.5 });
     expect(response.status).toBe(200);
+    // Campo aditivo do fim de upload: faststart do MP4 recém-promovido.
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body.faststart).toBe(true);
 
     const sets = updatedSets(fake(), "videos") as Array<Record<string, unknown>>;
     expect(sets[0]).toMatchObject({ status: "ready", durationSeconds: "42.5" });
@@ -850,13 +861,42 @@ describe("POST /api/videos/[id]/multipart", () => {
       parts: [{ etag: "abc", partNumber: 1 }],
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
+    // Campo aditivo: o complete devolve o diagnóstico de faststart do MP4.
+    expect(await response.json()).toEqual({ ok: true, faststart: true });
 
     const sets = updatedSets(fake(), "videos") as Array<Record<string, unknown>>;
     expect(sets[0]).toMatchObject({ status: "ready", durationSeconds: "60" });
     const players = insertedValues(fake(), "player_configs") as Array<Record<string, unknown>>;
     expect(players).toHaveLength(1);
     expect(players[0]).toMatchObject({ userId: OWNER, videoId: VIDEO_ID, published: true });
+  });
+
+  it("complete sem faststart devolve faststart: false e registra aviso", async () => {
+    fake().state.selectRows["videos"] = [videoRow({ status: "processing" })];
+    faststartState.value = false;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const response = await multipart({
+        action: "complete", uploadId: "upload-123",
+        parts: [{ etag: "abc", partNumber: 1 }],
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true, faststart: false });
+      expect(warn).toHaveBeenCalledWith("mp4_sem_faststart", { id: VIDEO_ID, objectPath: `${OWNER}/abc-video.mp4` });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("complete de não-MP4 não roda a detecção e devolve faststart: null", async () => {
+    fake().state.selectRows["videos"] = [videoRow({ status: "processing", mimeType: "application/vnd.apple.mpegurl" })];
+    const response = await multipart({
+      action: "complete", uploadId: "upload-123",
+      parts: [{ etag: "abc", partNumber: 1 }],
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, faststart: null });
+    expect(vi.mocked(detectMp4Faststart)).not.toHaveBeenCalled();
   });
 
   it("ação desconhecida com uploadId válido devolve 400 invalid_action", async () => {

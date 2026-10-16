@@ -5,7 +5,7 @@ import { db, schema } from "@/lib/db";
 import { createBoundEmbedEventTokenSafely, domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { signR2ReadUrl } from "@/lib/storage/r2";
-import { getAccountAccess } from "@/lib/access/service";
+import { getAccountAccessCached } from "@/lib/access/access-cache";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { isValidViewerId } from "@/lib/player/viewer-id";
 import { clientIpFromHeaders, isVpnOrProxy } from "@/lib/security/vpn";
@@ -84,7 +84,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // roundtrip ao Neon. Precedência externa preservada: o 402 do acesso vence
   // antes das checagens de origem e do 404 do vídeo.
   const [ownerAccess, video] = await Promise.all([
-    getAccountAccess(playerConfig.userId),
+    getAccountAccessCached(playerConfig.userId),
     db
       .select({ id: videos.id, title: videos.title, objectPath: videos.objectPath, mimeType: videos.mimeType, userId: videos.userId })
       .from(videos)

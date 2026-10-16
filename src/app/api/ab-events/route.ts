@@ -26,14 +26,21 @@ export async function POST(request: Request) {
   const progressPercent = Number(body?.progressPercent ?? 0);
   const watchedSeconds = Math.max(0, Math.min(Number(body?.watchedSeconds ?? 0), 86400));
   if (![testId, variantId, sessionId].every((id) => uuid.test(id)) || !allowedEvents.has(eventType) || ![0, 25, 50, 75, 100].includes(progressPercent)) return NextResponse.json({ error: "invalid_event" }, { status: 400 });
-  const limited = await rateLimit(request, `ab:${testId}:${variantId}:${sessionId}`, { max: 120, windowMs: 60_000 });
+  // Anti-CGNAT: espectadores de operadora móvel compartilham o mesmo IP
+  // público; identifier por IP fazia o limite acompanhar o IP da operadora,
+  // multiplicando buckets a cada troca de IP da mesma sessão. O corpo já
+  // traz sessionId validado como UUID acima (fora disso a rota devolve 400
+  // antes de chegar aqui), então o bucket passa a ser por SESSÃO.
+  const sessionIdentifier = `s:${sessionId}`;
+  const limited = await rateLimit(request, `ab:${testId}:${variantId}:${sessionId}`, { max: 120, windowMs: 60_000, identifier: sessionIdentifier });
   if (limited) return limited;
-  // Segunda barreira contra rotação de sessionId: o limite por sessão sozinho
-  // dava bucket novo a cada UUID girado. Este limite por teste+variante+IP
-  // (identifier padrão = IP do rateLimit) contém o volume total sem travar
-  // usuários legítimos atrás do mesmo NAT — 1000/min por IP é folga ampla.
-  const globalLimited = await rateLimit(request, `ab-global:${testId}:${variantId}`, { max: 1000, windowMs: 60_000 });
-  if (globalLimited) return globalLimited;
+  // Decisão do Lead (review do Plano E): a segunda barreira "global" por IP
+  // foi REMOVIDA — com identifier por sessão ela ficava ofuscada pelo
+  // limite de 120/min acima (código morto custando 1 write no Neon por
+  // request) e restaurá-la por IP reabrira o problema de CGNAT que o Plano
+  // E fechou. Camadas anti-abuso reais desta rota: validateOrigin acima,
+  // este teto por sessão, e o dedupe ON CONFLICT DO NOTHING do insert
+  // (chave test_id+variant_id+session_id+event_type+progress_percent).
 
   let variant: { userId: string; videoId: string } | undefined;
   try {

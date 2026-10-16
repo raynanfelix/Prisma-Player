@@ -73,6 +73,30 @@ O `.env.example` já está completo e sem nenhuma `SUPABASE_*`.
 
 ---
 
+## 6. Checklist de escala (quando o tráfego de verdade chegar)
+
+Arquitetura de entrega da VSL (pós-otimização): config pública do player
+servida da **borda da Vercel** (manifest, `s-maxage=60`) → endpoint
+dinâmico só para URL assinada + token de eventos → **bytes de vídeo
+direto do R2 ao navegador** (egress US$ 0) → eventos em lote no Neon com
+rollup diário + purga de retenção.
+
+| Quando | Ação | Onde |
+|---|---|---|
+| Primeiro cliente pagando | Vercel **Pro** (~US$20/mês) | Vercel → Billing |
+| Tráfego contínuo (qualquer hora do dia) | Neon **Launch** (~US$19/mês) e desligar scale-to-zero (compute sempre ativo) → mata o cold start do primeiro play de cada pico | Neon → plano → Compute → Always on |
+| Eventos passando de ~10 GB | Ajustar `VIDEO_EVENTS_RETENTION_DAYS` (30 → 14/21) OU subir Neon Scale | Vercel env vars / Neon |
+| Desde já (grátis) | **Monitor de uptime**: UptimeRobot/Better Stack free apontando para `https://seu-dominio/api/health` (a cada 5 min) + alerta por e-mail | monitor → URL `/api/health` |
+| Semana de lançamento de um cliente | Ping profundo: abrir a VSL de teste 1×/dia valida a cadeia inteira (edge + Neon + R2) | manual |
+
+**Janelas conhecidas e aceitas (decisões de produto):** mudança de config
+do player propaga em ≤60s (cache de borda do manifest); assinatura
+cancelada pode servir por até 30s (micro-cache de acesso no embed);
+eventos de analytics com limite por **sessão** (não por IP — CGNAT de
+operadora não trava espectador legítimo).
+
+---
+
 ## Pendências finais (consolidadas)
 
 1. **2FA/MFA indisponível** — Neon Auth gerenciado ainda não tem MFA (roadmap

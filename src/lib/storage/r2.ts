@@ -72,7 +72,9 @@ function required(name: string) {
   return value;
 }
 
-function client() {
+// Exportados para o módulo irmão faststart.ts: mesma fábrica de client (mesmas
+// credenciais/endpoint validados) para o GetObject de diagnóstico.
+export function client() {
   return new S3Client({
     region: "auto",
     endpoint: endpoint(),
@@ -84,7 +86,7 @@ function client() {
   });
 }
 
-const bucket = () => required("CLOUDFLARE_R2_BUCKET");
+export const bucket = () => required("CLOUDFLARE_R2_BUCKET");
 
 export async function createR2MultipartUpload(key: string, contentType: string, metadata: Record<string, string>) {
   const result = await client().send(new CreateMultipartUploadCommand({

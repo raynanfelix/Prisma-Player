@@ -6,6 +6,7 @@ import { readJsonBody } from "@/lib/api/request";
 import { db, schema } from "@/lib/db";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { deleteR2Object, headR2Object } from "@/lib/storage/r2";
+import { detectMp4Faststart } from "@/lib/storage/faststart";
 import { VIDEO } from "@/lib/constants";
 import { rateLimit } from "@/lib/security/rate-limit";
 
@@ -47,11 +48,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     updates.folderId = folderId;
   }
 
+  let faststart: boolean | null | undefined;
   if (body?.status === "ready" || body?.status === "failed") {
-    let current: { objectPath: string; status: string } | null = null;
+    let current: { objectPath: string; status: string; mimeType: string | null } | null = null;
     try {
       current = (await db
-        .select({ objectPath: videos.objectPath, status: videos.status })
+        .select({ objectPath: videos.objectPath, status: videos.status, mimeType: videos.mimeType })
         .from(videos)
         .where(and(eq(videos.id, id), eq(videos.userId, account.accountOwnerId)))
         .limit(1))[0] ?? null;
@@ -66,6 +68,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       updates.status = "ready";
       const duration = Number(body.durationSeconds);
       if (Number.isFinite(duration) && duration > 0) updates.durationSeconds = String(duration);
+      // Faststart (moov antes de mdat): diagnóstico best-effort do fim do
+      // upload — só para MP4; null quando indeterminado/erro, nunca derruba
+      // a transição. Campo aditivo na resposta deste PATCH.
+      faststart = current.mimeType?.toLowerCase() === "video/mp4"
+        ? await detectMp4Faststart(current.objectPath).catch(() => null)
+        : null;
+      if (faststart === false) console.warn("mp4_sem_faststart", { id, objectPath: current.objectPath });
     } else updates.status = "failed";
   }
 
@@ -85,7 +94,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         .onConflictDoNothing({ target: playerConfigs.videoId })
         .catch(() => undefined);
     }
-    return NextResponse.json({ video: { id: data.id, title: data.title, folder_id: data.folderId } });
+    // Sem transição de status não há campo novo: o contrato do PATCH
+    // título/pasta permanece byte a byte igual ao anterior.
+    return NextResponse.json(
+      faststart === undefined
+        ? { video: { id: data.id, title: data.title, folder_id: data.folderId } }
+        : { video: { id: data.id, title: data.title, folder_id: data.folderId }, faststart },
+    );
   } catch {
     return NextResponse.json({ error: "video_update_failed" }, { status: 400 });
   }

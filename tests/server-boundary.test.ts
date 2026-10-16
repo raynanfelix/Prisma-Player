@@ -9,6 +9,7 @@ import { join } from "node:path";
 const ROOT = join(process.cwd(), "src");
 
 const PRIVILEGED = [
+  "lib/access/access-cache.ts",
   "lib/access/bootstrap.ts",
   "lib/access/service.ts",
   "lib/access/team-context.ts",
@@ -22,6 +23,7 @@ const PRIVILEGED = [
   "lib/security/embed-origin.ts",
   "lib/security/auth-events.ts",
   "lib/storage/r2.ts",
+  "lib/storage/faststart.ts",
   "lib/webhooks/delivery.ts",
   "lib/email/operational-report.ts",
   "lib/cache/embed-purge.ts",

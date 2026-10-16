@@ -3,9 +3,8 @@ import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { sanitizeCoverUrl } from "@/lib/player/autoplay-cover";
-import { domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { getAccountAccess } from "@/lib/access/service";
+import { getAccountAccessCached } from "@/lib/access/access-cache";
 import { envInt } from "@/lib/config/env";
 
 const { playerConfigs } = schema;
@@ -62,7 +61,7 @@ const MANIFEST_CONFIG_KEYS = [
   "ctaEnabled", "ctaStart", "ctaEnd", "ctaText", "ctaUrl", "ctaNewTab", "ctaBackground",
   "ctaTextColor", "ctaFontSize", "ctaRadius", "ctaPaddingX", "ctaPaddingY", "ctaShadow",
   "ctaPulse", "ctaHoverBackground", "ctaHoverTextColor", "ctaPersist", "ctaAutoScroll",
-  "headline", "headlineColor", "headlineBackground", "headlineAlign",
+  "headline", "headlineColor", "headlineBackground", "headlineAlign", "headlineEnabled",
 ] as const;
 
 function sanitizeConfigForManifest(raw: Record<string, unknown>): Record<string, unknown> {
@@ -80,8 +79,14 @@ function sanitizeConfigForManifest(raw: Record<string, unknown>): Record<string,
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  if (!uuid.test(id)) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
+  // Erros NUNCA cacheiam na borda (sem no-store explícito, uma CDN agressiva
+  // poderia servir o 404/503 para o player reativado).
+  const NO_STORE = { "cache-control": "private, no-store, max-age=0" };
+  if (!uuid.test(id)) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: NO_STORE });
 
+  // O rate limit só roda em cache miss: com o manifest público cacheado na
+  // borda (s-maxage=60), a CDN absorve o tráfego repetido e a origem só vê a
+  // primeira requisição de cada janela por player.
   const limited = await rateLimit(request, `embed-manifest:${id}`, { max: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
@@ -90,39 +95,27 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     playerConfig = await findPublishedPlayerConfig(id);
   } catch (error) {
     console.error("embed manifest player lookup failed", databaseErrorDetails(error));
-    return NextResponse.json({ error: "player_lookup_failed" }, { status: 503 });
+    return NextResponse.json({ error: "player_lookup_failed" }, { status: 503, headers: NO_STORE });
   }
-  if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
+  if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: NO_STORE });
 
   // O manifest é entrega de valor igual ao endpoint dinâmico: sem esta
   // verificação, cancelar a assinatura não tirava CTAs/config do ar.
-  const ownerAccess = await getAccountAccess(playerConfig.userId);
+  const ownerAccess = await getAccountAccessCached(playerConfig.userId);
   if (!ownerAccess.hasAccess) {
     return NextResponse.json({ error: "player_unavailable" }, { status: 402, headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive" } });
   }
 
-  // RM-02: o manifest também não pode confiar em `Referer`/`Origin`. Sem token
-  // de origem válido (assinado, não expirado, do render) a requisição é rejeitada.
-  const requestUrl = new URL(request.url);
-  const originToken = requestUrl.searchParams.get("originToken");
-  // RM-04: no embed A/B o token chega mintado no escopo do TESTE (playerId =
-  // testId + claim `abTest`). O braço de verificação do teste usa o id de teste
-  // validado como UUID no query; um token de teste não vale para consumo direto.
-  const abTestIdParam = requestUrl.searchParams.get("abTestId");
-  const abTestId = abTestIdParam && uuid.test(abTestIdParam) ? abTestIdParam : "";
-  const verifiedOrigin = verifyEmbedOriginToken(originToken, playerConfig.id)
-    || verifyEmbedOriginToken(originToken, id)
-    || (abTestId ? verifyEmbedOriginToken(originToken, abTestId, { abTestPath: abTestId }) : null);
-  if (!verifiedOrigin) return NextResponse.json({ error: "invalid_origin_token" }, { status: 403 });
-  const host = verifiedOrigin.host;
-  if (!host || originHeaderDisagrees(request.headers, host, requestUrl.origin)) return NextResponse.json({ error: "origin_mismatch" }, { status: 403 });
-  if (!verifiedOrigin.nonce || !verifyEmbedRenderCookie(request.headers, verifiedOrigin.nonce)) return NextResponse.json({ error: "render_not_confirmed" }, { status: 403 });
-
-  // Usa a mesma normalização do endpoint dinâmico (www., https://, curinga *.).
-  // A comparação exata anterior bloqueava clientes legítimos que cadastraram o
-  // domínio em qualquer outro formato. O host vem do token, nunca dos headers.
+  // MANIFEST PÚBLICO (Plano A de escala): entrega só cosmetics sanitizadas
+  // (allowlist acima) por player-id — sem originToken, cookie de render ou
+  // checagem de domínio. Trade-off aceito pelo dono: as cosmetics são obtíveis
+  // por UUID sem render, mas um UUID v4 é incalculável por enumeração e o
+  // conteúdo é exatamente o que qualquer visitante da página do cliente já vê
+  // renderizado no player. Token de origem, cookie de render, eventToken e a
+  // URL assinada do vídeo continuam EXCLUSIVOS do endpoint dinâmico
+  // /api/embed/:id (no-store, intocado) — inclusive a aplicação de
+  // allowedDomains, que só lá decide se o player roda naquele host.
   const domains = Array.isArray(playerConfig.allowedDomains) ? playerConfig.allowedDomains.map((d) => d.trim()).filter(Boolean) : [];
-  if (domains.length > 0 && !domainAllowed(host, domains)) return NextResponse.json({ error: "domain_not_allowed" }, { status: 403 });
 
   const config = playerConfig.config && typeof playerConfig.config === "object"
     ? sanitizeConfigForManifest(playerConfig.config as Record<string, unknown>)
@@ -133,10 +126,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     {
       headers: {
         "content-type": "application/json; charset=utf-8",
-        // A resposta agora depende do token do render; cache público na borda
-        // poderia servir o manifest validado para um host a outro host.
-        "cache-control": "private, no-store, max-age=0",
-        "cloudflare-cdn-cache": "private, no-store",
+        // Cache público na borda por player-id (a resposta não varia mais por
+        // host/render). Config alterada no editor propaga em ≤60s (s-maxage);
+        // o purge por cache-tag `player:{id}` já existe no worker Cloudflare;
+        // stale-while-revalidate=300 segura o tráfego durante a revalidação.
+        "cache-control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
         "cache-tag": `player:${playerConfig.id}`,
         "x-robots-tag": "noindex, nofollow, noarchive",
       },

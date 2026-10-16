@@ -40,6 +40,7 @@ vi.mock("@/lib/db", async () => {
 // O módulo de origem é o REAL (criptografia pura, sem rede): os tokens são
 // mintados e verificados com o mesmo código de produção.
 import { createEmbedOriginToken, verifyEmbedEventTokenContext } from "@/lib/security/embed-origin";
+import { resetAccessCacheForTests } from "@/lib/access/access-cache";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { GET as getEmbedConfig } from "@/app/api/embed/[id]/route";
 import { GET as getEmbedManifest } from "@/app/api/embed/[id]/manifest/route";
@@ -121,6 +122,9 @@ afterAll(() => {
 beforeEach(() => {
   accessState.hasAccess = true;
   vpnState.blocked = false;
+  // O micro-cache de acesso (30s) sobrevive entre casos no mesmo worker:
+  // sem reset, o 402 de um caso vaza hasAccess=false para os demais.
+  resetAccessCacheForTests();
   resetFakeDb(fake());
   // Caminho feliz padrão: player publicado + vídeo ready do titular.
   fake().state.selectRows["player_configs"] = [playerConfigRow()];
@@ -390,17 +394,10 @@ describe("GET /api/embed/[id] — limite de fluxos simultâneos", () => {
 /* ------------------------------------------------------------------ */
 
 describe("GET /api/embed/[id]/manifest", () => {
+  // O manifest é PÚBLICO por player-id: nenhum originToken/cookie é preciso —
+  // a requisição abaixo é a mínima que qualquer visitante faria.
   const manifestRequest = (options: Parameters<typeof embedRequest>[1] = {}) =>
     getEmbedManifest(embedRequest(`/api/embed/${PLAYER_ID}/manifest`, options), ctx(PLAYER_ID));
-  const confirmedManifest = (options: Parameters<typeof embedRequest>[1] = {}) =>
-    getEmbedManifest(
-      embedRequest(`/api/embed/${PLAYER_ID}/manifest`, {
-        ...options,
-        token: options.token ?? mint(),
-        headers: { cookie: `pp_embed=${NONCE}`, ...(options.headers ?? {}) },
-      }),
-      ctx(PLAYER_ID),
-    );
 
   it("id não-UUID devolve 404 player_not_found (não 500)", async () => {
     const response = await getEmbedManifest(embedRequest("/api/embed/not-a-uuid/manifest"), ctx("not-a-uuid"));
@@ -410,40 +407,44 @@ describe("GET /api/embed/[id]/manifest", () => {
 
   it("player não publicado devolve 404 (published=false é invisível)", async () => {
     fake().state.selectRows["player_configs"] = [];
-    const response = await confirmedManifest();
+    const response = await manifestRequest();
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "player_not_found" });
   });
 
-  it("titular sem acesso pago devolve 402 player_unavailable", async () => {
+  it("titular sem acesso pago devolve 402 player_unavailable (e sem cache)", async () => {
     accessState.hasAccess = false;
-    const response = await confirmedManifest();
+    const response = await manifestRequest();
     expect(response.status).toBe(402);
     expect(await response.json()).toEqual({ error: "player_unavailable" });
+    // O 402 nunca pode ser cacheado pela borda: assinatura cancelada derruba o player.
+    expect(response.headers.get("cache-control")).toContain("no-store");
   });
 
-  it("sem token devolve 403 invalid_origin_token", async () => {
+  it("sem originToken nenhum devolve 200: manifest público cacheável na borda", async () => {
     const response = await manifestRequest();
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: "invalid_origin_token" });
-  });
+    expect(response.status).toBe(200);
 
-  it("sem cookie de render devolve 403 render_not_confirmed", async () => {
-    const response = await manifestRequest({ token: mint() });
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: "render_not_confirmed" });
-  });
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual(["allowedDomains", "config", "id", "videoId"]);
+    expect(body.id).toBe(PLAYER_ID);
+    expect(body.videoId).toBe(VIDEO_ID);
+    expect(typeof body.config).toBe("object");
+    expect(body.allowedDomains).toEqual([]);
 
-  it("domínio não permitido devolve 403 domain_not_allowed", async () => {
-    fake().state.selectRows["player_configs"] = [playerConfigRow({ allowedDomains: ["permitido.com"] })];
-    const response = await confirmedManifest();
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: "domain_not_allowed" });
+    const cacheControl = response.headers.get("cache-control") ?? "";
+    expect(cacheControl).toContain("public");
+    expect(cacheControl).toContain("s-maxage=60");
+    expect(cacheControl).toContain("stale-while-revalidate=300");
+    expect(response.headers.get("cache-tag")).toBe(`player:${PLAYER_ID}`);
+    // O header que forçava bypass da CDN não existe mais.
+    expect(response.headers.get("cloudflare-cdn-cache")).toBe(null);
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow, noarchive");
   });
 
   it("falha no lookup devolve 503 player_lookup_failed", async () => {
     fake().state.failingTables["player_configs"] = true;
-    const response = await confirmedManifest();
+    const response = await manifestRequest();
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "player_lookup_failed" });
   });
@@ -463,11 +464,10 @@ describe("GET /api/embed/[id]/manifest", () => {
       },
     })];
 
-    const response = await confirmedManifest();
+    const response = await manifestRequest();
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("private, no-store, max-age=0");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=0, s-maxage=60, stale-while-revalidate=300");
     expect(response.headers.get("cache-tag")).toBe(`player:${PLAYER_ID}`);
-    expect(response.headers.get("cloudflare-cdn-cache")).toBe("private, no-store");
 
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.id).toBe(PLAYER_ID);

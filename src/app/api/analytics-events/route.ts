@@ -33,7 +33,13 @@ export async function POST(request: Request) {
   if (!firstPartyOrigin && events.some((event) => event.eventType !== "conversion")) return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
   const tokenFailure = verifyEventToken(request, { videoId, sessionId }, parsed.body);
   if (tokenFailure) return tokenFailure;
-  const limited = await rateLimit(request, `analytics:${videoId}:${sessionId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS });
+  // Anti-CGNAT: espectadores de operadora móvel compartilham o mesmo IP
+  // público. Com identifier por IP, a troca de IP da mesma sessão (comum em
+  // 4G/5G) multiplicava buckets e o limite deixava de ser por sessão de
+  // fato. O sessionId aqui já sai do normalizer validado como UUID: o bucket
+  // passa a ser por sessão, e um espectador legítimo nunca é travado pelo
+  // tráfego de outra pessoa atrás do mesmo IP da operadora.
+  const limited = await rateLimit(request, `analytics:${videoId}:${sessionId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS, identifier: `s:${sessionId}` });
   if (limited) return limited;
   const outcome = await ingestAnalyticsEvents(ingestCommandFrom(request, { firstPartyOrigin, videoId, sessionId, events, body: parsed.body }));
   return respondToIngest(request, outcome);

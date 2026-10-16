@@ -6,6 +6,7 @@ import { readJsonBody } from "@/lib/api/request";
 import { getStorageUsedBytes } from "@/lib/access/service";
 import { db, schema } from "@/lib/db";
 import { abortR2MultipartUpload, completeR2MultipartUpload, createR2MultipartUpload, describeR2Error, signR2UploadPart } from "@/lib/storage/r2";
+import { detectMp4Faststart } from "@/lib/storage/faststart";
 import { VIDEO } from "@/lib/constants";
 import { rateLimit } from "@/lib/security/rate-limit";
 
@@ -87,7 +88,14 @@ export async function POST(request: Request, { params }: Context) {
         .insert(playerConfigs)
         .values({ userId: account.accountOwnerId, videoId: id, config: {}, allowedDomains: [], published: true })
         .onConflictDoNothing({ target: playerConfigs.videoId });
-      return NextResponse.json({ ok: true });
+      // Faststart (moov antes de mdat): diagnóstico best-effort do fim do
+      // upload — só para MP4; null quando indeterminado/erro, nunca derruba
+      // o complete. Campo aditivo na resposta.
+      const faststart = video.mimeType?.toLowerCase() === "video/mp4"
+        ? await detectMp4Faststart(video.objectPath).catch(() => null)
+        : null;
+      if (faststart === false) console.warn("mp4_sem_faststart", { id, objectPath: video.objectPath });
+      return NextResponse.json({ ok: true, faststart });
     }
     return NextResponse.json({ error: "invalid_action" }, { status: 400 });
   } catch (error) {
