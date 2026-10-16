@@ -79,7 +79,20 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   // O embed é a entrega do produto. Sem esta verificação, cancelar a assinatura
   // não tirava nada do ar: a VSL continuava hospedada e servida indefinidamente.
-  const ownerAccess = await getAccountAccess(playerConfig.userId);
+  // Acesso do dono e linha do vídeo saem em PARALELO: antes eram dois awaits
+  // seriais na cadeia (acesso → checagens → vídeo), cada um pagando um
+  // roundtrip ao Neon. Precedência externa preservada: o 402 do acesso vence
+  // antes das checagens de origem e do 404 do vídeo.
+  const [ownerAccess, video] = await Promise.all([
+    getAccountAccess(playerConfig.userId),
+    db
+      .select({ id: videos.id, title: videos.title, objectPath: videos.objectPath, mimeType: videos.mimeType, userId: videos.userId })
+      .from(videos)
+      .where(and(eq(videos.id, playerConfig.videoId), eq(videos.status, "ready")))
+      .limit(1)
+      .then((rows) => rows[0] ?? null)
+      .catch(() => null),
+  ]);
   if (!ownerAccess.hasAccess) {
     return NextResponse.json({ error: "player_unavailable" }, { status: 402, headers: { "cache-control": "private, no-store" } });
   }
@@ -170,13 +183,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     }
   }
 
-  const video = await db
-    .select({ id: videos.id, title: videos.title, objectPath: videos.objectPath, mimeType: videos.mimeType, userId: videos.userId })
-    .from(videos)
-    .where(and(eq(videos.id, playerConfig.videoId), eq(videos.status, "ready")))
-    .limit(1)
-    .then((rows) => rows[0] ?? null)
-    .catch(() => null);
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
   const source = await signR2ReadUrl(video.objectPath, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
   if (!source) return NextResponse.json({ error: "source_unavailable" }, { status: 503 });
