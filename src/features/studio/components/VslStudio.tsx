@@ -85,6 +85,8 @@ interface StudioConfig extends PixelTrackingFields {
   watermarkShowDate: boolean;
   watermarkShowCustomText: boolean;
   watermarkCustomText: string;
+  watermarkEmailText: string;
+  watermarkPhoneText: string;
   watermarkType: "static" | "dynamic";
   watermarkPosition: "top-right" | "top-left" | "bottom-right" | "bottom-left" | "center";
   watermarkIntervalValue: number;
@@ -229,6 +231,8 @@ const initialConfig: StudioConfig = {
   watermarkShowDate: true,
   watermarkShowCustomText: true,
   watermarkCustomText: "Sample Custom Text",
+  watermarkEmailText: "",
+  watermarkPhoneText: "",
   watermarkType: "static",
   watermarkPosition: "top-right",
   watermarkIntervalValue: 10,
@@ -1423,6 +1427,22 @@ function ProtectionPanel({ config: c, update: u }: { config: StudioConfig; updat
                     onChange={(v) => u("watermarkCustomText", v)}
                   />
                 )}
+                {c.watermarkShowEmail && (
+                  <TextInput
+                    label="E-mail exibido na marca d'água (ex.: o comercial da sua empresa)"
+                    value={c.watermarkEmailText}
+                    placeholder="contato@suaempresa.com"
+                    onChange={(v) => u("watermarkEmailText", v)}
+                  />
+                )}
+                {c.watermarkShowPhone && (
+                  <TextInput
+                    label="Telefone exibido na marca d'água"
+                    value={c.watermarkPhoneText}
+                    placeholder="+55 11 99999-0000"
+                    onChange={(v) => u("watermarkPhoneText", v)}
+                  />
+                )}
               </div>
 
               <div className="space-y-3 pt-2">
@@ -1590,6 +1610,13 @@ function ProtectionPanel({ config: c, update: u }: { config: StudioConfig; updat
       {/* TAB 4: BLOCO GEOGRÁFICO */}
       {subTab === "geo" && (
         <div className="space-y-4 pt-1">
+          <CheckRow label="Regras de tráfego ativas" checked={c.trafficEnabled} onChange={(v) => u("trafficEnabled", v)} />
+          {!c.trafficEnabled && (
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 p-3 text-xs font-semibold text-amber-900 dark:text-amber-300 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <span>As regras abaixo só são aplicadas com as regras de tráfego ativas. Sem isso, nada é bloqueado.</span>
+            </div>
+          )}
           <CheckRow label="Bloquear acessos de Proxy / VPN" checked={c.blockVpn} onChange={(v) => u("blockVpn", v)} />
           <Select label="Idioma do Navegador" value={c.browserLanguage} options={["Todos", "Português", "Inglês", "Espanhol"]} onChange={(v) => u("browserLanguage", v)} />
           <TextInput label="Países permitidos" value={c.allowedCountries} placeholder="Todos ou BR, PT, US" onChange={(v) => u("allowedCountries", v)} />

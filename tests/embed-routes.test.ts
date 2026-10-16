@@ -242,7 +242,8 @@ describe("GET /api/embed/[id] — entrega", () => {
     expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow, noarchive");
 
     const body = (await response.json()) as Record<string, unknown>;
-    expect(Object.keys(body).sort()).toEqual(["config", "eventToken", "id", "source", "title", "type", "videoId"]);
+    expect(Object.keys(body).sort()).toEqual(["config", "eventToken", "id", "source", "title", "type", "videoId", "viewerIp"]);
+    expect(body.viewerIp).toBe("");
     expect(body.id).toBe(PLAYER_ID);
     expect(body.videoId).toBe(VIDEO_ID);
     expect(body.title).toBe("VSL Principal");
@@ -262,6 +263,33 @@ describe("GET /api/embed/[id] — entrega", () => {
     expect(context?.host).toBe(HOST);
     expect(context?.sessionId).toBe(SESSION_ID);
     expect(context?.nonce).toBe(NONCE);
+  });
+
+  it("devolve o IP real do espectador quando o deploy repassa os headers", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow()];
+    const response = await getEmbedConfig(
+      confirmedRequest(PLAYER_ID, { headers: { "x-forwarded-for": "203.0.113.9, 10.0.0.1" } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { viewerIp: string };
+    expect(body.viewerIp).toBe("203.0.113.9");
+  });
+
+  it("drmSignedTokenEnabled ativo exige sessão do player: sem viewerId/sessionId é 403 session_required", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
+    const response = await getEmbedConfig(confirmedRequest(PLAYER_ID), ctx(PLAYER_ID));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "session_required" });
+  });
+
+  it("drmSignedTokenEnabled ativo entrega a config quando a sessão é válida", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
+    const response = await getEmbedConfig(
+      confirmedRequest(PLAYER_ID, { query: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(200);
   });
 
   it("só assina assets do próprio dono: alheio é descartado antes de assinar", async () => {

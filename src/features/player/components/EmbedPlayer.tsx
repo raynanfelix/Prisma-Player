@@ -10,7 +10,7 @@ import { pixelIntegrations } from "@/lib/player/pixels";
 import { createAnalyticsBatcher } from "@/lib/player/analytics-batcher";
 import { getOrCreateViewerId } from "@/lib/player/viewer-id";
 
-interface Payload { videoId: string; title: string; source: string; type: string; config: Record<string, unknown>; eventToken?: string }
+interface Payload { videoId: string; title: string; source: string; type: string; config: Record<string, unknown>; eventToken?: string; viewerIp?: string }
 
 interface Tracking { testId: string; variantId: string; sessionId: string }
 
@@ -25,6 +25,7 @@ const EMBED_ERROR_MESSAGES: Record<string, string> = {
   source_unavailable: "Não foi possível carregar o vídeo agora. Tente novamente em instantes.",
   vpn_not_allowed: "Este vídeo não está disponível em conexões VPN ou proxy.",
   stream_limit: "Limite de telas simultâneas atingido neste navegador.",
+  session_required: "Este vídeo exige uma sessão válida do player. Recarregue a página.",
 };
 
 const ANALYTICS_BATCH_FLUSH_MS = 5_000;
@@ -65,6 +66,9 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   // botão direito e some sozinha em 15s.
   const [watermarkArmed, setWatermarkArmed] = useState(false);
   const watermarkTimerRef = useRef(0);
+  // Identidade do espectador em STATE (não ref) para o render da marca d'água:
+  // ler ref durante o render é impuro (react-hooks/refs) e perde a atualização.
+  const [viewerIdentity, setViewerIdentity] = useState<{ viewerId: string; session: string } | null>(null);
   const sentEvents = useRef(new Set<string>());
   const analyticsEvents = useRef(new Set<string>());
   const ctaAutoScrolled = useRef(false);
@@ -192,8 +196,13 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     // O viewerId e persistente e separado da sessao: identifica o navegador entre
     // visitas (attribution) sem colapsar sessoes distintas.
     viewerIdRef.current = getOrCreateViewerId();
+    // Espelho em estado para o render da marca d'água (sem ler ref no render).
+    // setState direto no corpo do efeito viola react-hooks/set-state-in-effect;
+    // adiado para o tick seguinte (mesmo padrão do unlock de CTA deste arquivo).
+    const identityTimer = window.setTimeout(() => setViewerIdentity({ viewerId: viewerIdRef.current, session: sessionId.current }), 0);
     analyticsEvents.current.clear();
     payloadRef.current = payload;
+    return () => window.clearTimeout(identityTimer);
   }, [playerId, payload]);
 
   useEffect(() => {
@@ -316,7 +325,11 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   }, [payload, trackingSessionId, trackingTestId, trackingVariantId]);
 
   useEffect(() => {
-    if (!payload || payload.config.antiDownload === false) return;
+    if (!payload) return;
+    // Bloqueios de navegador são mitigação, não DRM real. Cada toggle da sub-aba
+    // DRM controla o seu bloqueio; o antiDownload (sempre on) é a base comum.
+    const menuBlocked = payload.config.antiDownload !== false && payload.config.disableContextMenu !== false;
+    const shortcutsBlocked = payload.config.antiDownload !== false && payload.config.blockDevTools !== false;
     const blockContext = (event: MouseEvent) => event.preventDefault();
     const blockDrag = (event: DragEvent) => event.preventDefault();
     const blockShortcuts = (event: KeyboardEvent) => {
@@ -326,9 +339,11 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
         event.stopPropagation();
       }
     };
-    document.addEventListener("contextmenu", blockContext);
-    document.addEventListener("dragstart", blockDrag);
-    document.addEventListener("keydown", blockShortcuts, true);
+    if (menuBlocked) {
+      document.addEventListener("contextmenu", blockContext);
+      document.addEventListener("dragstart", blockDrag);
+    }
+    if (shortcutsBlocked) document.addEventListener("keydown", blockShortcuts, true);
     return () => {
       document.removeEventListener("contextmenu", blockContext);
       document.removeEventListener("dragstart", blockDrag);
@@ -365,6 +380,29 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     };
   }, []);
 
+  useEffect(() => {
+    // Modos da marca d'água: estático fica sempre visível; dinâmico reaparece
+    // no intervalo configurado (visível por ~1/3 do intervalo, máx. 10s). O
+    // botão direito arma fora de hora em qualquer modo (handleVideoContextMenu).
+    if (!payload || !Boolean(payload.config.watermarkEnabled)) return;
+    if (payload.config.watermarkType === "static") {
+      setWatermarkArmed(true);
+      return;
+    }
+    const value = Math.max(3, Math.min(600, Number(payload.config.watermarkIntervalValue) || 10));
+    const intervalMs = value * (payload.config.watermarkIntervalUnit === "minute" ? 60_000 : 1_000);
+    const showMs = Math.min(10_000, Math.max(2_000, Math.round(intervalMs / 3)));
+    let hideTimer = 0;
+    const cycle = window.setInterval(() => {
+      setWatermarkArmed(true);
+      hideTimer = window.setTimeout(() => setWatermarkArmed(false), showMs);
+    }, intervalMs);
+    return () => {
+      window.clearInterval(cycle);
+      window.clearTimeout(hideTimer);
+    };
+  }, [payload]);
+
   function handleVideoContextMenu(event: React.MouseEvent) {
     // Selo orgânico em todas as VSLs: intercepta o botão direito sobre o vídeo,
     // mostra o selo exatamente onde clicou e some sozinho em 6s.
@@ -380,10 +418,13 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       setPromoSpot({ x, y });
       window.clearTimeout(promoTimerRef.current);
       promoTimerRef.current = window.setTimeout(() => setPromoSpot(null), 6000);
-      // Marca d'água aparece SÓ na tentativa de download (botão direito).
+      // Marca d'água arma na tentativa de download (botão direito). No modo
+      // estático ela já está sempre visível — não agenda o sumiço.
       setWatermarkArmed(true);
-      window.clearTimeout(watermarkTimerRef.current);
-      watermarkTimerRef.current = window.setTimeout(() => setWatermarkArmed(false), 15000);
+      if (payload?.config.watermarkType !== "static") {
+        window.clearTimeout(watermarkTimerRef.current);
+        watermarkTimerRef.current = window.setTimeout(() => setWatermarkArmed(false), 15000);
+      }
     }
   }
 
@@ -477,7 +518,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   const hookViewers = hookType === "live_viewers" && payload?.videoId ? hookLiveViewersCount(payload.videoId) : 0;
   const autoplayAnimClass = c.autoplayAnimation === "pulse" ? "animate-pulse" : c.autoplayAnimation === "sound_bars" ? "studio-autoplay-sound" : c.autoplayAnimation === "cursor_click" ? "studio-autoplay-click" : c.autoplayAnimation === "play_glow" ? "studio-autoplay-glow" : "";
 
-  return <main data-prisma-embed className="flex min-h-0 select-none justify-center bg-transparent" onContextMenu={(event) => { if (c.antiDownload !== false) event.preventDefault(); }}>
+  return <main data-prisma-embed className="flex min-h-0 select-none justify-center bg-transparent" onContextMenu={(event) => { if (c.antiDownload !== false && c.disableContextMenu !== false) event.preventDefault(); }}>
     <div className="flex w-full flex-col" style={responsiveStyle}>
       {Boolean(c.headlineEnabled) && headlineVisible && (
         <HeadlineBlock
@@ -496,8 +537,10 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       <div ref={videoBoxRef} className="relative order-2 mx-auto w-full overflow-hidden bg-transparent" style={{ borderRadius: `${Number(c.radius ?? 0)}px`, aspectRatio: String(videoRatio ?? initialRatio), ...(String(c.colorStyle) === "gradient" || (c.background && String(c.background).toLowerCase() !== "#000000" && String(c.background).toLowerCase() !== "#000") ? { background: String(c.colorStyle) === "gradient" ? `linear-gradient(135deg, ${String(c.background ?? "#000000")}, ${String(c.gradientEnd ?? "#2997ff")})` : String(c.background) } : {}) }} onContextMenu={handleVideoContextMenu}>
       <VideoPlayer className={playerClasses} sources={[{ src: payload.source, type: payload.type }]} poster={thumbnailEnabled && assetUrls.thumbnailStart ? assetUrls.thumbnailStart : undefined} preload="auto" textTracks={Boolean(c.captionsEnabled) && assetUrls.captions ? [{ src: assetUrls.captions, kind: "subtitles", label: String(c.captionName || "Legendas"), srclang: "pt-BR", default: true }] : []} autoplay={smartAutoplay && resumeChecked && resumePoint === null && !autoplayActivated} muted={Boolean(c.muted) || (smartAutoplay && !autoplayActivated)} loop={Boolean(c.loop)} playbackRate={Number(c.playbackRate ?? 1)} bigPlayButton={c.bigPlay !== false} pauseWhenHidden={Boolean(c.smartPause)} playbackRates={[0.75, 1, 1.25, 1.5, 2]} startTime={startTime} restartWithSoundSignal={restartWithSoundSignal} resumePlaybackSignal={resumePlaybackSignal} onPlay={() => { isPlaying.current = true; track("play", 0, currentTime); trackAnalytics("play", 0, currentTime); setThumbnailOverlay(null); }} onPause={() => { isPlaying.current = false; if (thumbnailEnabled && assetUrls.thumbnailPause && currentTime > 0 && currentTime < duration) setThumbnailOverlay("pause"); }} onEnded={() => { isPlaying.current = false; track("complete", 100, duration); trackAnalytics("complete", 100, duration); if (!Boolean(c.loop)) localStorage.removeItem(resumeStorageKey); if (thumbnailEnabled && assetUrls.thumbnailEnd) setThumbnailOverlay("end"); }} onTimeUpdate={(time) => { if (Math.floor(time) !== renderedSecondRef.current) { renderedSecondRef.current = Math.floor(time); setCurrentTime(time); } liveProgress.current = { percent: duration > 0 ? Math.min(100, Math.round(time / duration * 100)) : 0, watchedSeconds: time }; if (resumeEnabled && time > 0 && Math.floor(time) !== lastResumeWriteRef.current) { lastResumeWriteRef.current = Math.floor(time); localStorage.setItem(resumeStorageKey, String(Math.floor(time))); } if (duration > 0) [10, 25, 50, 75, 90].forEach((point) => { if (time / duration * 100 >= point) { if ([25, 50, 75].includes(point)) track("progress", point, time); trackAnalytics("progress", point, time); } }); }} onLoadedMetadata={(metadata) => { setDuration(metadata.duration); if (metadata.width > 0 && metadata.height > 0) setVideoRatio(metadata.width / metadata.height); if (resumeEnabled) { const saved = Number(localStorage.getItem(resumeStorageKey)); if (Number.isFinite(saved) && saved >= 5 && saved < metadata.duration - 5) setResumePoint(saved); } setResumeChecked(true); }} controlVisibility={{ progressControl: !Boolean(c.smartProgress) && c.progressBar !== false, currentTimeDisplay: c.time !== false, durationDisplay: c.time !== false, volumePanel: c.volume !== false, fullscreenToggle: c.fullscreen !== false, pictureInPictureToggle: c.pictureInPicture !== false, playbackRateMenuButton: c.speedControl !== false, seekBackward: c.seekBackward === true, seekForward: c.seekForward === true }} />
         {Boolean(c.watermarkEnabled) && watermarkArmed && <div className={`pointer-events-none absolute z-40 p-3 font-mono text-[11px] leading-tight select-none ${c.watermarkPosition === "top-left" ? "top-3 left-3 text-left" : c.watermarkPosition === "bottom-left" ? "bottom-3 left-3 text-left" : c.watermarkPosition === "bottom-right" ? "bottom-3 right-3 text-right" : c.watermarkPosition === "center" ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center" : "top-3 right-3 text-right"}`} style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 3px rgba(0,0,0,0.8)", opacity: Number(c.watermarkOpacity ?? 85) / 100 }}>
-          {Boolean(c.watermarkShowUsername) && viewerIdRef.current && <div>ID: {viewerIdRef.current.slice(0, 8)}</div>}
-          {Boolean(c.watermarkShowIp) && <div>Sessão: {sessionId.current.slice(0, 8)}</div>}
+          {Boolean(c.watermarkShowUsername) && viewerIdentity?.viewerId && <div>ID: {viewerIdentity.viewerId.slice(0, 8)}</div>}
+          {Boolean(c.watermarkShowIp) && (payload.viewerIp ? <div>IP: {payload.viewerIp}</div> : viewerIdentity?.session ? <div>Sessão: {viewerIdentity.session.slice(0, 8)}</div> : null)}
+          {Boolean(c.watermarkShowEmail) && String(c.watermarkEmailText ?? "").trim() && <div>{String(c.watermarkEmailText)}</div>}
+          {Boolean(c.watermarkShowPhone) && String(c.watermarkPhoneText ?? "").trim() && <div>{String(c.watermarkPhoneText)}</div>}
           {Boolean(c.watermarkShowDate) && <div>{new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>}
           {Boolean(c.watermarkShowCustomText) && Boolean(c.watermarkCustomText) && <div>{String(c.watermarkCustomText)}</div>}
         </div>}
