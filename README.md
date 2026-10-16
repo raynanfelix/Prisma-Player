@@ -36,7 +36,7 @@ comentários está em `.env.example`.
 - [Checks de qualidade](docs/quality.md)
 - [Instruções para agentes](AGENTS.md)
 - [Setup e evidências](docs/setup.md)
-- [Segurança](docs/SECURITY.md) · [UI](docs/UI_ARCHITECTURE.md) · [Apple design](docs/apple-DESIGN.md)
+- [Segurança](docs/SECURITY.md) · [UI](docs/UI_ARCHITECTURE.md)
 
 ## Próxima entrega
 

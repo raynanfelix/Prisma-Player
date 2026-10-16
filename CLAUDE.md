@@ -6,7 +6,7 @@ As regras oficiais de desenvolvimento deste repositório estão em:
 - `docs/ARCHITECTURE.md` (fronteiras, guard, checklist de nova funcionalidade)
 - `docs/SECURITY.md` (isolamento, padrão de rotas, testes de segurança)
 - `docs/UI_ARCHITECTURE.md`
-- `docs/apple-DESIGN.md`
+- `docs/design.md`
 - `src/components/README.md`
 
 Leia esses arquivos antes de criar ou modificar qualquer interface. Preserve o

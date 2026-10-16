@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Skills vendorizadas e config de agentes — não são código da aplicação:
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".github/**",
+    ".superpowers/**",
   ]),
   {
     rules: {

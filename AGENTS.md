@@ -3,7 +3,7 @@
 Antes de alterar interface, leia integralmente:
 
 - `docs/UI_ARCHITECTURE.md`
-- `docs/apple-DESIGN.md`
+- `docs/design.md`
 - `src/components/README.md`
 
 Esses documentos definem a stack, o fluxo de pesquisa de componentes, o design

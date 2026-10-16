@@ -81,7 +81,7 @@ ignorados para autorização. UUID identifica, não autoriza.
 3. Novo módulo servidor com secret/DB? `import "server-only";` + entrada na
    lista de `tests/server-boundary.test.ts`.
 4. Novo estado selecionado/hover? Usar `--color-selected` e hovers neutros
-   (ver `docs/apple-DESIGN.md` + tokens em `globals.css`).
+   (ver `docs/design.md` + tokens em `globals.css`).
 5. Teste: comportamento em `tests/` + `npm test` + `tsc --noEmit` + build.
 
 ## Ciclo de vida do plano (fonte única)

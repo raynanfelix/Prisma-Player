@@ -49,4 +49,4 @@ retomada de reprodução nem eventos de conversão server-side.
 
 - `npm run verify` verde (typecheck + lint sem erros + testes) e build válido.
 - Toda query nova filtra por `accountOwnerId`; rota mutante nova usa `guard`.
-- UI segue `docs/apple-DESIGN.md` e `docs/UI_ARCHITECTURE.md`.
+- UI segue `docs/design.md` e `docs/UI_ARCHITECTURE.md`.
