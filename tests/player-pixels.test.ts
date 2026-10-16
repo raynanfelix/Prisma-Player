@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildPlayerLoaderScript } from "@/app/api/player-loader/[id]/route";
 import { normalizePixelConfig, pixelConfigErrors, pixelIntegrations } from "@/lib/player/pixels";
 import { deliverServerPurchase } from "@/services/ads/server-events";
@@ -40,6 +40,18 @@ describe("player pixel configuration", () => {
     expect(script).toContain("advertising-consent");
   });
 
+  it("shares the conversion event id with browser pixels so platforms dedupe browser + CAPI", () => {
+    // A conversão dispara DUAS vezes no browser (publish direto do
+    // trackConversion + round-trip iframe → pixel-event) e uma terceira via
+    // CAPI. Meta/TikTok só colapsam as duplicatas quando TODAS as vias
+    // carregam a mesma chave: eventID (fbq, 4º arg) / event_id (ttq.track,
+    // 3º arg) = transaction_id — exatamente o event_id que o
+    // services/ads/server-events envia no CAPI.
+    const script = buildPlayerLoaderScript("37c52d61-f4ae-45db-890f-0ef87de5a967");
+    expect(script).toContain("dedupeId?{eventID:dedupeId}:undefined");
+    expect(script).toContain("tracker.track(name,detail,detail.transaction_id||undefined)");
+  });
+
   it("delivers Meta and TikTok purchases server-side without exposing tokens", async () => {
     process.env.META_CAPI_TOKENS_JSON = JSON.stringify({ "1234567890": "meta-secret-token-value" });
     process.env.TIKTOK_EVENTS_TOKENS_JSON = JSON.stringify({ C123456789ABCDEF: "tiktok-secret-token-value" });
@@ -51,9 +63,31 @@ describe("player pixel configuration", () => {
     const results = await deliverServerPurchase({ integrations: [{ provider: "meta", id: "1234567890" }, { provider: "tiktok", id: "C123456789ABCDEF" }], eventId: "ORDER-42", eventName: "Purchase", eventSourceUrl: "https://example.com/obrigado", value: 197, currency: "BRL", clientUserAgent: "Vitest" }, fetcher);
     expect(results.every((item) => item.delivered)).toBe(true);
     expect(requests).toHaveLength(2);
-    expect(String(requests[0].init?.body)).toContain("ORDER-42");
+    // O event_id do CAPI precisa ser a mesma chave que o browser envia
+    // (eventID/event_id = transaction_id), senão as plataformas contam a
+    // venda duas vezes.
+    const metaBody = JSON.parse(String(requests[0].init?.body)) as { data: Array<{ event_name: string; event_id: string }> };
+    expect(metaBody.data[0].event_name).toBe("Purchase");
+    expect(metaBody.data[0].event_id).toBe("ORDER-42");
+    const tiktokBody = JSON.parse(String(requests[1].init?.body)) as { data: Array<{ event: string; event_id: string }> };
+    expect(tiktokBody.data[0].event).toBe("Purchase");
+    expect(tiktokBody.data[0].event_id).toBe("ORDER-42");
     expect(JSON.stringify(requests)).not.toContain("NEXT_PUBLIC");
     delete process.env.META_CAPI_TOKENS_JSON;
     delete process.env.TIKTOK_EVENTS_TOKENS_JSON;
+  });
+
+  it("fails silently without network calls when a pixel has no server token", async () => {
+    // Pixel configurado no player, mas sem token global: o CAPI não dispara
+    // (o pixel de browser segue funcionando) e nada é enviado à plataforma.
+    delete process.env.META_CAPI_TOKENS_JSON;
+    delete process.env.TIKTOK_EVENTS_TOKENS_JSON;
+    const fetcher = vi.fn();
+    const results = await deliverServerPurchase({ integrations: [{ provider: "meta", id: "1234567890" }, { provider: "tiktok", id: "C123456789ABCDEF" }], eventId: "ORDER-42", eventName: "Purchase", value: 197, currency: "BRL", clientUserAgent: "Vitest" }, fetcher as unknown as typeof fetch);
+    expect(results).toEqual([
+      { provider: "meta", delivered: false, reason: "not_configured" },
+      { provider: "tiktok", delivered: false, reason: "not_configured" },
+    ]);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

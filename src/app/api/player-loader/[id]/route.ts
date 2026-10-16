@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 
+/**
+ * Loader embed servido por /api/player-loader/[id]. Carrega os pixels de
+ * browser (Meta/Google/TikTok) usando apenas os IDs públicos — tokens nunca
+ * entram aqui. Em conversões, o transaction_id viaja como eventID (Meta) /
+ * event_id (TikTok): a MESMA chave que o CAPI server-side
+ * (services/ads/server-events) envia, para as plataformas deduplicarem
+ * browser + server e cada venda contar uma única vez.
+ */
 export function buildPlayerLoaderScript(playerId: string) {
   return `(()=>{
 const PLAYER_ID=${JSON.stringify(playerId)};
@@ -37,13 +45,13 @@ const sendToProviders=(eventType,detail,configured)=>{
   for(const integration of cleanIntegrations(configured)){
     const name=eventNames[integration.provider]?.[eventType];if(!name)continue;
     if(integration.provider==='meta'&&typeof window.fbq==='function'){
-      const custom=name.startsWith('Prisma');window.fbq(custom?'trackSingleCustom':'trackSingle',integration.id,name,detail);
+      const custom=name.startsWith('Prisma');const dedupeId=detail.transaction_id||'';window.fbq(custom?'trackSingleCustom':'trackSingle',integration.id,name,detail,dedupeId?{eventID:dedupeId}:undefined);
     }else if(integration.provider==='google'&&typeof window.gtag==='function'){
       const destination=eventType==='conversion'&&integration.conversionDestination?integration.conversionDestination:integration.id;const googleDetail=eventType==='conversion'?{...detail,items:[{item_id:detail.player_id,item_name:'Prisma Player VSL',price:detail.value,quantity:1}]}:detail;
       window.gtag('event',name,{...googleDetail,send_to:destination});
     }else if(integration.provider==='tiktok'&&window.ttq){
       const tracker=typeof window.ttq.instance==='function'?window.ttq.instance(integration.id):window.ttq;
-      if(tracker&&typeof tracker.track==='function')tracker.track(name,detail);
+      if(tracker&&typeof tracker.track==='function')tracker.track(name,detail,detail.transaction_id||undefined);
     }
   }
 };

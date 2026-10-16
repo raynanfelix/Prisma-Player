@@ -265,8 +265,10 @@ describe("GET /api/embed/[id] — entrega", () => {
     expect(context?.nonce).toBe(NONCE);
   });
 
-  it("devolve o IP real do espectador quando o deploy repassa os headers", async () => {
-    fake().state.selectRows["player_configs"] = [playerConfigRow()];
+  it("devolve o IP real do espectador quando o deploy repassa os headers (e só com exibição de IP ativa na marca d'água)", async () => {
+    // Review LOW-2: viewerIp é PII condicional — sai da rota apenas quando o
+    // dono ativou "Endereço IP" na marca d'água (watermarkShowIp: true).
+    fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { watermarkShowIp: true } })];
     const response = await getEmbedConfig(
       confirmedRequest(PLAYER_ID, { headers: { "x-forwarded-for": "203.0.113.9, 10.0.0.1" } }),
       ctx(PLAYER_ID),

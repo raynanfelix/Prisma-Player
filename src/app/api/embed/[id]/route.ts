@@ -218,9 +218,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const sessionIdParam = requestUrl.searchParams.get("sessionId");
   const eventSessionId = sessionIdParam && uuid.test(sessionIdParam) ? sessionIdParam : undefined;
   const eventToken = createBoundEmbedEventTokenSafely({ videoId: video.id, host, sessionId: eventSessionId, nonce: verifiedOrigin.nonce });
-  // IP real do espectador (dado de quem assiste/baixa) para a marca d'água.
-  // Vazio quando o deploy não repassa x-forwarded-for/x-real-ip.
-  const viewerIp = clientIpFromHeaders(request.headers);
+  // IP real do espectador para a marca d'água "Endereço IP". Review de
+  // segurança (LOW-2): o campo só sai na resposta quando o dono ativou a
+  // exibição de IP na marca d'água — sem isso era PII incondicional legível
+  // por qualquer script da página hospedeira. Vazio quando o deploy não
+  // repassa x-forwarded-for/x-real-ip.
+  const viewerIp = Boolean(config.watermarkShowIp) ? clientIpFromHeaders(request.headers) : "";
 
   return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.videoId, title: video.title, source, type: video.mimeType, config, eventToken, viewerIp }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
 }
