@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Teto de 350 linhas por arquivo (referência do toolkit) —
+      // adoção progressiva: começa em warn e endurece após o burndown.
+      "max-lines": ["warn", { max: 350 }],
+    },
+  },
 ]);
 
 export default eslintConfig;

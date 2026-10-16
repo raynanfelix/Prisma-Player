@@ -29,6 +29,30 @@ Lakebase) — client `db` e schema em `src/lib/db`; auth é Neon Auth gerenciado
 módulo servidor novo recebe `import "server-only"` + entrada em
 `tests/server-boundary.test.ts`. Valide com `npm test`, `tsc --noEmit` e build.
 
+## Comandos canônicos
+
+- Instalar: `npm install` — Desenvolver: `npm run dev`
+- Lint: `npm run lint` — Tipos: `npm run typecheck`
+- Testes: `npm run test` — Build: `npm run build`
+- Verificar base: `npm run verify` (typecheck + lint + test)
+- Schema Drizzle: `npx drizzle-kit generate` (aplicar exige `DATABASE_URL_UNPOOLED`)
+- Código não usado: `npx knip`
+
+## Acordos de trabalho
+
+- Leia código e instruções pertinentes antes de editar; declare hipóteses que alterem comportamento ou escopo.
+- Menor mudança suficiente; reutilize padrões, componentes e dependências existentes.
+- Execute os checks canônicos e teste regressões; correções precisam de reprodução quando viável.
+- Continue trabalho autorizado; pergunte somente o indispensável. Publicação, custos e ações destrutivas exigem autorização específica.
+- Um bloqueio afeta só as tarefas dependentes; conclua as independentes que forem seguras.
+
+## Documentação e ferramentas
+
+- Escopo do produto: `PRODUCT.md`. Checks: `docs/quality.md`. Preparação local: `docs/onboarding.md`. Setup e evidências: `docs/setup.md`.
+- Skills locais: conjunto web Vercel + `find-skills` em `.agents/skills/` com lock versionado (`skills-lock.json`); atualizar via `npx skills update --project`.
+- Context7/RTK/Graphify não integrados ao cliente atual: use documentação oficial e registre a limitação em `docs/setup.md`.
+
+Após cada ciclo de implementação ou correção, sugira de 3 a 8 ciclos posteriores de code review, com focos e prompt de continuação (ver `docs/quality.md`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
