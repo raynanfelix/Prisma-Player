@@ -5,6 +5,7 @@ import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { ensureAccountBootstrap } from "@/lib/access/bootstrap";
 
 const { profiles } = schema;
 
@@ -26,7 +27,13 @@ function toProfileView(row: typeof profiles.$inferSelect) {
 export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const [row] = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1);
+  let [row] = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1);
+  if (!row) {
+    // Conta criada antes do bootstrap aplicacional (ou signup best-effort que
+    // falhou): self-heal a partir do usuário do Neon Auth e lê de novo.
+    await ensureAccountBootstrap({ id: userId });
+    [row] = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1);
+  }
   if (!row) return NextResponse.json({ error: "profile_load_failed" }, { status: 500 });
   return NextResponse.json({ profile: toProfileView(row) });
 }

@@ -5,6 +5,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { isoOrNull } from "@/lib/datetime";
 import { envInt } from "@/lib/config/env";
+import { ensureAccountBootstrap } from "@/lib/access/bootstrap";
 
 const { accountAccess, billingPlans, subscriptions, videoEvents, videos } = schema;
 
@@ -170,6 +171,19 @@ export async function getAccountAccess(userId: string): Promise<AccountAccess> {
       .where(eq(subscriptions.userId, userId))
       .limit(1),
   ]);
+  if (accessRow.length === 0) {
+    // Self-heal: conta criada antes do bootstrap aplicacional (signup legado
+    // sem trigger) — inicializa access/trial e lê de novo. O "?? 'used'" do
+    // toAccessRow permanece como defesa, não como fluxo normal.
+    await ensureAccountBootstrap({ id: userId });
+    accessRow.push(
+      ...(await db
+        .select(ACCESS_COLUMNS)
+        .from(accountAccess)
+        .where(eq(accountAccess.userId, userId))
+        .limit(1)),
+    );
+  }
   return accessFrom(toAccessRow(accessRow[0]), toSubscriptionRow(subscriptionRow[0]));
 }
 
@@ -200,6 +214,20 @@ export async function getAccountPlan(ownerId: string): Promise<AccountPlan> {
       .where(eq(subscriptions.userId, ownerId))
       .limit(1),
   ]);
+
+  if (accessRow.length === 0) {
+    // Self-heal: mesmo contrato de getAccountAccess — conta sem linha de
+    // access (criada antes do bootstrap aplicacional) é inicializada e lida
+    // de novo antes de qualquer decisão de "pode usar".
+    await ensureAccountBootstrap({ id: ownerId });
+    accessRow.push(
+      ...(await db
+        .select(ACCESS_COLUMNS)
+        .from(accountAccess)
+        .where(eq(accountAccess.userId, ownerId))
+        .limit(1)),
+    );
+  }
 
   const subscription = toSubscriptionRow(subscriptionRow[0]);
   const access = accessFrom(toAccessRow(accessRow[0]), subscription);

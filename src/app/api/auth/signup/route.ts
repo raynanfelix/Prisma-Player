@@ -5,6 +5,7 @@ import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
+import { ensureAccountBootstrap } from "@/lib/access/bootstrap";
 
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);
@@ -36,6 +37,20 @@ export async function POST(request: Request) {
     await recordAuthFailure("signup_failed", email, request);
     const message = getAuthErrorMessage(error, "Não foi possível criar a conta. Tente novamente.");
     return NextResponse.json({ error: "signup_failed", message }, { status: 400 });
+  }
+
+  // Bootstrap das linhas de produto (profiles, access/trial, wallet, inbox,
+  // equipe) — equivalente aplicacional do trigger legado on_auth_user_created
+  // do Supabase: o schema neon_auth é gerenciado pela Neon e não aceita
+  // triggers. Best-effort: nunca derruba o signup (só o Auth era crítico no
+  // contrato do trigger); leitores (guard/perfil/Nav) fazem self-heal.
+  if (data?.user) {
+    await ensureAccountBootstrap({ id: data.user.id, email, name }).catch((reason) => {
+      console.error("signup_bootstrap_failed", {
+        userId: data?.user?.id,
+        reason: reason instanceof Error ? reason.message : "unknown",
+      });
+    });
   }
   // Não expor access_token, refresh_token ou objeto session completo no response
   // (contrato { user, hasSession } — teste tests/auth-signup-shape.test.ts).
