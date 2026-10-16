@@ -22,7 +22,7 @@ export function blockedIp(address: string) {
 function isBlockedIpv4(ip: string): boolean {
   if (!ip.includes(".")) return false;
   const [a, b] = ip.split(".").map(Number);
-  return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || (a === 192 && b === 0);
+  return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || (a === 192 && b === 0) || (a === 198 && b >= 18 && b <= 31) || (a === 198 && b === 51) || (a === 203 && b === 0);
 }
 
 function isBlockedIpv6(ip: string): boolean {

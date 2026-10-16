@@ -1,6 +1,6 @@
 "use client";
 
-import type { GeoPermissibleObjects } from "@visx/vendor/d3-geo";
+import type { GeoPermissibleObjects } from "d3-geo";
 import type { ProvidedZoom, TransformMatrix } from "@visx/zoom";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import type { Transition } from "motion/react";
@@ -150,7 +150,7 @@ export function ChoroplethInteractionShell({
   );
 }
 
-export function ChoroplethProvider({
+function ChoroplethProvider({
   children,
   value,
 }: {
@@ -247,7 +247,7 @@ export function useChoropleth(): ChoroplethContextValue {
 import { CHART_SCALE_VARS, chartScaleCssVars } from "../chart-scale";
 
 // CSS variables for choropleth theming
-export const choroplethCssVars = {
+const choroplethCssVars = {
   scale01: chartScaleCssVars.scale01,
   scale02: chartScaleCssVars.scale02,
   scale03: chartScaleCssVars.scale03,

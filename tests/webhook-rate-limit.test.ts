@@ -3,39 +3,33 @@ import { createHmac } from "node:crypto";
 import { shouldRequireHmac } from "@/lib/billing/abacatepay/webhook";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { POST } from "@/app/api/webhooks/abacatepay/route";
+import { currentFakeDb, resetFakeDb, type FakeDb } from "./helpers/fake-db";
 
 const SECRET = "test-webhook-secret";
 // RH-02: a chave HMAC é sempre distinta do secret que viaja na URL.
 const SIGNING_SECRET = "test-hmac-signing-secret";
 
-const { adminState, makeAdmin } = vi.hoisted(() => {
-  const adminState: { mode: "ok" | "over" | "down" } = { mode: "ok" };
-  const makeAdmin = () => ({
-    rpc: vi.fn(() => ({
-      maybeSingle: async () => {
-        if (adminState.mode === "down") return { data: null, error: { message: "store unavailable" } };
-        const future = new Date(Date.now() + 60_000).toISOString();
-        const hit_count = adminState.mode === "over" ? 61 : 1;
-        return { data: { hit_count, window_expires_at: future }, error: null };
-      },
-    })),
-    from: vi.fn(() => ({
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-      update: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })),
-  });
-  return { adminState, makeAdmin: vi.fn(makeAdmin) };
+vi.mock("@/lib/db", async () => {
+  const { installFakeDb } = await import("./helpers/fake-db");
+  const schema = await vi.importActual("../drizzle/schema");
+  const fake = installFakeDb();
+  return { db: fake.db, pool: {}, schema };
 });
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: vi.fn(() => makeAdmin()),
-}));
+function futureWindow(): Date {
+  return new Date(Date.now() + 60_000);
+}
+
+function setRateLimitMode(fake: FakeDb, mode: "ok" | "over" | "down"): void {
+  resetFakeDb(fake);
+  if (mode === "down") {
+    fake.state.failingTables["rate_limits"] = true;
+    return;
+  }
+  fake.state.insertResults["rate_limits"] = [
+    { hitCount: mode === "over" ? 61 : 1, windowExpiresAt: futureWindow() },
+  ];
+}
 
 function post(
   body: string,
@@ -81,17 +75,17 @@ describe("shouldRequireHmac", () => {
 
 describe("consumeRateLimit fail-closed (store indisponível)", () => {
   const request = new Request("https://prisma.example/it/rate");
+  const fake = () => currentFakeDb();
 
   beforeEach(() => {
-    adminState.mode = "ok";
+    setRateLimitMode(fake(), "ok");
   });
   afterEach(() => {
-    adminState.mode = "ok";
-    vi.clearAllMocks();
+    setRateLimitMode(fake(), "ok");
   });
 
   it("fecha a porta (429) com failClosed verdadeiro quando o store cai", async () => {
-    adminState.mode = "down";
+    setRateLimitMode(fake(), "down");
     const result = await consumeRateLimit(request, "webhook:abacatepay:test", { max: 60, windowMs: 60_000, failClosed: true });
     expect(result.limited).toBe(true);
     const response = (result as { response: Response }).response;
@@ -100,13 +94,13 @@ describe("consumeRateLimit fail-closed (store indisponível)", () => {
   });
 
   it("abre (limit ok) quando o store cai e failClosed é falso", async () => {
-    adminState.mode = "down";
+    setRateLimitMode(fake(), "down");
     const result = await consumeRateLimit(request, "webhook:abacatepay:test", { max: 60, windowMs: 60_000, failClosed: false });
     expect(result.limited).toBe(false);
   });
 
   it("limita acima do max com X-RateLimit e Retry-After", async () => {
-    adminState.mode = "over";
+    setRateLimitMode(fake(), "over");
     const result = await consumeRateLimit(request, "webhook:abacatepay:test", { max: 60, windowMs: 60_000, failClosed: true });
     expect(result.limited).toBe(true);
     const response = (result as { response: Response }).response;
@@ -132,15 +126,14 @@ describe("rota do webhook AbacatePay — autenticação", () => {
     // opta explicitamente pelo fallback.
     process.env.ABACATEPAY_ALLOW_URL_SECRET = "true";
     delete process.env.ABACATEPAY_REQUIRE_HMAC;
-    adminState.mode = "ok";
+    setRateLimitMode(currentFakeDb(), "ok");
   });
   afterEach(() => {
     delete process.env.ABACATEPAY_WEBHOOK_SECRET;
     delete process.env.ABACATEPAY_ALLOW_URL_SECRET;
     delete process.env.ABACATEPAY_REQUIRE_HMAC;
     delete process.env.ABACATEPAY_WEBHOOK_SIGNING_SECRET;
-    adminState.mode = "ok";
-    vi.clearAllMocks();
+    setRateLimitMode(currentFakeDb(), "ok");
   });
 
   it("aceita o secret da URL sozinho quando HMAC não é exigido (padrão mantém OR)", async () => {
@@ -191,23 +184,22 @@ describe("rota do webhook AbacatePay — autenticação", () => {
 describe("rota do webhook AbacatePay — rate limit", () => {
   beforeEach(() => {
     process.env.ABACATEPAY_WEBHOOK_SECRET = SECRET;
-    adminState.mode = "ok";
+    setRateLimitMode(currentFakeDb(), "ok");
   });
   afterEach(() => {
     delete process.env.ABACATEPAY_WEBHOOK_SECRET;
-    adminState.mode = "ok";
-    vi.clearAllMocks();
+    setRateLimitMode(currentFakeDb(), "ok");
   });
 
   it("retorna 429 quando a janela de rate limit é excedida", async () => {
-    adminState.mode = "over";
+    setRateLimitMode(currentFakeDb(), "over");
     const response = await post(UNSUPPORTED, { secret: SECRET });
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ error: "rate_limited", retryAfterSeconds: expect.any(Number) });
   });
 
   it("retorna 429 fail-closed quando o store de rate limit fica indisponível", async () => {
-    adminState.mode = "down";
+    setRateLimitMode(currentFakeDb(), "down");
     const response = await post(UNSUPPORTED, { secret: SECRET });
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ error: "rate_limited", retryAfterSeconds: expect.any(Number) });

@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+
 import { guard } from "@/lib/api/guard";
 import { getStorageUsedBytes } from "@/lib/access/service";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { PLAYER_ASSET_KINDS } from "@/lib/player/assets";
+import { listR2Objects, uploadR2Object } from "@/lib/storage/r2";
 import { rateLimit } from "@/lib/security/rate-limit";
+
+const { videos } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED_KINDS = new Set<string>(PLAYER_ASSET_KINDS);
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "text/vtt"]);
 const MAX_BYTES = 10 * 1024 * 1024;
+const ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 /**
  * Assinaturas de arquivo. O `file.type` vem do navegador e é escolhido pelo
@@ -52,18 +58,19 @@ export async function POST(request: Request) {
   if (!ALLOWED_MIME.has(contentType)) return NextResponse.json({ error: "unsupported_mime_type" }, { status: 415 });
 
   // Valida que o video pertence a esta conta antes de qualquer escrita no bucket.
-  const admin = createAdminClient();
-  const { data: ownedVideo } = await admin.from("videos").select("id").eq("id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
-  if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  try {
+    const [ownedVideo] = await db.select({ id: videos.id }).from(videos).where(and(eq(videos.id, videoId), eq(videos.userId, account.accountOwnerId))).limit(1);
+    if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  } catch {
+    return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  }
 
   // Assets contam na quota do plano: sem isto, o storage de thumbnails e
-  // legendas crescia fora do limite contratado.
-  const { data: siblings } = await admin.storage.from("player-assets").list(`${account.accountOwnerId}/${videoId}`, { limit: 100 });
-  let assetsBytes = 0;
-  for (const item of siblings ?? []) {
-    const size = Number((item.metadata as { size?: unknown } | null)?.size ?? 0);
-    if (Number.isFinite(size) && size > 0) assetsBytes += size;
-  }
+  // legendas crescia fora do limite contratado. A listagem é best effort:
+  // erro aqui não libera upload ilimitado — o total de vídeos da conta já
+  // é somado por getStorageUsedBytes.
+  const objects = await listR2Objects(`${account.accountOwnerId}/${videoId}/`, 100).catch(() => []);
+  const assetsBytes = objects.reduce((total, object) => total + (Number.isFinite(object.size) && object.size > 0 ? object.size : 0), 0);
   const usedBytes = await getStorageUsedBytes(account.accountOwnerId);
   if (usedBytes + assetsBytes + file.size > plan.quotas.storageBytes) {
     return NextResponse.json({ error: "storage_quota_exceeded", usedBytes: usedBytes + assetsBytes, limitBytes: plan.quotas.storageBytes }, { status: 413 });
@@ -74,13 +81,14 @@ export async function POST(request: Request) {
 
   // Path montado server-side: {ownerId}/{videoId}/{kind}-{uuid}.{ext}.
   // O {kind} mantem legibilidade para o editor; o {uuid} impede colisao e nao
-  // expoe sequencias previsiveis para outros usuarios mesmo se a RLS falhar.
+  // expoe sequencias previsiveis para outros usuarios.
   const ext = (file.name.split(".").pop() || "").replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin";
   const path = `${account.accountOwnerId}/${videoId}/${kind}-${crypto.randomUUID()}.${ext}`;
 
-  const { error } = await admin.storage.from("player-assets").upload(path, buffer, { contentType, cacheControl: "31536000", upsert: false });
-  if (error) {
-    console.error("player-asset upload failed", { videoId, kind, message: error.message });
+  try {
+    await uploadR2Object(path, buffer, contentType, ASSET_CACHE_CONTROL);
+  } catch (error) {
+    console.error("player-asset upload failed", { videoId, kind, message: error instanceof Error ? error.message : "unknown" });
     return NextResponse.json({ error: "asset_upload_failed" }, { status: 500 });
   }
   return NextResponse.json({ path }, { status: 201, headers: { "cache-control": "no-store" } });

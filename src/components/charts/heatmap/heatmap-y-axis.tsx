@@ -87,4 +87,3 @@ export const HeatmapYAxis = memo(function HeatmapYAxis({
 
 HeatmapYAxis.displayName = "HeatmapYAxis";
 
-export default HeatmapYAxis;

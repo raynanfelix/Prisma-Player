@@ -3,7 +3,11 @@ import { readJsonBody } from "@/lib/api/request";
 import { getCurrentUserId } from "@/lib/auth/server";
 import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { isoOrNull } from "@/lib/datetime";
+
+const { accountAccess, userInbox } = schema;
 
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);
@@ -17,23 +21,39 @@ export async function POST(request: Request) {
   const body = parsed.body;
   const action = body?.action;
   if (action !== "activate" && action !== "later") return NextResponse.json({ error: "invalid_action" }, { status: 400 });
-  const admin = createAdminClient();
   const now = new Date();
   const update = action === "activate" ? {
-    onboarding_completed: true,
-    trial_status: "active",
-    trial_started_at: now.toISOString(),
-    trial_ends_at: new Date(now.getTime() + 14 * 86400000).toISOString(),
-    updated_at: now.toISOString(),
-  } : { onboarding_completed: true, updated_at: now.toISOString() };
-  let query = admin.from("account_access").update(update).eq("user_id", userId);
-  if (action === "activate") query = query.eq("trial_status", "available");
-  const { data, error } = await query.select("trial_status,trial_ends_at").maybeSingle();
-  if (error) return NextResponse.json({ error: "trial_update_failed" }, { status: 500 });
-  if (action === "activate" && !data) return NextResponse.json({ error: "trial_unavailable" }, { status: 409 });
+    onboardingCompleted: true,
+    trialStatus: "active" as const,
+    trialStartedAt: now,
+    trialEndsAt: new Date(now.getTime() + 14 * 86400000),
+    updatedAt: now,
+  } : { onboardingCompleted: true, updatedAt: now };
+  // Ativar só é permitido com trial 'available'; o RETURNING vazio (nenhuma
+  // linha atualizada) é o sinal de trial indisponível.
+  const [row] = await db.update(accountAccess)
+    .set(update)
+    .where(action === "activate"
+      ? and(eq(accountAccess.userId, userId), eq(accountAccess.trialStatus, "available"))
+      : eq(accountAccess.userId, userId))
+    .returning({ trialStatus: accountAccess.trialStatus, trialEndsAt: accountAccess.trialEndsAt });
+  if (action === "activate" && !row) return NextResponse.json({ error: "trial_unavailable" }, { status: 409 });
   if (action === "activate") {
-    await admin.from("user_inbox").update({ read_at: now.toISOString() }).eq("user_id", userId).eq("kind", "welcome").is("read_at", null);
-    await admin.from("user_inbox").insert({ user_id: userId, kind: "trial", title: "Teste gratuito ativado", message: "Voce tem acesso completo por 14 dias. Aproveite para publicar, medir e otimizar suas VSLs." });
+    // Marcar o welcome como lido e inserir o aviso de trial são escritas do
+    // mesmo evento: uma transação.
+    await db.transaction(async (tx) => {
+      await tx.update(userInbox).set({ readAt: now })
+        .where(and(eq(userInbox.userId, userId), eq(userInbox.kind, "welcome"), isNull(userInbox.readAt)));
+      await tx.insert(userInbox).values({
+        userId,
+        kind: "trial",
+        title: "Teste gratuito ativado",
+        message: "Voce tem acesso completo por 14 dias. Aproveite para publicar, medir e otimizar suas VSLs.",
+      });
+    });
   }
-  return NextResponse.json({ ok: true, ...data });
+  return NextResponse.json({
+    ok: true,
+    ...(row ? { trial_status: row.trialStatus, trial_ends_at: isoOrNull(row.trialEndsAt) } : {}),
+  });
 }

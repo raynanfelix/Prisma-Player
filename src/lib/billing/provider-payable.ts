@@ -28,9 +28,14 @@ export function providerPayable(provider: ProviderPayableView, checkout: { amoun
 export function providerWebhookPayable(view: Record<string, unknown> | null | undefined, storedAmountCents: number): boolean {
   if (!view) return true;
   if (view.devMode === true) return false;
-  const amount = typeof view.amount === "number" ? view.amount : view.amount == null ? null : Number(view.amount);
-  if (amount !== null && (!Number.isFinite(amount) || amount !== storedAmountCents)) return false;
-  const currency = typeof view.currency === "string" ? view.currency.trim().toUpperCase() : "";
-  if (currency && currency !== "BRL") return false;
+  // Fail-closed: se amount ou currency estão ausentes/undefined, bloqueia.
+  // O payload do provedor pode vir incompleto, mas não podemos confiar em campos
+  // ausentes para autorizar cobrança — a reconciliação contra a API do provedor
+  // é que reconfere os valores antes de ativar.
+  if (view.amount == null || view.currency == null) return false;
+  const amount = typeof view.amount === "number" ? view.amount : Number(view.amount);
+  if (!Number.isFinite(amount) || amount !== storedAmountCents) return false;
+  const currency = String(view.currency).trim().toUpperCase();
+  if (currency !== "BRL") return false;
   return true;
 }

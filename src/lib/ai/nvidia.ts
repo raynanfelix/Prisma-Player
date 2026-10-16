@@ -5,10 +5,9 @@ const DEFAULT_CHAT_MODEL = "z-ai/glm-5.2";
 const DEFAULT_CHAT_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 const SECRET_PATTERNS = [
-  /sb_secret_[a-z0-9_\-]+/gi,
   /sk-[a-z0-9_\-]+/gi,
   /nvapi-[a-z0-9_\-]+/gi,
-  /(NVIDIA|SUPABASE|ABACATEPAY|CLOUDFLARE|R2|SECRET|TOKEN|API_KEY)[A-Z0-9_]*\s*[:=]\s*["']?[^"',\s}]+/gi,
+  /(NVIDIA|ABACATEPAY|CLOUDFLARE|R2|SECRET|TOKEN|API_KEY)[A-Z0-9_]*\s*[:=]\s*["']?[^"',\s}]+/gi,
 ];
 
 type AnalysisInput = {

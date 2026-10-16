@@ -12,7 +12,7 @@ export type AbacateProduct = {
   cycle?: string | null;
 };
 
-export type AbacateCustomer = {
+type AbacateCustomer = {
   id: string;
   email: string;
 };

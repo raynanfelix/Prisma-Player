@@ -1,14 +1,50 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { and, eq } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
 import { sanitizeCoverUrl } from "@/lib/player/autoplay-cover";
 import { domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { getAccountAccess } from "@/lib/access/service";
 import { envInt } from "@/lib/config/env";
 
+const { playerConfigs } = schema;
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RATE_LIMIT_MAX = envInt("EMBED_MANIFEST_RATE_LIMIT_MAX", 600);
 const RATE_LIMIT_WINDOW_MS = envInt("EMBED_MANIFEST_RATE_LIMIT_WINDOW_MS", 60_000);
+
+type PlayerConfigRow = {
+  id: string;
+  videoId: string;
+  userId: string;
+  config: unknown;
+  allowedDomains: string[];
+  published: boolean;
+};
+
+const PLAYER_CONFIG_FIELDS = {
+  id: playerConfigs.id,
+  videoId: playerConfigs.videoId,
+  userId: playerConfigs.userId,
+  config: playerConfigs.config,
+  allowedDomains: playerConfigs.allowedDomains,
+  published: playerConfigs.published,
+};
+
+function databaseErrorDetails(error: unknown) {
+  const shape = error as { code?: string; message?: string };
+  return { code: shape?.code ?? "database_error", message: shape?.message ?? "unknown" };
+}
+
+/** Player publicado por id de config; cai para o id de vídeo (mesma busca dupla do SDK antigo). */
+async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | null> {
+  const [byPlayerId, byVideoId] = await Promise.all([
+    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
+    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
+  ]);
+  return byPlayerId ?? byVideoId;
+}
 
 /**
  * Allowlist de chaves PUBLICAS do player config que o manifest cachea na borda.
@@ -49,27 +85,18 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const limited = await rateLimit(request, `embed-manifest:${id}`, { max: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
-  const supabase = createAdminClient();
-  const fields = "id,video_id,user_id,config,allowed_domains,published";
-  const byPlayerId = await supabase.from("player_configs").select(fields).eq("id", id).eq("published", true).maybeSingle();
-  if (byPlayerId.error) {
-    console.error("embed manifest player lookup failed", { code: byPlayerId.error.code, message: byPlayerId.error.message });
+  let playerConfig: PlayerConfigRow | null = null;
+  try {
+    playerConfig = await findPublishedPlayerConfig(id);
+  } catch (error) {
+    console.error("embed manifest player lookup failed", databaseErrorDetails(error));
     return NextResponse.json({ error: "player_lookup_failed" }, { status: 503 });
-  }
-  let playerConfig = byPlayerId.data;
-  if (!playerConfig) {
-    const byVideoId = await supabase.from("player_configs").select(fields).eq("video_id", id).eq("published", true).maybeSingle();
-    if (byVideoId.error) {
-      console.error("embed manifest video lookup failed", { code: byVideoId.error.code, message: byVideoId.error.message });
-      return NextResponse.json({ error: "player_lookup_failed" }, { status: 503 });
-    }
-    playerConfig = byVideoId.data;
   }
   if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
 
   // O manifest é entrega de valor igual ao endpoint dinâmico: sem esta
   // verificação, cancelar a assinatura não tirava CTAs/config do ar.
-  const ownerAccess = await getAccountAccess(playerConfig.user_id);
+  const ownerAccess = await getAccountAccess(playerConfig.userId);
   if (!ownerAccess.hasAccess) {
     return NextResponse.json({ error: "player_unavailable" }, { status: 402, headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive" } });
   }
@@ -94,7 +121,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // Usa a mesma normalização do endpoint dinâmico (www., https://, curinga *.).
   // A comparação exata anterior bloqueava clientes legítimos que cadastraram o
   // domínio em qualquer outro formato. O host vem do token, nunca dos headers.
-  const domains = Array.isArray(playerConfig.allowed_domains) ? playerConfig.allowed_domains.map((d) => d.trim()).filter(Boolean) : [];
+  const domains = Array.isArray(playerConfig.allowedDomains) ? playerConfig.allowedDomains.map((d) => d.trim()).filter(Boolean) : [];
   if (domains.length > 0 && !domainAllowed(host, domains)) return NextResponse.json({ error: "domain_not_allowed" }, { status: 403 });
 
   const config = playerConfig.config && typeof playerConfig.config === "object"
@@ -102,7 +129,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     : {};
 
   return NextResponse.json(
-    { id: playerConfig.id, videoId: playerConfig.video_id, config, allowedDomains: domains },
+    { id: playerConfig.id, videoId: playerConfig.videoId, config, allowedDomains: domains },
     {
       headers: {
         "content-type": "application/json; charset=utf-8",

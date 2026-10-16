@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { AlertCircle, CheckCircle2, Info } from "lucide-react";
+import Link from "next/link";
 import type { AuthNoticeState } from "@/features/auth/model/types";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,17 @@ export function AuthNotice({ notice }: { notice: AuthNoticeState | null }) {
             const Icon = toneIcons[notice.tone];
             return <Icon className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />;
           })()}
-          <span>{notice.message}</span>
+          <span>
+            {notice.message}{" "}
+            {notice.action && (
+              <Link
+                href={notice.action.href}
+                className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-80"
+              >
+                {notice.action.label}
+              </Link>
+            )}
+          </span>
         </motion.div>
       )}
     </AnimatePresence>

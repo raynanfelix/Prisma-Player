@@ -1,24 +1,9 @@
 import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserId } from "@/lib/auth/server";
-import { getSupabasePublishableKey, getSupabaseUrl } from "@/lib/supabase/env";
+import { getCurrentUserId, getAuth } from "@/lib/auth/server";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { csrfGuard } from "@/lib/security/csrf";
-
-/**
- * Verifies the current password on a throwaway client so a stolen session alone
- * cannot change the password and lock the real owner out. Using a client with
- * `persistSession: false` keeps this check from rotating the caller's cookies.
- */
-async function currentPasswordMatches(email: string, password: string) {
-  const verifier = createSupabaseClient(getSupabaseUrl(), getSupabasePublishableKey(), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { error } = await verifier.auth.signInWithPassword({ email, password });
-  return !error;
-}
+import { recordSecurityEvent } from "@/lib/security/auth-events";
 
 export async function PATCH(request: Request) {
   const csrf = csrfGuard(request);
@@ -35,20 +20,16 @@ export async function PATCH(request: Request) {
   if (password.length < 10 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return NextResponse.json({ error: "weak_password" }, { status: 400 });
   if (!currentPassword) return NextResponse.json({ error: "current_password_required" }, { status: 400 });
 
-  const supabase = await createClient();
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  const email = userData?.user?.email;
-  if (userError || !email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (!(await currentPasswordMatches(email, currentPassword))) {
-    await supabase.from("security_events").insert({ user_id: userId, event_type: "password_change_denied" });
-    return NextResponse.json({ error: "invalid_current_password" }, { status: 403 });
+  // changePassword valida a senha atual no Managed Better Auth e, com
+  // revokeOtherSessions, troca para uma nova sessão preservando a atual.
+  const { error } = await getAuth().changePassword({ currentPassword, newPassword: password, revokeOtherSessions: true });
+  if (error) {
+    if (String(error.code ?? "").toUpperCase() === "INVALID_PASSWORD") {
+      await recordSecurityEvent("password_change_denied", { userId });
+      return NextResponse.json({ error: "invalid_current_password" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "password_update_failed" }, { status: 400 });
   }
-
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return NextResponse.json({ error: "password_update_failed" }, { status: 400 });
-  // A nova senha derruba as outras sessões, mas preserva a atual: quem roubou
-  // a sessão antiga perde o acesso sem deslogar o titular aqui.
-  await supabase.auth.signOut({ scope: "others" }).catch(() => undefined);
-  await supabase.from("security_events").insert({ user_id: userId, event_type: "password_changed" });
+  await recordSecurityEvent("password_changed", { userId });
   return NextResponse.json({ ok: true });
 }

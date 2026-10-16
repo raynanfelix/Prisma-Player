@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
-import { createClient } from "@/lib/supabase/server";
-import { getAuthErrorMessage } from "@/lib/supabase/auth-errors";
+import { getAuth } from "@/lib/auth/server";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
@@ -28,13 +28,11 @@ export async function POST(request: Request) {
   });
   if (accountLimited) return accountLimited;
 
-  const supabase = await createClient();
-  const result = await supabase.auth.signInWithPassword({ email, password });
-  if (result.error) {
+  const { data, error } = await getAuth().signIn.email({ email, password });
+  if (error || !data?.user) {
     await recordAuthFailure("login_failed", email, request);
-    const message = getAuthErrorMessage(result.error, "Não foi possível entrar agora. Tente novamente.");
+    const message = getAuthErrorMessage(error, "Não foi possível entrar agora. Tente novamente.");
     return NextResponse.json({ error: "auth_failed", message }, { status: 401 });
   }
-  const { data } = await supabase.auth.getUser();
-  return NextResponse.json({ user: data.user });
+  return NextResponse.json({ user: { id: data.user.id, email: data.user.email } });
 }

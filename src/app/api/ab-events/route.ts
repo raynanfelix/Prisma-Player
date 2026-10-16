@@ -1,10 +1,13 @@
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { validateOrigin } from "@/lib/security/csrf";
 import { originHeaderDisagrees, verifyEmbedEventTokenContext, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { readJsonBody } from "@/lib/api/request";
 import { ANALYTICS } from "@/lib/constants";
+
+const { abTests, abTestVariants, playerConfigs, playerEvents, videos } = schema;
 
 const allowedEvents = new Set(["impression", "play", "progress", "complete"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -31,8 +34,13 @@ export async function POST(request: Request) {
   // usuários legítimos atrás do mesmo NAT — 1000/min por IP é folga ampla.
   const globalLimited = await rateLimit(request, `ab-global:${testId}:${variantId}`, { max: 1000, windowMs: 60_000 });
   if (globalLimited) return globalLimited;
-  const supabase = createAdminClient();
-  const { data: variant } = await supabase.from("ab_test_variants").select("user_id,video_id,test_id").eq("id", variantId).eq("test_id", testId).maybeSingle();
+
+  let variant: { userId: string; videoId: string } | undefined;
+  try {
+    [variant] = await db.select({ userId: abTestVariants.userId, videoId: abTestVariants.videoId }).from(abTestVariants).where(and(eq(abTestVariants.id, variantId), eq(abTestVariants.testId, testId))).limit(1);
+  } catch {
+    variant = undefined;
+  }
   if (!variant) return NextResponse.json({ error: "variant_not_found" }, { status: 404 });
   // Same proof-of-embed requirement as /api/analytics-events, bound to the
   // video actually served for this variant. A sessão A/B (persistida entre
@@ -40,18 +48,46 @@ export async function POST(request: Request) {
   // isso não exigimos sessão no token aqui — temos que evitar quebrar o
   // sorteio consistente de variante. Sem efeito lateral pago, não há prejuízo.
   const eventToken = typeof body?.eventToken === "string" ? body.eventToken : null;
-  const verifiedEvent = verifyEmbedEventTokenContext(eventToken, { videoId: variant.video_id });
+  const verifiedEvent = verifyEmbedEventTokenContext(eventToken, { videoId: variant.videoId });
   if (!verifiedEvent) return NextResponse.json({ error: "invalid_event_token" }, { status: 403 });
   // Prova de render (mesmo cookie `pp_embed` do embed).
   if (!verifiedEvent.nonce || !verifyEmbedRenderCookie(request.headers, verifiedEvent.nonce)) return NextResponse.json({ error: "invalid_event_token" }, { status: 403 });
   // Origin presente e não-self precisa concordar com o host do token.
   if (verifiedEvent.host && originHeaderDisagrees(request.headers, verifiedEvent.host, new URL(request.url).origin)) return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
-  const [{ data: test }, { data: video }, { data: player }] = await Promise.all([
-    supabase.from("ab_tests").select("status").eq("id", testId).eq("user_id", variant.user_id).maybeSingle(),
-    supabase.from("videos").select("status").eq("id", variant.video_id).eq("user_id", variant.user_id).maybeSingle(),
-    supabase.from("player_configs").select("id").eq("video_id", variant.video_id).eq("user_id", variant.user_id).eq("published", true).maybeSingle(),
-  ]);
-  if (test?.status !== "active" || video?.status !== "ready" || !player) return NextResponse.json({ error: "test_not_active" }, { status: 409 });
-  const { error } = await supabase.from("player_events").upsert({ user_id: variant.user_id, video_id: variant.video_id, test_id: testId, variant_id: variantId, session_id: sessionId, event_type: eventType, progress_percent: progressPercent, watched_seconds: watchedSeconds }, { onConflict: "test_id,variant_id,session_id,event_type,progress_percent", ignoreDuplicates: true });
-  return error ? NextResponse.json({ error: "event_failed" }, { status: 500 }) : NextResponse.json({ ok: true }, { status: 202 });
+
+  let testStatus: string | undefined, videoStatus: string | undefined, playerId: string | undefined;
+  try {
+    const [testRows, videoRows, playerRows] = await Promise.all([
+      db.select({ status: abTests.status }).from(abTests).where(and(eq(abTests.id, testId), eq(abTests.userId, variant.userId))).limit(1),
+      db.select({ status: videos.status }).from(videos).where(and(eq(videos.id, variant.videoId), eq(videos.userId, variant.userId))).limit(1),
+      db.select({ id: playerConfigs.id }).from(playerConfigs).where(and(eq(playerConfigs.videoId, variant.videoId), eq(playerConfigs.userId, variant.userId), eq(playerConfigs.published, true))).limit(1),
+    ]);
+    testStatus = testRows[0]?.status;
+    videoStatus = videoRows[0]?.status;
+    playerId = playerRows[0]?.id;
+  } catch {
+    testStatus = videoStatus = playerId = undefined;
+  }
+  if (testStatus !== "active" || videoStatus !== "ready" || !playerId) return NextResponse.json({ error: "test_not_active" }, { status: 409 });
+
+  // Chave de dedupe (test_id,variant_id,session_id,event_type,
+  // progress_percent => player_events_dedupe_key); DO NOTHING ignora repetidos.
+  try {
+    await db
+      .insert(playerEvents)
+      .values({
+        userId: variant.userId,
+        videoId: variant.videoId,
+        testId,
+        variantId,
+        sessionId,
+        eventType,
+        progressPercent,
+        watchedSeconds: String(watchedSeconds),
+      })
+      .onConflictDoNothing({ target: [playerEvents.testId, playerEvents.variantId, playerEvents.sessionId, playerEvents.eventType, playerEvents.progressPercent] });
+  } catch {
+    return NextResponse.json({ error: "event_failed" }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true }, { status: 202 });
 }

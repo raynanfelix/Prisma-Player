@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { abacateRequest } from "@/lib/billing/abacatepay/client";
 import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { db, schema } from "@/lib/db";
+
+const { subscriptions } = schema;
 
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);
@@ -15,15 +18,24 @@ export async function POST(request: Request) {
   // contador, ao contrario dos endpoints de checkout (que criam custo novo).
   const cancelLimit = await rateLimit(request, `billing-cancel:${userId}`, { max: 3, windowMs: 60_000 });
   if (cancelLimit) return cancelLimit;
-  const admin = createAdminClient();
-  const result = await admin.from("subscriptions").select("id,billing_method,provider_subscription_id,status").eq("user_id", userId).single();
-  if (result.error || !result.data) return NextResponse.json({ error: "subscription_not_found" }, { status: 404 });
-  if (result.data.billing_method !== "card" || !result.data.provider_subscription_id) return NextResponse.json({ error: "pix_does_not_auto_renew" }, { status: 409 });
-  if (result.data.status !== "active") return NextResponse.json({ error: "subscription_not_active" }, { status: 409 });
+
+  const [subscription] = await db
+    .select({
+      id: subscriptions.id,
+      billingMethod: subscriptions.billingMethod,
+      providerSubscriptionId: subscriptions.providerSubscriptionId,
+      status: subscriptions.status,
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, userId))
+    .limit(1);
+  if (!subscription) return NextResponse.json({ error: "subscription_not_found" }, { status: 404 });
+  if (subscription.billingMethod !== "card" || !subscription.providerSubscriptionId) return NextResponse.json({ error: "pix_does_not_auto_renew" }, { status: 409 });
+  if (subscription.status !== "active") return NextResponse.json({ error: "subscription_not_active" }, { status: 409 });
   try {
-    await abacateRequest("/subscriptions/cancel", { method: "POST", body: JSON.stringify({ id: result.data.provider_subscription_id }) });
-    const now = new Date().toISOString();
-    await admin.from("subscriptions").update({ status: "cancelled", cancelled_at: now, updated_at: now }).eq("id", result.data.id);
+    await abacateRequest("/subscriptions/cancel", { method: "POST", body: JSON.stringify({ id: subscription.providerSubscriptionId }) });
+    const now = new Date();
+    await db.update(subscriptions).set({ status: "cancelled", cancelledAt: now, updatedAt: now }).where(eq(subscriptions.id, subscription.id));
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("AbacatePay cancellation failed", error instanceof Error ? error.message : "unknown_error");

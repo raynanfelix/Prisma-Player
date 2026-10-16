@@ -1,7 +1,10 @@
 import { AdminHeader, AdminMetric, AdminPanel } from "@/components/admin/AdminUi";
 import { SeoCheckForm, SeoTargetForm } from "@/components/admin/SeoForms";
 import { CheckCircle2, Globe, Search, XCircle } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { desc, eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+
+const { seoTargets, visibilityChecks } = schema;
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +30,15 @@ async function probe(url: string, match?: RegExp): Promise<{ ok: boolean; detail
  */
 export default async function AdminSeoPage() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
-  const admin = createAdminClient();
-  const [robots, sitemap, llms, pricing, targets, checks] = await Promise.all([
+  const [robots, sitemap, llms, pricing, targetRows, checkRows] = await Promise.all([
     probe(`${base}/robots.txt`, /GPTBot|PerplexityBot|ClaudeBot|Google-Extended/i),
     probe(`${base}/sitemap.xml`, /<loc>/),
     probe(`${base}/llms.txt`, /prisma/i),
     probe(`${base}/pricing`, /R\$/),
-    admin.from("seo_targets").select("id,keyword,locale,notes,is_active,created_at").eq("is_active", true).order("created_at", { ascending: false }).limit(60),
-    admin.from("visibility_checks").select("target_id,platform,cited,runs,checked_at").order("checked_at", { ascending: false }).limit(500),
+    db.select({ id: seoTargets.id, keyword: seoTargets.keyword, locale: seoTargets.locale, notes: seoTargets.notes, isActive: seoTargets.isActive, createdAt: seoTargets.createdAt })
+      .from(seoTargets).where(eq(seoTargets.isActive, true)).orderBy(desc(seoTargets.createdAt)).limit(60),
+    db.select({ targetId: visibilityChecks.targetId, platform: visibilityChecks.platform, cited: visibilityChecks.cited, runs: visibilityChecks.runs, checkedAt: visibilityChecks.checkedAt })
+      .from(visibilityChecks).orderBy(desc(visibilityChecks.checkedAt)).limit(500),
   ]);
 
   const autoChecks = [
@@ -45,13 +49,13 @@ export default async function AdminSeoPage() {
   ];
   const healthy = autoChecks.filter((item) => item.ok).length;
 
-  const byTarget = new Map<string, { total: number; cited: number; last: string }>();
-  for (const check of checks.data ?? []) {
-    const row = byTarget.get(check.target_id) ?? { total: 0, cited: 0, last: check.checked_at };
+  const byTarget = new Map<string, { total: number; cited: number; last: Date }>();
+  for (const check of checkRows) {
+    const row = byTarget.get(check.targetId) ?? { total: 0, cited: 0, last: check.checkedAt };
     row.total += check.runs;
     if (check.cited) row.cited += check.runs;
-    if (check.checked_at > row.last) row.last = check.checked_at;
-    byTarget.set(check.target_id, row);
+    if (check.checkedAt > row.last) row.last = check.checkedAt;
+    byTarget.set(check.targetId, row);
   }
 
   return <div>
@@ -62,7 +66,7 @@ export default async function AdminSeoPage() {
     <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_1.4fr]">
       <div><AdminPanel title="Nova meta de busca" description="Palavra-chave que importa para o negócio."><SeoTargetForm /></AdminPanel>
         <div className="mt-5"><AdminPanel title="Como medir" description="Rode cada busca 3–5x por plataforma e registre quantas citaram a Prisma."><div className="space-y-2 p-5 text-[12px] themeable-text-ink-muted-48"><p className="flex gap-2"><Globe size={14} /> Consultas: “melhor player de VSL”, “player de VSL preço”, “Prisma Player vs concorrente”.</p><p className="flex gap-2"><Search size={14} /> Base automática: {healthy}/{autoChecks.length} passando. JSON-LD e metadados: ver layout e pricing no código.</p></div></AdminPanel></div></div>
-      <AdminPanel title="Metas e taxa de citação" description="Citados ÷ execuções somadas (todas as plataformas)."><div className="space-y-4 p-5">{(targets.data ?? []).map((target) => { const stat = byTarget.get(target.id); const rate = stat && stat.total ? Math.round((stat.cited / stat.total) * 100) : null; return <div key={target.id} className="rounded-[14px] border p-4 themeable-border-hairline"><div className="flex items-center justify-between gap-2"><p className="text-[13px] font-semibold themeable-text-ink">{target.keyword}</p><span className="text-[12px] font-bold themeable-text-ink">{rate === null ? "sem dados" : `${rate}%`}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-card"><div className="h-full rounded-full bg-selected" style={{ width: `${rate ?? 0}%` }} /></div><div className="mt-3"><SeoCheckForm targetId={target.id} /></div></div>; })}{(targets.data ?? []).length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhuma meta ainda. Adicione a primeira ao lado.</p>}</div></AdminPanel>
+      <AdminPanel title="Metas e taxa de citação" description="Citados ÷ execuções somadas (todas as plataformas)."><div className="space-y-4 p-5">{targetRows.map((target) => { const stat = byTarget.get(target.id); const rate = stat && stat.total ? Math.round((stat.cited / stat.total) * 100) : null; return <div key={target.id} className="rounded-[14px] border p-4 themeable-border-hairline"><div className="flex items-center justify-between gap-2"><p className="text-[13px] font-semibold themeable-text-ink">{target.keyword}</p><span className="text-[12px] font-bold themeable-text-ink">{rate === null ? "sem dados" : `${rate}%`}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-card"><div className="h-full rounded-full bg-selected" style={{ width: `${rate ?? 0}%` }} /></div><div className="mt-3"><SeoCheckForm targetId={target.id} /></div></div>; })}{targetRows.length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhuma meta ainda. Adicione a primeira ao lado.</p>}</div></AdminPanel>
     </div>
   </div>;
 }

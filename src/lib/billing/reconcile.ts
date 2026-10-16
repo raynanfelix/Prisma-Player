@@ -1,11 +1,16 @@
 import "server-only";
-import { createAdminClient } from "@/lib/supabase/admin";
+
+import { and, eq } from "drizzle-orm";
+
 import { abacateRequest } from "./abacatepay/client";
 import type { AbacateCheckout } from "./abacatepay/types";
 import { providerPayable } from "./provider-payable";
 import { activateSubscription, cancelPreviousProviderSubscription } from "./shared-activation";
+import { db, schema } from "@/lib/db";
 
-type StoredCheckout = {
+const { billingCheckouts } = schema;
+
+export type StoredCheckout = {
   id: string;
   user_id: string;
   plan_id: string;
@@ -16,26 +21,25 @@ type StoredCheckout = {
   previous_provider_subscription_id?: string | null;
 };
 
-export async function activatePaidCheckout(checkout: StoredCheckout, provider: AbacateCheckout) {
-  const admin = createAdminClient();
-  const now = new Date().toISOString();
+async function activatePaidCheckout(checkout: StoredCheckout, provider: AbacateCheckout) {
+  const now = new Date();
 
-  const { error: checkoutError } = await admin.from("billing_checkouts").update({
-    status: "paid",
-    paid_at: now,
-    provider_checkout_id: provider.id,
-    receipt_url: provider.receiptUrl ?? null,
-    updated_at: now,
-  }).eq("id", checkout.id).eq("user_id", checkout.user_id);
-  if (checkoutError) throw new Error("billing_checkout_payment_save_failed");
-
+  // A referência da assinatura anterior só é apagada DEPOIS do cancelamento no
+  // provedor: se o cancelamento falhar, a próxima tentativa ainda sabe o que
+  // cancelar. Falhar antes perderia a referência e deixaria cobrança dupla.
   await cancelPreviousProviderSubscription(
     checkout.previous_provider_subscription_id,
     provider.id,
   );
-  if (checkout.previous_provider_subscription_id && checkout.previous_provider_subscription_id !== provider.id) {
-    await admin.from("billing_checkouts").update({ previous_provider_subscription_id: null, updated_at: now }).eq("id", checkout.id);
-  }
+
+  await db.update(billingCheckouts).set({
+    status: "paid",
+    paidAt: now,
+    providerCheckoutId: provider.id,
+    receiptUrl: provider.receiptUrl ?? null,
+    previousProviderSubscriptionId: null,
+    updatedAt: now,
+  }).where(and(eq(billingCheckouts.id, checkout.id), eq(billingCheckouts.userId, checkout.user_id)));
 
   await activateSubscription(checkout, provider.id);
 }
@@ -69,8 +73,10 @@ export async function reconcileBillingCheckout(checkout: StoredCheckout) {
   }
   if (["EXPIRED", "CANCELLED", "REFUNDED"].includes(status)) {
     const localStatus = status === "REFUNDED" ? "refunded" : status.toLowerCase();
-    const admin = createAdminClient();
-    await admin.from("billing_checkouts").update({ status: localStatus, updated_at: new Date().toISOString() }).eq("id", checkout.id).eq("user_id", checkout.user_id);
+    await db.update(billingCheckouts).set({
+      status: localStatus,
+      updatedAt: new Date(),
+    }).where(and(eq(billingCheckouts.id, checkout.id), eq(billingCheckouts.userId, checkout.user_id)));
   }
   return false;
 }

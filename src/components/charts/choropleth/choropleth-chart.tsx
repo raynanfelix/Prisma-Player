@@ -2,7 +2,7 @@
 
 import { Mercator } from "@visx/geo";
 import { ParentSize } from "@visx/responsive";
-import type { GeoPath, GeoPermissibleObjects } from "@visx/vendor/d3-geo";
+import type { GeoPath, GeoPermissibleObjects } from "d3-geo";
 import type { TransformMatrix } from "@visx/zoom";
 import { Zoom } from "@visx/zoom";
 import type { FeatureCollection, Geometry } from "geojson";
@@ -512,4 +512,3 @@ export function ChoroplethChart({
 
 ChoroplethChart.displayName = "ChoroplethChart";
 
-export default ChoroplethChart;

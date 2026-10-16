@@ -55,4 +55,3 @@ export function ChartLoadingLabel({
   );
 }
 
-export default ChartLoadingLabel;

@@ -1,5 +1,8 @@
 import "server-only";
-import { createAdminClient } from "@/lib/supabase/admin";
+
+import { db, schema } from "@/lib/db";
+
+const { adminAuditLog } = schema;
 
 export const CASE_STATUSES = ["aberto", "em_andamento", "aguardando_cliente", "resolvido"] as const;
 export const CASE_PRIORITIES = ["baixa", "normal", "alta", "urgente"] as const;
@@ -26,6 +29,5 @@ export function validateNoteBody(body: string): string | null {
 }
 
 export async function audit(adminId: string, action: string, targetUserId: string | null, details: Record<string, unknown> = {}) {
-  const admin = createAdminClient();
-  await admin.from("admin_audit_log").insert({ admin_user_id: adminId, action, target_user_id: targetUserId, details });
+  await db.insert(adminAuditLog).values({ adminUserId: adminId, action, targetUserId, details });
 }

@@ -209,7 +209,7 @@ export function HeatmapInteractionRoot({ children }: { children: ReactNode }) {
 }
 
 /** @deprecated Use {@link HEATMAP_DEFAULT_LEVEL_COLORS} */
-export const heatmapCssVars = {
+const heatmapCssVars = {
   empty: HEATMAP_DEFAULT_LEVEL_COLORS[0],
   level1: HEATMAP_DEFAULT_LEVEL_COLORS[1],
   level2: HEATMAP_DEFAULT_LEVEL_COLORS[2],

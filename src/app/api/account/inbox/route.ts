@@ -3,7 +3,11 @@ import { readJsonBody } from "@/lib/api/request";
 import { getCurrentUserId } from "@/lib/auth/server";
 import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { isoOrNull } from "@/lib/datetime";
+
+const { userInbox } = schema;
 
 const defaultMessages = [
   {
@@ -36,43 +40,71 @@ const defaultMessages = [
   },
 ];
 
+const inboxColumns = {
+  id: userInbox.id,
+  kind: userInbox.kind,
+  title: userInbox.title,
+  message: userInbox.message,
+  actionLabel: userInbox.actionLabel,
+  actionUrl: userInbox.actionUrl,
+  readAt: userInbox.readAt,
+  createdAt: userInbox.createdAt,
+};
+
+type InboxRow = {
+  id: string;
+  kind: string;
+  title: string;
+  message: string;
+  actionLabel: string | null;
+  actionUrl: string | null;
+  readAt: Date | null;
+  createdAt: Date;
+};
+
+function toInboxItem(row: InboxRow) {
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    message: row.message,
+    action_label: row.actionLabel,
+    action_url: row.actionUrl,
+    read_at: isoOrNull(row.readAt),
+    created_at: row.createdAt.toISOString(),
+  };
+}
+
+async function fetchInbox(userId: string) {
+  return db.select(inboxColumns)
+    .from(userInbox)
+    .where(and(eq(userInbox.userId, userId), isNull(userInbox.dismissedAt)))
+    .orderBy(desc(userInbox.createdAt));
+}
+
 export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const admin = createAdminClient();
 
-  const { data, error } = await admin
-    .from("user_inbox")
-    .select("id,kind,title,message,action_label,action_url,read_at,created_at")
-    .eq("user_id", userId)
-    .is("dismissed_at", null)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error) return NextResponse.json({ error: "inbox_failed" }, { status: 500 });
+  const data = await fetchInbox(userId);
 
   // Seed uma única vez na vida da conta: se só olhássemos as não-dispensadas,
   // dispensar as 4 padrões ressuscitava todas no próximo GET.
-  if (!data || data.length === 0) {
-    const { count: ever } = await admin.from("user_inbox").select("id", { count: "exact", head: true }).eq("user_id", userId);
-    if ((ever ?? 0) > 0) return NextResponse.json({ items: [] }, { headers: { "cache-control": "no-store" } });
-    const toInsert = defaultMessages.map((item) => ({
-      user_id: userId,
-      ...item,
-    }));
-    await admin.from("user_inbox").insert(toInsert);
-
-    const { data: fresh } = await admin
-      .from("user_inbox")
-      .select("id,kind,title,message,action_label,action_url,read_at,created_at")
-      .eq("user_id", userId)
-      .is("dismissed_at", null)
-      .order("created_at", { ascending: false });
-
-    return NextResponse.json({ items: fresh ?? [] }, { headers: { "cache-control": "no-store" } });
+  if (data.length === 0) {
+    const [everRow] = await db.select({ total: sql<number>`count(*)::int` }).from(userInbox).where(eq(userInbox.userId, userId));
+    if ((everRow?.total ?? 0) > 0) return NextResponse.json({ items: [] }, { headers: { "cache-control": "no-store" } });
+    try {
+      await db.insert(userInbox).values(defaultMessages.map((item) => ({ userId, ...item })));
+    } catch {
+      // Duas requisições simultâneas podem tentar o seed juntas; o índice único
+      // do welcome aborta o segundo insert. O re-select abaixo devolve o estado
+      // real da inbox de qualquer forma.
+    }
+    const fresh = await fetchInbox(userId);
+    return NextResponse.json({ items: fresh.map(toInboxItem) }, { headers: { "cache-control": "no-store" } });
   }
 
-  return NextResponse.json({ items: data ?? [] }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ items: data.map(toInboxItem) }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function PATCH(request: Request) {
@@ -88,26 +120,20 @@ export async function PATCH(request: Request) {
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
 
-  const admin = createAdminClient();
+  try {
+    if (body?.markAll) {
+      await db.update(userInbox).set({ readAt: new Date() })
+        .where(and(eq(userInbox.userId, userId), isNull(userInbox.readAt)));
+      return NextResponse.json({ ok: true });
+    }
 
-  if (body?.markAll) {
-    const { error } = await admin
-      .from("user_inbox")
-      .update({ read_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .is("read_at", null);
-    return error ? NextResponse.json({ error: "inbox_update_failed" }, { status: 500 }) : NextResponse.json({ ok: true });
+    if (typeof body?.id !== "string") return NextResponse.json({ error: "invalid_notification" }, { status: 400 });
+    await db.update(userInbox).set({ readAt: new Date() })
+      .where(and(eq(userInbox.id, body.id), eq(userInbox.userId, userId)));
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "inbox_update_failed" }, { status: 500 });
   }
-
-  if (typeof body?.id !== "string") return NextResponse.json({ error: "invalid_notification" }, { status: 400 });
-
-  const { error } = await admin
-    .from("user_inbox")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", body.id)
-    .eq("user_id", userId);
-
-  return error ? NextResponse.json({ error: "inbox_update_failed" }, { status: 500 }) : NextResponse.json({ ok: true });
 }
 
 export async function DELETE(request: Request) {
@@ -122,24 +148,19 @@ export async function DELETE(request: Request) {
   const parsed = await readJsonBody<{ id?: unknown; clearAll?: boolean }>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
-  const admin = createAdminClient();
 
-  if (body?.clearAll) {
-    const { error } = await admin
-      .from("user_inbox")
-      .update({ dismissed_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .is("dismissed_at", null);
-    return error ? NextResponse.json({ error: "inbox_delete_failed" }, { status: 500 }) : NextResponse.json({ ok: true });
+  try {
+    if (body?.clearAll) {
+      await db.update(userInbox).set({ dismissedAt: new Date() })
+        .where(and(eq(userInbox.userId, userId), isNull(userInbox.dismissedAt)));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (typeof body?.id !== "string") return NextResponse.json({ error: "invalid_notification" }, { status: 400 });
+    await db.update(userInbox).set({ dismissedAt: new Date() })
+      .where(and(eq(userInbox.id, body.id), eq(userInbox.userId, userId)));
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "inbox_delete_failed" }, { status: 500 });
   }
-
-  if (typeof body?.id !== "string") return NextResponse.json({ error: "invalid_notification" }, { status: 400 });
-
-  const { error } = await admin
-    .from("user_inbox")
-    .update({ dismissed_at: new Date().toISOString() })
-    .eq("id", body.id)
-    .eq("user_id", userId);
-
-  return error ? NextResponse.json({ error: "inbox_delete_failed" }, { status: 500 }) : NextResponse.json({ ok: true });
 }

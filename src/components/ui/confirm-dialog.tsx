@@ -4,6 +4,7 @@ import * as React from "react"
 import { AlertTriangle, Trash2 } from "lucide-react"
 import Dialog from "@/components/ui/Dialog"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/I18nProvider"
 
 interface ConfirmOptions {
   title: string
@@ -19,7 +20,7 @@ interface State extends ConfirmOptions {
   danger: boolean
 }
 
-export function ConfirmDialog({
+function ConfirmDialog({
   open,
   options,
   onClose,
@@ -30,6 +31,7 @@ export function ConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <Dialog
       open={open}
@@ -58,9 +60,13 @@ export function ConfirmDialog({
           <AlertTriangle size={18} />
         </span>
         <p className="text-xs leading-5 text-slate-600 dark:text-zinc-400">
-          Esta ação não pode ser desfeita. Clique em{" "}
-          <strong className="font-bold text-slate-900 dark:text-white">{options.confirmLabel}</strong>{" "}
-          para continuar ou em <strong className="font-bold text-slate-900 dark:text-white">Cancelar</strong> para voltar.
+          {"Esta ação não pode ser desfeita."}
+          <strong className="font-bold text-slate-900 dark:text-white">
+            {options.confirmLabel}
+          </strong>{" "}
+          {" para continuar ou em "}&nbsp;
+          <strong className="font-bold text-slate-900 dark:text-white">{"Cancelar"}</strong>{" "}
+          para voltar.
         </p>
       </div>
     </Dialog>

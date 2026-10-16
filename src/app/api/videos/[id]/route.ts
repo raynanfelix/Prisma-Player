@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+
 import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { deleteR2Object, headR2Object } from "@/lib/storage/r2";
 import { VIDEO } from "@/lib/constants";
 import { rateLimit } from "@/lib/security/rate-limit";
+
+const { playerConfigs, videoFolders, videos } = schema;
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const gate = await guard(request, { csrf: true, role: "edit", paid: true });
@@ -20,8 +26,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
 
-  const supabase = createAdminClient();
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const updates: Partial<typeof videos.$inferInsert> = { updatedAt: new Date() };
   if (typeof body?.title === "string") {
     const title = body.title.trim().slice(0, VIDEO.MAX_TITLE_LENGTH);
     if (!title) return NextResponse.json({ error: "invalid_title" }, { status: 400 });
@@ -32,38 +37,58 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     // O POST já validava a pasta; o PATCH não. A FK composta do banco impedia o
     // vazamento, mas devolvia um erro genérico em vez de dizer o que houve.
     if (folderId) {
-      const folder = await supabase.from("video_folders").select("id").eq("id", folderId).eq("user_id", account.accountOwnerId).maybeSingle();
-      if (!folder.data) return NextResponse.json({ error: "folder_not_found" }, { status: 404 });
+      try {
+        const [folder] = await db.select({ id: videoFolders.id }).from(videoFolders).where(and(eq(videoFolders.id, folderId), eq(videoFolders.userId, account.accountOwnerId))).limit(1);
+        if (!folder) return NextResponse.json({ error: "folder_not_found" }, { status: 404 });
+      } catch {
+        return NextResponse.json({ error: "folder_not_found" }, { status: 404 });
+      }
     }
-    updates.folder_id = folderId;
+    updates.folderId = folderId;
   }
 
   if (body?.status === "ready" || body?.status === "failed") {
-    const { data: current } = await supabase.from("videos").select("object_path,status,storage_provider").eq("id", id).eq("user_id", account.accountOwnerId).maybeSingle();
+    let current: { objectPath: string; status: string } | null = null;
+    try {
+      current = (await db
+        .select({ objectPath: videos.objectPath, status: videos.status })
+        .from(videos)
+        .where(and(eq(videos.id, id), eq(videos.userId, account.accountOwnerId)))
+        .limit(1))[0] ?? null;
+    } catch {
+      current = null;
+    }
     if (!current || current.status !== "processing") return NextResponse.json({ error: "invalid_status_transition" }, { status: 409 });
     if (body.status === "ready") {
-      // A verificação olhava sempre o Supabase Storage, mesmo com o vídeo no R2
-      // (o caminho padrão): todo finalize de vídeo em R2 falhava por aqui.
-      const uploaded = current.storage_provider === "r2"
-        ? await headR2Object(current.object_path).then(() => true).catch(() => false)
-        : await (async () => {
-            const separator = current.object_path.lastIndexOf("/");
-            const folder = current.object_path.slice(0, separator);
-            const fileName = current.object_path.slice(separator + 1);
-            const { data: objects, error: storageError } = await supabase.storage.from("videos").list(folder, { search: fileName, limit: 2 });
-            return !storageError && Boolean(objects?.some((object) => object.name === fileName));
-          })();
+      // R2 é o único storage: a confirmação é um HEAD no objeto do próprio vídeo.
+      const uploaded = await headR2Object(current.objectPath).then(() => true).catch(() => false);
       if (!uploaded) return NextResponse.json({ error: "uploaded_file_not_found" }, { status: 409 });
       updates.status = "ready";
       const duration = Number(body.durationSeconds);
-      if (Number.isFinite(duration) && duration > 0) updates.duration_seconds = duration;
+      if (Number.isFinite(duration) && duration > 0) updates.durationSeconds = String(duration);
     } else updates.status = "failed";
   }
 
-  const { data, error } = await supabase.from("videos").update(updates).eq("id", id).eq("user_id", account.accountOwnerId).select("id,title,folder_id").maybeSingle();
-  if (error || !data) return NextResponse.json({ error: "video_update_failed" }, { status: 400 });
-  if (body?.status === "ready") await supabase.from("player_configs").upsert({ user_id: account.accountOwnerId, video_id: id, config: {}, allowed_domains: [], published: true }, { onConflict: "video_id", ignoreDuplicates: true });
-  return NextResponse.json({ video: data });
+  try {
+    const [data] = await db
+      .update(videos)
+      .set(updates)
+      .where(and(eq(videos.id, id), eq(videos.userId, account.accountOwnerId)))
+      .returning({ id: videos.id, title: videos.title, folderId: videos.folderId });
+    if (!data) return NextResponse.json({ error: "video_update_failed" }, { status: 400 });
+    if (body?.status === "ready") {
+      // Idempotente: ignora o conflito quando o player já existe (como o
+      // `ignoreDuplicates` do SDK antigo). Falha aqui não desfaz o update.
+      await db
+        .insert(playerConfigs)
+        .values({ userId: account.accountOwnerId, videoId: id, config: {}, allowedDomains: [], published: true })
+        .onConflictDoNothing({ target: playerConfigs.videoId })
+        .catch(() => undefined);
+    }
+    return NextResponse.json({ video: { id: data.id, title: data.title, folder_id: data.folderId } });
+  } catch {
+    return NextResponse.json({ error: "video_update_failed" }, { status: 400 });
+  }
 }
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -75,24 +100,46 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   if (limited) return limited;
 
   const { id } = await context.params;
-  const supabase = createAdminClient();
-  const { data: video, error: videoError } = await supabase.from("videos").select("id,object_path,storage_provider").eq("id", id).eq("user_id", account.accountOwnerId).maybeSingle();
-  if (videoError || !video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  let video: { id: string; objectPath: string } | null = null;
+  try {
+    video = (await db
+      .select({ id: videos.id, objectPath: videos.objectPath })
+      .from(videos)
+      .where(and(eq(videos.id, id), eq(videos.userId, account.accountOwnerId)))
+      .limit(1))[0] ?? null;
+  } catch {
+    video = null;
+  }
+  if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
 
-  const { data: playerConfig } = await supabase.from("player_configs").select("config").eq("video_id", id).eq("user_id", account.accountOwnerId).maybeSingle();
-  const config = playerConfig?.config && typeof playerConfig.config === "object" ? playerConfig.config as Record<string, unknown> : {};
-  const assets = Object.values(ownedAssetPaths(config.assets, account.accountOwnerId));
+  const config = await db
+    .select({ config: playerConfigs.config })
+    .from(playerConfigs)
+    .where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.userId, account.accountOwnerId)))
+    .limit(1)
+    .then((rows) => rows[0]?.config ?? {})
+    .catch(() => ({}));
+  const configRecord = config && typeof config === "object" ? config as Record<string, unknown> : {};
+  const assets = Object.values(ownedAssetPaths(configRecord.assets, account.accountOwnerId));
 
+  // Delete no R2 é idempotente; assets falhos abortam a operação para não
+  // deixar órfãos pagando armazenamento.
   if (assets.length) {
-    const { error: assetError } = await supabase.storage.from("player-assets").remove(assets);
-    if (assetError) return NextResponse.json({ error: "player_assets_delete_failed" }, { status: 500 });
+    try {
+      await Promise.all(assets.map((path) => deleteR2Object(path)));
+    } catch {
+      return NextResponse.json({ error: "player_assets_delete_failed" }, { status: 500 });
+    }
   }
-  if (video.storage_provider === "r2") {
-    try { await deleteR2Object(video.object_path); } catch { return NextResponse.json({ error: "video_file_delete_failed" }, { status: 500 }); }
-  } else {
-    const { error: videoStorageError } = await supabase.storage.from("videos").remove([video.object_path]);
-    if (videoStorageError) return NextResponse.json({ error: "video_file_delete_failed" }, { status: 500 });
+  try {
+    await deleteR2Object(video.objectPath);
+  } catch {
+    return NextResponse.json({ error: "video_file_delete_failed" }, { status: 500 });
   }
-  const { error: deleteError } = await supabase.from("videos").delete().eq("id", id).eq("user_id", account.accountOwnerId);
-  return deleteError ? NextResponse.json({ error: "video_delete_failed" }, { status: 500 }) : NextResponse.json({ ok: true });
+  try {
+    await db.delete(videos).where(and(eq(videos.id, id), eq(videos.userId, account.accountOwnerId)));
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "video_delete_failed" }, { status: 500 });
+  }
 }

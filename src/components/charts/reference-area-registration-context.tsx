@@ -11,6 +11,6 @@ export interface ReferenceAreaRegistrationContextValue {
 export const ReferenceAreaRegistrationContext =
   createContext<ReferenceAreaRegistrationContextValue | null>(null);
 
-export function useReferenceAreaRegistration(): ReferenceAreaRegistrationContextValue | null {
+function useReferenceAreaRegistration(): ReferenceAreaRegistrationContextValue | null {
   return useContext(ReferenceAreaRegistrationContext);
 }

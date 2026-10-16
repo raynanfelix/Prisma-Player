@@ -28,7 +28,7 @@ export const termsSections = [
   },
   {
     title: "7. Terceiros e infraestrutura",
-    body: "A plataforma pode depender de serviços como Supabase, Vercel, Cloudflare R2, provedores de pagamento e provedores de IA. Falhas, janelas de manutenção ou limitações desses terceiros podem afetar temporariamente recursos específicos.",
+    body: "A plataforma pode depender de serviços como Neon (banco de dados e autenticação), Vercel, Cloudflare R2, provedores de pagamento e provedores de IA. Falhas, janelas de manutenção ou limitações desses terceiros podem afetar temporariamente recursos específicos.",
   },
   {
     title: "8. Suspensão e encerramento",

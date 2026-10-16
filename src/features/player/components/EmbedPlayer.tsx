@@ -368,7 +368,13 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
 
   useEffect(() => {
     if (!Boolean(payload?.config.disablePause)) return;
-    const media = document.querySelector<HTMLVideoElement>("video");
+    // Busca o elemento de vídeo dentro do container do player para evitar conflitos
+    // com outros vídeos na página. O seletor prioriza o vídeo do player por sua classe
+    // e atributos data, caindo de volta ao seletor global apenas se necessário.
+    const container = document.querySelector('[data-prisma-embed]');
+    const media = container
+      ? container.querySelector<HTMLVideoElement>("video")
+      : document.querySelector<HTMLVideoElement>("video");
     if (!media) return;
     const keepPlaying = () => { if (!media.ended && media.currentTime > 0) void media.play().catch(() => undefined); };
     media.addEventListener("pause", keepPlaying);

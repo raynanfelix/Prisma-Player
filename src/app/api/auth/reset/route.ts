@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
-import { createClient } from "@/lib/supabase/server";
-import { getAuthErrorMessage } from "@/lib/supabase/auth-errors";
+import { getAuth } from "@/lib/auth/server";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
 
@@ -23,13 +23,18 @@ export async function POST(request: Request) {
   });
   if (accountLimited) return accountLimited;
 
-  const supabase = await createClient();
-  const result = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
+  // O Managed Better Auth envia o e-mail de reset (SMTP compartilhado no dev).
+  // O link aponta para /reset-password?token=... — não há troca de código por
+  // sessão; o token é entregue a /api/auth/update-password.
+  const { error } = await getAuth().requestPasswordReset({
+    email,
+    redirectTo: `${siteUrl}/reset-password`,
   });
-  if (result.error) {
-    const message = getAuthErrorMessage(result.error, "Não foi possível enviar o e-mail.");
+  if (error) {
+    const message = getAuthErrorMessage(error, "Não foi possível enviar o e-mail.");
     return NextResponse.json({ error: "reset_failed", message }, { status: 400 });
   }
+  // Anti-enumeracao: para e-mail inexistente o Managed responde sucesso;
+  // a resposta ao cliente é sempre { ok: true }.
   return NextResponse.json({ ok: true });
 }

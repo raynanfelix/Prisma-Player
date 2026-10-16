@@ -16,7 +16,7 @@ export interface ChartConfigValue {
   highlightSpring: SpringConfig;
 }
 
-export const DEFAULT_CHART_CONFIG: ChartConfigValue = {
+const DEFAULT_CHART_CONFIG: ChartConfigValue = {
   tooltipSpring: { stiffness: 300, damping: 30 },
   tooltipBoxSpring: { stiffness: 100, damping: 20 },
   highlightSpring: { stiffness: 180, damping: 28 },
@@ -29,7 +29,7 @@ export interface ChartConfigProviderProps {
   children: ReactNode;
 }
 
-export function ChartConfigProvider({
+function ChartConfigProvider({
   value,
   children,
 }: ChartConfigProviderProps) {

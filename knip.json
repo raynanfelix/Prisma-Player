@@ -1,0 +1,7 @@
+﻿{
+  "$schema": "./node_modules/knip/schema.json",
+  "entry": ["src/proxy.ts", "instrumentation-client.ts"],
+  "project": ["src/**/*.{ts,tsx,css}", "instrumentation-client.ts"],
+  "paths": { "@/*": ["./src/*"] },
+  "ignoreExportsUsedInFile": { "interface": true, "type": true }
+}

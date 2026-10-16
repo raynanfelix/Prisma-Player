@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/api/admin-guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+
+const { adminAuditLog, aiCreditLedger, aiCreditWallets, profiles } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -27,32 +30,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id").eq("id", userId).maybeSingle();
+  const [profile] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, userId)).limit(1);
   if (!profile) return NextResponse.json({ error: "account_not_found" }, { status: 404 });
 
-  const { data: wallet } = await admin.from("ai_credit_wallets").select("balance,lifetime_purchased").eq("user_id", userId).maybeSingle();
-  const current = wallet?.balance ?? 0;
-  const applied = delta < 0 ? -Math.min(-delta, current) : delta;
-  const balance = current + applied;
-  if (applied === 0) return NextResponse.json({ error: "insufficient_balance" }, { status: 409 });
+  const now = new Date();
+  // Ledger e carteira do mesmo movimento: uma transação com lock da carteira,
+  // para que ajustes concorrentes não calculem saldo a partir de leitura velha.
+  const result = await db.transaction(async (tx) => {
+    const [wallet] = await tx.select({ balance: aiCreditWallets.balance, lifetimePurchased: aiCreditWallets.lifetimePurchased })
+      .from(aiCreditWallets).where(eq(aiCreditWallets.userId, userId)).for("update").limit(1);
+    const current = wallet?.balance ?? 0;
+    const applied = delta < 0 ? -Math.min(-delta, current) : delta;
+    if (applied === 0) return null;
 
-  const reference = `admin-adjust-${crypto.randomUUID()}`;
-  const ledger = await admin.from("ai_credit_ledger").insert({ user_id: userId, amount: applied, reason: "adjustment", reference });
-  if (ledger.error) return NextResponse.json({ error: "adjust_failed" }, { status: 500 });
+    const balance = current + applied;
+    const reference = `admin-adjust-${crypto.randomUUID()}`;
+    await tx.insert(aiCreditLedger).values({ userId, amount: applied, reason: "adjustment", reference });
 
-  const purchased = (wallet?.lifetime_purchased ?? 0) + Math.max(0, applied);
-  const upsert = wallet
-    ? await admin.from("ai_credit_wallets").update({ balance, lifetime_purchased: purchased, updated_at: new Date().toISOString() }).eq("user_id", userId)
-    : await admin.from("ai_credit_wallets").insert({ user_id: userId, balance, lifetime_purchased: purchased });
-  if (upsert.error) return NextResponse.json({ error: "adjust_failed" }, { status: 500 });
+    const purchased = (wallet?.lifetimePurchased ?? 0) + Math.max(0, applied);
+    if (wallet) {
+      await tx.update(aiCreditWallets).set({ balance, lifetimePurchased: purchased, updatedAt: now }).where(eq(aiCreditWallets.userId, userId));
+    } else {
+      await tx.insert(aiCreditWallets).values({ userId, balance, lifetimePurchased: purchased });
+    }
+    return { balance, applied, reference };
+  });
+  if (!result) return NextResponse.json({ error: "insufficient_balance" }, { status: 409 });
 
-  await admin.from("admin_audit_log").insert({
-    admin_user_id: gate.adminId,
+  await db.insert(adminAuditLog).values({
+    adminUserId: gate.adminId,
     action: "credit_adjust",
-    target_user_id: userId,
-    details: { delta: applied, reason, reference },
+    targetUserId: userId,
+    details: { delta: result.applied, reason, reference: result.reference },
   });
 
-  return NextResponse.json({ updated: true, balance, applied }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ updated: true, balance: result.balance, applied: result.applied }, { headers: { "cache-control": "no-store" } });
 }

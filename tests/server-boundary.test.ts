@@ -9,14 +9,13 @@ import { join } from "node:path";
 const ROOT = join(process.cwd(), "src");
 
 const PRIVILEGED = [
-  "lib/supabase/admin.ts",
-  "lib/supabase/server.ts",
-  "lib/supabase/proxy.ts",
   "lib/access/service.ts",
   "lib/access/team-context.ts",
   "lib/auth/server.ts",
-  "lib/auth/server.ts",
+  "lib/auth/session.ts",
+  "lib/db/index.ts",
   "lib/security/rate-limit.ts",
+  "lib/security/self-origins.ts",
   "lib/security/embed-origin.ts",
   "lib/security/auth-events.ts",
   "lib/storage/r2.ts",
@@ -43,7 +42,7 @@ const PRIVILEGED = [
 ];
 
 const PRIVILEGED_IMPORT = new RegExp(
-  `@/(lib/(supabase/admin|supabase/server|supabase/proxy|access/|auth/server|security/(rate-limit|embed-origin|auth-events)|storage/|webhooks|email/|cache/|posthog-server|billing|ai/nvidia|api/(guard|request)|player/assets)|services/ads/server-events)`,
+  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|auth-events|self-origins)|storage/|webhooks|email/|cache/|posthog-server|billing|ai/nvidia|api/(guard|request)|player/assets)|services/ads/server-events)`,
 );
 
 function allFiles(dir: string): string[] {

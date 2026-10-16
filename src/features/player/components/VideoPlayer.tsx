@@ -36,6 +36,17 @@ export default function VideoPlayer({
   const mediaRef = useRef<HTMLVideoElement>(null);
   const source = sources[0];
   const contentProtection = protectContent ?? (className.includes("prisma-player--embed") && !className.includes("prisma-player--unprotected"));
+  if (!protectContent && className.includes("prisma-player--embed")) {
+    // Warn in development: protection defaults to className convention.
+    // Ensure the player container has the `prisma-player--embed` class for
+    // content protection to work as intended.
+    if (typeof window !== "undefined" && (window as any).__PRISMA_DEV__) {
+      console.warn(
+        "[Prisma Player] Content protection is defaulting to className convention. " +
+        "Add `protectContent={true}` prop or ensure the container has `className=\"prisma-player--embed\"`."
+      );
+    }
+  }
   const visibilityClasses = useMemo(() => [
     !controls && "prisma-player--controls-hidden",
     !bigPlayButton && "prisma-player--big-play-hidden",

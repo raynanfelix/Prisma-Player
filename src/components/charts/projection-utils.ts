@@ -1,7 +1,7 @@
 export type ProjectionMode = "auto" | "target" | "manual";
 export type ProjectionAutoMethod = "linearRegression" | "lastSegment";
 /** How the projection segment is drawn between anchor and horizon. */
-export type ProjectionCurveKind = "linear" | "bezier";
+type ProjectionCurveKind = "linear" | "bezier";
 /** @deprecated Stepped density removed — projections always anchor → horizon. */
 export type ProjectionPathDensity = "stepped" | "endpoints";
 
@@ -188,7 +188,7 @@ function buildAutoFutureValues(options: {
 }
 
 /** Slope (value change per ms) at the projection anchor from the last data segment. */
-export function computeProjectionAnchorTangentSlope(
+function computeProjectionAnchorTangentSlope(
   sourceData: Record<string, unknown>[],
   seriesKey: string,
   xDataKey = "date",
@@ -223,7 +223,7 @@ export function computeProjectionAnchorTangentSlope(
 }
 
 /** Cubic bezier with horizontal tangents at start and end (price-target S-curve). */
-export function buildHorizontalTangentBezierPath(
+function buildHorizontalTangentBezierPath(
   x0: number,
   y0: number,
   x1: number,
@@ -258,7 +258,7 @@ function buildTargetPath(options: {
 }
 
 /** Build a projection path from historical chart data or explicit points. */
-export function buildProjectionPath(
+function buildProjectionPath(
   options: BuildProjectionPathOptions
 ): ProjectionPoint[] {
   const {

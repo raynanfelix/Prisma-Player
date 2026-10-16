@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
 import { validateCaseInput, validateNoteBody } from "@/lib/admin/support";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { db, schema } from "@/lib/db";
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const { supportCases } = schema;
 
 /**
  * Tickets do cliente: abre caso vinculado a si mesmo. Sem acesso a casos
@@ -30,12 +30,12 @@ export async function POST(request: Request) {
   const invalid = validateCaseInput(input);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
 
-  const admin = createAdminClient();
-  const { data, error } = await admin.from("support_cases").insert({
-    user_id: account.accountOwnerId,
+  const [created] = await db.insert(supportCases).values({
+    userId: account.accountOwnerId,
     subject: input.subject.trim().replace(/\s+/g, " "),
-    category: input.category, priority: input.priority,
-  }).select("id").single();
-  if (error || !data) return NextResponse.json({ error: "case_create_failed" }, { status: 400 });
-  return NextResponse.json({ created: true, id: data.id }, { headers: { "cache-control": "no-store" } });
+    category: input.category,
+    priority: input.priority,
+  }).returning({ id: supportCases.id });
+  if (!created) return NextResponse.json({ error: "case_create_failed" }, { status: 400 });
+  return NextResponse.json({ created: true, id: created.id }, { headers: { "cache-control": "no-store" } });
 }

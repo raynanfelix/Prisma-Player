@@ -59,7 +59,7 @@ function readHeatmapSeparatorConfig(
 }
 
 /** Reads the first {@link HeatmapSeparator} child for separator config. */
-export function resolveHeatmapSeparatorConfig(
+function resolveHeatmapSeparatorConfig(
   children: ReactNode,
   chartSeparators?: HeatmapSeparatorParsedConfig | null
 ): HeatmapSeparatorParsedConfig | null {

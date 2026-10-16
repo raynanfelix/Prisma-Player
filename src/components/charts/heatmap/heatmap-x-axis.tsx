@@ -88,4 +88,3 @@ export const HeatmapXAxis = memo(function HeatmapXAxis({
 
 HeatmapXAxis.displayName = "HeatmapXAxis";
 
-export default HeatmapXAxis;

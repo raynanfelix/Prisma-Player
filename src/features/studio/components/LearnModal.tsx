@@ -25,7 +25,7 @@ const CONTENT: Record<LearnModuleId, { title: string; points: string[] }> = {
   playback: { title: "Reprodução", points: ["Loop repete o vídeo; mudo inicia sem som.", "Pausa inteligente para quando a aba some.", "Taxa padrão vale para quem não usa o Turbo."] },
 };
 
-export function learnContent(module: LearnModuleId) {
+function learnContent(module: LearnModuleId) {
   return CONTENT[module];
 }
 

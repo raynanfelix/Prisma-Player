@@ -197,7 +197,7 @@ const defaultThumbnailPresetCards: PresetCardItem[] = [
 export type MiniHookType = "live_viewers" | "sound_indicator" | "fast_speed" | "geo" | "custom";
 
 /** Rótulos em linguagem natural + ícone + explicação de cada tipo de gancho. */
-export const HOOK_TYPE_META: Record<MiniHookType, { label: string; hint: string }> = {
+const HOOK_TYPE_META: Record<MiniHookType, { label: string; hint: string }> = {
   live_viewers: { label: "Pessoas assistindo", hint: "Mostra seu texto com o número de pessoas assistindo agora. Ideal para prova social no meio do vídeo." },
   sound_indicator: { label: "Alerta de som", hint: "Mostra seu texto com destaque de som. Ideal para pedir que o espectador ative o áudio." },
   fast_speed: { label: "Selo de velocidade", hint: "Mostra seu texto com destaque de velocidade. Ideal para vídeos acelerados ou trechos rápidos." },

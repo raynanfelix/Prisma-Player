@@ -7,10 +7,10 @@ export { Grid as LineGrid } from "./grid";
 export { XAxis as LineXAxis } from "./x-axis";
 export { ChartTooltip as LineChartTooltip } from "./tooltip";
 export { ChartStatFlow } from "./chart-stat-flow";
-export { useChart } from "./chart-context";
+;
 
 // Custom charts added for Prisma Player
-export { FunnelChart, type FunnelStage, type FunnelGradientStop, type FunnelChartProps } from "./funnel-chart";
+export { FunnelChart,    } from "./funnel-chart";
 export { RingChart, Ring, RingCenter, Legend as RingLegend, type RingData } from "./ring-chart";
 export { AreaChart, Area, Grid, XAxis as AreaXAxis, ChartTooltip as AreaChartTooltip } from "./area-chart";
 

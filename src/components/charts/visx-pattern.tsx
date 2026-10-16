@@ -20,12 +20,12 @@ export function PatternCircles(
 }
 PatternCircles.displayName = "PatternCircles";
 
-export function PatternWaves(props: ComponentProps<typeof VisxPatternWaves>) {
+function PatternWaves(props: ComponentProps<typeof VisxPatternWaves>) {
   return <VisxPatternWaves {...props} />;
 }
 PatternWaves.displayName = "PatternWaves";
 
-export function PatternHexagons(
+function PatternHexagons(
   props: ComponentProps<typeof VisxPatternHexagons>
 ) {
   return <VisxPatternHexagons {...props} />;

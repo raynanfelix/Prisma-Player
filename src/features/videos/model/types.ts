@@ -1,5 +1,6 @@
 export type VideoStatus = "draft" | "processing" | "ready" | "failed";
-export type StorageProvider = "supabase" | "r2";
+// Cloudflare R2 é o único storage desde a migração (CHECK em videos.storage_provider).
+export type StorageProvider = "r2";
 
 export interface StoredVideo {
   id: string;

@@ -575,4 +575,3 @@ export const HeatmapCells = memo(function HeatmapCells({
 
 HeatmapCells.displayName = "HeatmapCells";
 
-export default HeatmapCells;

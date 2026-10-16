@@ -27,9 +27,9 @@ import {
  * `<BarChart status="loading">`.
  */
 
-// Curva do visx/d3: reexporta o tipo real da @types/d3-shape (via @visx/vendor)
-// em vez de `any` — a fábrica é opaca ao consumo aqui, só é repassada adiante.
-import type { CurveFactory } from "@visx/vendor/d3-shape";
+// Fábrica de curva opaca ao consumo: tipo real de @types/d3-shape — d3-shape é
+// dependência direta do projeto; a fábrica só é repassada adiante ao @visx/shape.
+import type { CurveFactory } from "d3-shape";
 
 /** One shimmer sweep, in seconds. */
 const DEFAULT_SWEEP_DURATION_S = 2;
@@ -64,7 +64,7 @@ function hashFract(n: number): number {
 }
 
 /** Deterministic heights (percentages of the available height) for a seed. */
-export function getSkeletonHeights(
+function getSkeletonHeights(
   count: number,
   seed = 0,
   min = HEIGHT_MIN_PCT,
@@ -424,7 +424,7 @@ export interface BarLoadingSkeletonProps {
  * Rendered in the chart's inner coordinate space (origin at the inner top-left),
  * so a `BarChart` drops it inside its margin-translated group.
  */
-export function BarLoadingSkeleton({
+function BarLoadingSkeleton({
   innerWidth,
   innerHeight,
   barCount = DEFAULT_BAR_COUNT,

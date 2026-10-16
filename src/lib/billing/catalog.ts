@@ -22,7 +22,7 @@ export type BillingPlan = {
   conversion_drop_alerts?: boolean;
 };
 
-export const sharedFeatures = [
+const sharedFeatures = [
   "Todas as funcionalidades de personalização e conversão",
   "Analytics completo, retenção e funil da VSL",
   "Testes A/B de vídeos e proteção por domínio",

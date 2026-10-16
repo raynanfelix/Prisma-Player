@@ -3,7 +3,7 @@
 import posthog from "posthog-js";
 import { apiRequest, ApiError } from "@/services/http/client";
 
-export class AuthServiceError extends Error {
+class AuthServiceError extends Error {
   constructor(error: unknown, fallback: string) {
     const message = error instanceof ApiError && error.payload?.message
       ? String(error.payload.message)
@@ -64,11 +64,11 @@ export const authService = {
     }
   },
 
-  async updatePassword(password: string) {
+  async updatePassword(password: string, token?: string) {
     try {
       await apiRequest("/api/auth/update-password", {
         method: "POST",
-        body: { password },
+        body: { password, ...(token ? { token } : {}) },
       });
     } catch (error) {
       throw new AuthServiceError(error, "O link expirou ou a senha não foi aceita.");

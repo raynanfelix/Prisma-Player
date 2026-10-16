@@ -1,6 +1,12 @@
 import "server-only";
-import { createAdminClient } from "@/lib/supabase/admin";
+
+import { and, eq, gte, sql } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
+import { isoOrNull } from "@/lib/datetime";
 import { envInt } from "@/lib/config/env";
+
+const { accountAccess, billingPlans, subscriptions, videoEvents, videos } = schema;
 
 export type AccountAccess = {
   onboardingCompleted: boolean;
@@ -61,6 +67,17 @@ const ALL_CAPABILITIES: PlanCapabilities = {
 
 const GB = 1024 ** 3;
 
+type AccessRow = {
+  onboarding_completed?: boolean;
+  trial_status?: string | null;
+  trial_ends_at?: string | null;
+};
+
+type SubscriptionRow = {
+  status?: string | null;
+  current_period_end?: string | null;
+};
+
 type PlanRow = Partial<PlanCapabilities> & {
   storage_gb?: number | null;
   included_plays?: number | null;
@@ -92,8 +109,8 @@ export function subscriptionDisplayStatus(subscription: { status?: string | null
 }
 
 function accessFrom(
-  row: { onboarding_completed?: boolean; trial_status?: string | null; trial_ends_at?: string | null } | null,
-  subscription: { status?: string | null; current_period_end?: string | null } | null,
+  row: AccessRow | null,
+  subscription: SubscriptionRow | null,
 ): AccountAccess {
   const now = Date.now();
   const validTrialStatuses = ["available", "active", "used", "expired"] as const;
@@ -114,13 +131,46 @@ function accessFrom(
   };
 }
 
+function toAccessRow(row: {
+  onboardingCompleted: boolean;
+  trialStatus: string;
+  trialEndsAt: Date | null;
+} | undefined): AccessRow | null {
+  if (!row) return null;
+  return {
+    onboarding_completed: row.onboardingCompleted,
+    trial_status: row.trialStatus,
+    trial_ends_at: isoOrNull(row.trialEndsAt),
+  };
+}
+
+function toSubscriptionRow(row: {
+  status: string;
+  currentPeriodEnd: Date | null;
+} | undefined): SubscriptionRow | null {
+  if (!row) return null;
+  return {
+    status: row.status,
+    current_period_end: isoOrNull(row.currentPeriodEnd),
+  };
+}
+
+const ACCESS_COLUMNS = {
+  onboardingCompleted: accountAccess.onboardingCompleted,
+  trialStatus: accountAccess.trialStatus,
+  trialEndsAt: accountAccess.trialEndsAt,
+};
+
 export async function getAccountAccess(userId: string): Promise<AccountAccess> {
-  const admin = createAdminClient();
-  const [accessResult, subscriptionResult] = await Promise.all([
-    admin.from("account_access").select("onboarding_completed,trial_status,trial_ends_at").eq("user_id", userId).maybeSingle(),
-    admin.from("subscriptions").select("status,current_period_end").eq("user_id", userId).maybeSingle(),
+  const [accessRow, subscriptionRow] = await Promise.all([
+    db.select(ACCESS_COLUMNS).from(accountAccess).where(eq(accountAccess.userId, userId)).limit(1),
+    db
+      .select({ status: subscriptions.status, currentPeriodEnd: subscriptions.currentPeriodEnd })
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .limit(1),
   ]);
-  return accessFrom(accessResult.data, subscriptionResult.data);
+  return accessFrom(toAccessRow(accessRow[0]), toSubscriptionRow(subscriptionRow[0]));
 }
 
 /**
@@ -128,20 +178,45 @@ export async function getAccountAccess(userId: string): Promise<AccountAccess> {
  * Toda decisão de "pode usar" e "quanto pode usar" no servidor sai daqui.
  */
 export async function getAccountPlan(ownerId: string): Promise<AccountPlan> {
-  const admin = createAdminClient();
-  const [accessResult, subscriptionResult] = await Promise.all([
-    admin.from("account_access").select("onboarding_completed,trial_status,trial_ends_at").eq("user_id", ownerId).maybeSingle(),
-    admin
-      .from("subscriptions")
-      .select("status,current_period_end,plan:billing_plans(automatic_reports,audience_sync,outgoing_webhooks,private_benchmark,portfolio_comparison,conversion_drop_alerts,storage_gb,included_plays,prisma_ai_analyses,team_seats)")
-      .eq("user_id", ownerId)
-      .maybeSingle(),
+  const [accessRow, subscriptionRow] = await Promise.all([
+    db.select(ACCESS_COLUMNS).from(accountAccess).where(eq(accountAccess.userId, ownerId)).limit(1),
+    db
+      .select({
+        status: subscriptions.status,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        automaticReports: billingPlans.automaticReports,
+        audienceSync: billingPlans.audienceSync,
+        outgoingWebhooks: billingPlans.outgoingWebhooks,
+        privateBenchmark: billingPlans.privateBenchmark,
+        portfolioComparison: billingPlans.portfolioComparison,
+        conversionDropAlerts: billingPlans.conversionDropAlerts,
+        storageGb: billingPlans.storageGb,
+        includedPlays: billingPlans.includedPlays,
+        prismaAiAnalyses: billingPlans.prismaAiAnalyses,
+        teamSeats: billingPlans.teamSeats,
+      })
+      .from(subscriptions)
+      .leftJoin(billingPlans, eq(subscriptions.planId, billingPlans.id))
+      .where(eq(subscriptions.userId, ownerId))
+      .limit(1),
   ]);
 
-  const subscription = subscriptionResult.data;
-  const access = accessFrom(accessResult.data, subscription);
-  const rawPlan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan;
-  const plan = (rawPlan ?? null) as PlanRow | null;
+  const subscription = toSubscriptionRow(subscriptionRow[0]);
+  const access = accessFrom(toAccessRow(accessRow[0]), subscription);
+  const plan: PlanRow | null = subscriptionRow[0]
+    ? {
+        automatic_reports: subscriptionRow[0].automaticReports ?? false,
+        audience_sync: subscriptionRow[0].audienceSync ?? false,
+        outgoing_webhooks: subscriptionRow[0].outgoingWebhooks ?? false,
+        private_benchmark: subscriptionRow[0].privateBenchmark ?? false,
+        portfolio_comparison: subscriptionRow[0].portfolioComparison ?? false,
+        conversion_drop_alerts: subscriptionRow[0].conversionDropAlerts ?? false,
+        storage_gb: subscriptionRow[0].storageGb ?? null,
+        included_plays: subscriptionRow[0].includedPlays ?? null,
+        prisma_ai_analyses: subscriptionRow[0].prismaAiAnalyses ?? null,
+        team_seats: subscriptionRow[0].teamSeats ?? null,
+      }
+    : null;
 
   const capabilities: PlanCapabilities = access.subscriptionActive && plan
     ? {
@@ -174,11 +249,11 @@ export async function getAccountPlan(ownerId: string): Promise<AccountPlan> {
 
 /** Bytes já ocupados pelos vídeos da conta. Somado no servidor, nunca no cliente. */
 export async function getStorageUsedBytes(ownerId: string): Promise<number> {
-  const admin = createAdminClient();
-  const { data } = await admin.from("videos").select("size_bytes").eq("user_id", ownerId);
-  let total = 0;
-  for (const row of data ?? []) total += Number(row.size_bytes) || 0;
-  return total;
+  const [row] = await db
+    .select({ totalSize: sql<string>`coalesce(sum(${videos.sizeBytes}), 0)` })
+    .from(videos)
+    .where(eq(videos.userId, ownerId));
+  return Number(row?.totalSize ?? 0);
 }
 
 /**
@@ -189,15 +264,18 @@ export async function getStorageUsedBytes(ownerId: string): Promise<number> {
  * para negar eventos legítimos sem decisão de produto.
  */
 export async function getMonthPlaysUsed(ownerId: string): Promise<number> {
-  const admin = createAdminClient();
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
-  const { data } = await admin
-    .from("video_events")
-    .select("session_id")
-    .eq("user_id", ownerId)
-    .eq("event_type", "play")
-    .gte("created_at", monthStart.toISOString());
-  return new Set((data ?? []).map((row) => row.session_id)).size;
+  const [row] = await db
+    .select({ playSessions: sql<number>`count(distinct ${videoEvents.sessionId})::int` })
+    .from(videoEvents)
+    .where(
+      and(
+        eq(videoEvents.userId, ownerId),
+        eq(videoEvents.eventType, "play"),
+        gte(videoEvents.createdAt, monthStart),
+      ),
+    );
+  return row?.playSessions ?? 0;
 }

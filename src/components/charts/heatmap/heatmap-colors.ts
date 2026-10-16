@@ -78,7 +78,7 @@ export function isHeatmapLevelPattern(style: HeatmapLevelStyle): boolean {
   );
 }
 
-export function heatmapPatternStrokeFallback(color: string): string {
+function heatmapPatternStrokeFallback(color: string): string {
   return `color-mix(in oklch, ${color} 45%, white)`;
 }
 
@@ -112,7 +112,7 @@ export function heatmapLevelCellFillOpacity(style: HeatmapLevelStyle): number {
   return style.patternOpacity ?? 1;
 }
 
-export function levelColorsFromStyles(
+function levelColorsFromStyles(
   levelStyles: HeatmapLevelStyles
 ): HeatmapLevelColors {
   return [
@@ -124,7 +124,7 @@ export function levelColorsFromStyles(
   ];
 }
 
-export function levelStylesFromColors(
+function levelStylesFromColors(
   levelColors: HeatmapLevelColors
 ): HeatmapLevelStyles {
   return [
@@ -149,7 +149,7 @@ export function resolveHeatmapLevelStyles(
   return HEATMAP_DEFAULT_LEVEL_STYLES;
 }
 
-export function buildHeatmapColorScale(
+function buildHeatmapColorScale(
   levelColors: HeatmapLevelColors
 ): (count: number | null | undefined) => string {
   return buildHeatmapColorScaleFromStyles(levelStylesFromColors(levelColors));
@@ -183,6 +183,6 @@ export const defaultHeatmapColorScale = buildHeatmapColorScale(
   HEATMAP_DEFAULT_LEVEL_COLORS
 );
 
-export const defaultHeatmapFillScale = buildHeatmapFillScale(
+const defaultHeatmapFillScale = buildHeatmapFillScale(
   HEATMAP_DEFAULT_LEVEL_STYLES
 );

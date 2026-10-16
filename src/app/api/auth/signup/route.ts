@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
-import { createClient } from "@/lib/supabase/server";
-import { getAuthErrorMessage } from "@/lib/supabase/auth-errors";
+import { getAuth } from "@/lib/auth/server";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
@@ -26,20 +26,25 @@ export async function POST(request: Request) {
   });
   if (accountLimited) return accountLimited;
 
-  const supabase = await createClient();
-  const result = await supabase.auth.signUp({
+  const { data, error } = await getAuth().signUp.email({
     email,
     password,
-    options: {
-      data: { full_name: name },
-      emailRedirectTo: `${siteUrl}/auth/callback?next=/welcome`,
-    },
+    name,
+    callbackURL: `${siteUrl}/auth/callback?next=/welcome`,
   });
-  if (result.error) {
+  if (error) {
     await recordAuthFailure("signup_failed", email, request);
-    const message = getAuthErrorMessage(result.error, "Não foi possível criar a conta. Tente novamente.");
+    const message = getAuthErrorMessage(error, "Não foi possível criar a conta. Tente novamente.");
     return NextResponse.json({ error: "signup_failed", message }, { status: 400 });
   }
   // Não expor access_token, refresh_token ou objeto session completo no response
-  return NextResponse.json({ user: result.data.user, hasSession: Boolean(result.data.session) });
+  // (contrato { user, hasSession } — teste tests/auth-signup-shape.test.ts).
+  // `hasSession` reflete se o Managed emitiu sessão imediata (null quando a
+  // verificação de e-mail está habilitada no branch).
+  return NextResponse.json({
+    user: data?.user
+      ? { id: data.user.id, email: data.user.email, name: data.user.name, emailVerified: data.user.emailVerified }
+      : null,
+    hasSession: Boolean(data?.token),
+  });
 }

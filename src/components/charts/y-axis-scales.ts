@@ -4,7 +4,7 @@ import type { LineConfig } from "./chart-context";
 /** Default axis id when `yAxisId` is omitted (Recharts-style `0` / primary left axis). */
 export const DEFAULT_Y_AXIS_ID = "left";
 
-export type YAxisOrientation = "left" | "right";
+type YAxisOrientation = "left" | "right";
 
 export function normalizeYAxisId(id?: string | number): string {
   if (id == null || id === "") {
@@ -40,7 +40,7 @@ export function getPrimaryYScale(
   return first ?? fallback;
 }
 
-export function buildYScalesForLines({
+function buildYScalesForLines({
   lines,
   innerHeight,
   resolveDomain,
@@ -110,6 +110,6 @@ export function buildYScalesFromDomains({
 }
 
 /** Single-axis charts (bar, scatter, candlestick, live line). */
-export function wrapSingleYScale(yScale: YScale): Record<string, YScale> {
+function wrapSingleYScale(yScale: YScale): Record<string, YScale> {
   return { [DEFAULT_Y_AXIS_ID]: yScale };
 }

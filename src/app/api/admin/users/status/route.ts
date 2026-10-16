@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/api/admin-guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+
+const { accountAccess, adminAuditLog, profiles, subscriptions } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const actions = new Set(["suspend", "reactivate", "trial_extend", "trial_reset"]);
@@ -26,8 +29,7 @@ export async function POST(request: Request) {
   const reason = String(parsed.body?.reason ?? "").trim().replace(/\s+/g, " ").slice(0, 280);
   if (!uuid.test(userId) || !actions.has(action) || !reason) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id").eq("id", userId).maybeSingle();
+  const [profile] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, userId)).limit(1);
   if (!profile) return NextResponse.json({ error: "account_not_found" }, { status: 404 });
 
   const now = new Date();
@@ -35,46 +37,44 @@ export async function POST(request: Request) {
   let result: Record<string, unknown> = { updated: true };
 
   if (action === "suspend" || action === "reactivate") {
-    const { data: sub } = await admin.from("subscriptions").select("status").eq("user_id", userId).maybeSingle();
+    const [sub] = await db.select({ status: subscriptions.status }).from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
     if (!sub) return NextResponse.json({ error: "subscription_not_found" }, { status: 404 });
     if (action === "suspend") {
-      const { error } = await admin.from("subscriptions").update({ status: "suspended", updated_at: now.toISOString() }).eq("user_id", userId);
-      if (error) return NextResponse.json({ error: "status_change_failed" }, { status: 500 });
+      await db.update(subscriptions).set({ status: "suspended", updatedAt: now }).where(eq(subscriptions.userId, userId));
       auditAction = "subscription_suspend";
       result = { updated: true, warning: "Assinatura suspensa só na Prisma. Trate a recorrência na AbacatePay." };
     } else {
-      const { error } = await admin.from("subscriptions").update({
-        status: "active", cancelled_at: null,
-        current_period_start: now.toISOString(),
-        current_period_end: new Date(now.getTime() + 30 * 86400000).toISOString(),
-        updated_at: now.toISOString(),
-      }).eq("user_id", userId);
-      if (error) return NextResponse.json({ error: "status_change_failed" }, { status: 500 });
+      await db.update(subscriptions).set({
+        status: "active",
+        cancelledAt: null,
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getTime() + 30 * 86400000),
+        updatedAt: now,
+      }).where(eq(subscriptions.userId, userId));
       auditAction = "subscription_reactivate";
     }
   } else {
     const days = Math.trunc(Number(parsed.body?.days ?? 0));
-    const { data: access } = await admin.from("account_access").select("trial_status,trial_ends_at").eq("user_id", userId).maybeSingle();
+    const [access] = await db.select({ trialStatus: accountAccess.trialStatus, trialEndsAt: accountAccess.trialEndsAt })
+      .from(accountAccess).where(eq(accountAccess.userId, userId)).limit(1);
     if (!access) return NextResponse.json({ error: "access_not_found" }, { status: 404 });
     if (action === "trial_extend") {
       if (!Number.isInteger(days) || days < 1 || days > 60) return NextResponse.json({ error: "invalid_days" }, { status: 400 });
-      const base = Math.max(now.getTime(), access.trial_ends_at ? new Date(access.trial_ends_at).getTime() : 0);
-      const endsAt = new Date(base + days * 86400000).toISOString();
-      const { error } = await admin.from("account_access").update({ trial_status: "active", trial_ends_at: endsAt, updated_at: now.toISOString() }).eq("user_id", userId);
-      if (error) return NextResponse.json({ error: "trial_change_failed" }, { status: 500 });
+      const base = Math.max(now.getTime(), access.trialEndsAt ? access.trialEndsAt.getTime() : 0);
+      const endsAt = new Date(base + days * 86400000);
+      await db.update(accountAccess).set({ trialStatus: "active", trialEndsAt: endsAt, updatedAt: now }).where(eq(accountAccess.userId, userId));
       auditAction = "trial_extend";
-      result = { updated: true, trial_ends_at: endsAt };
+      result = { updated: true, trial_ends_at: endsAt.toISOString() };
     } else {
-      const { error } = await admin.from("account_access").update({ trial_status: "available", trial_started_at: null, trial_ends_at: null, updated_at: now.toISOString() }).eq("user_id", userId);
-      if (error) return NextResponse.json({ error: "trial_change_failed" }, { status: 500 });
+      await db.update(accountAccess).set({ trialStatus: "available", trialStartedAt: null, trialEndsAt: null, updatedAt: now }).where(eq(accountAccess.userId, userId));
       auditAction = "trial_reset";
     }
   }
 
-  await admin.from("admin_audit_log").insert({
-    admin_user_id: gate.adminId,
+  await db.insert(adminAuditLog).values({
+    adminUserId: gate.adminId,
     action: auditAction,
-    target_user_id: userId,
+    targetUserId: userId,
     details: action === "trial_extend" ? { days: Math.trunc(Number(parsed.body?.days ?? 0)), reason } : { reason },
   });
 

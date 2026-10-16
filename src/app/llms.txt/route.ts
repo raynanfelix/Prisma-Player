@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { asc, eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+
+const { billingPlans } = schema;
 
 /**
  * Contexto legível por IAs (convenção llms.txt): lido do catálogo vigente,
@@ -9,39 +12,63 @@ export async function GET() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
   let plans: Array<{ slug: string; name: string; description: string; amount_cents: number; included_plays: number; storage_gb: number; prisma_ai_analyses: number; team_seats: number }> = [];
   try {
-    const admin = createAdminClient();
-    const { data } = await admin.from("billing_plans")
-      .select("slug,name,description,amount_cents,included_plays,storage_gb,prisma_ai_analyses,team_seats")
-      .eq("is_active", true).order("display_order");
-    plans = data ?? [];
+    const rows = await db
+      .select({
+        slug: billingPlans.slug,
+        name: billingPlans.name,
+        description: billingPlans.description,
+        amountCents: billingPlans.amountCents,
+        includedPlays: billingPlans.includedPlays,
+        storageGb: billingPlans.storageGb,
+        prismaAiAnalyses: billingPlans.prismaAiAnalyses,
+        teamSeats: billingPlans.teamSeats,
+      })
+      .from(billingPlans)
+      .where(eq(billingPlans.isActive, true))
+      .orderBy(asc(billingPlans.displayOrder));
+    plans = rows.map((row) => ({
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      amount_cents: row.amountCents,
+      included_plays: row.includedPlays,
+      storage_gb: row.storageGb,
+      prisma_ai_analyses: row.prismaAiAnalyses,
+      team_seats: row.teamSeats,
+    }));
   } catch {
     plans = [];
   }
 
+  const formatBRL = (cents: number) =>
+    `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
+
   const lines = [
     "# Prisma Player",
     "",
-    "> Player de VSL (video sales letter) com embeds, analytics de retenção, testes A/B, pixels de conversão e Prisma IA.",
+    "> Player de vídeo para VSL e marketing com analytics de conversão,",
+    "> testes A/B e inteligência artificial. Hospedagem de vídeo no R2.",
     "",
-    "## Páginas",
-    `- Site: ${base}/`,
-    `- Planos e preços: ${base}/pricing`,
-    `- Sitemap: ${base}/sitemap.xml`,
+    "## Planos (valores reais do catálogo)",
     "",
-    "## Planos (BRL, mensais)",
+    ...plans.map(
+      (plan) =>
+        `- ${plan.name} (${plan.slug}): ${formatBRL(plan.amount_cents)}/mês — ${plan.description}; ${plan.included_plays} plays, ${plan.storage_gb} GB, ${plan.prisma_ai_analyses} análises de IA, ${plan.team_seats} assento(s).`,
+    ),
+    "",
+    "## Links",
+    "",
+    `- Site: ${base}`,
+    `- Preços: ${base}/pricing`,
+    `- Serviços: ${base}/services`,
+    `- Sobre: ${base}/about`,
     "",
   ];
-  for (const plan of plans) {
-    lines.push(`### ${plan.name} (${plan.slug})`);
-    lines.push(`- Preço: R$ ${(plan.amount_cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} por mês`);
-    lines.push(`- Plays incluídos por mês: ${plan.included_plays.toLocaleString("pt-BR")} (excedente cobrado à parte)`);
-    lines.push(`- Armazenamento: ${plan.storage_gb} GB`);
-    lines.push(`- Análises Prisma IA por mês: ${plan.prisma_ai_analyses}`);
-    lines.push(`- Membros na equipe: ${plan.team_seats}`);
-    lines.push(`- Descrição: ${plan.description}`);
-    lines.push("");
-  }
-  lines.push("## Contato comercial");
-  lines.push(`- Planos e teste gratuito: ${base}/pricing`);
-  return new NextResponse(lines.join("\n"), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
+
+  return new NextResponse(lines.join("\n"), {
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, max-age=3600",
+    },
+  });
 }

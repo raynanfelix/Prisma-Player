@@ -32,4 +32,3 @@ export const ChoroplethGraticule = memo(function ChoroplethGraticule({
 
 ChoroplethGraticule.displayName = "ChoroplethGraticule";
 
-export default ChoroplethGraticule;

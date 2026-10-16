@@ -35,7 +35,10 @@ export default function ResetPasswordPage() {
     setLoading(true);
     setNotice(null);
     try {
-      await authService.updatePassword(password);
+      // Token do link de redefinição (?token=...) enviado por e-mail pelo
+      // Neon Auth; sem ele a rota responde reset_token_required.
+      const token = new URLSearchParams(window.location.search).get("token") ?? undefined;
+      await authService.updatePassword(password, token);
       setNotice({ tone: "success", message: "Senha atualizada. Sua conta já está protegida." });
     } catch (error) {
       setNotice({
@@ -64,6 +67,7 @@ export default function ResetPasswordPage() {
           autoComplete="new-password"
           minLength={10}
           required
+          revealPassword
           hint="Mínimo de 10 caracteres, incluindo um número."
         />
         <AuthField
@@ -75,6 +79,7 @@ export default function ResetPasswordPage() {
           autoComplete="new-password"
           minLength={10}
           required
+          revealPassword
         />
         <AuthNotice notice={notice} />
         <Button type="submit" size="lg" disabled={loading} className="h-12 w-full rounded-xl bg-prisma-blue text-white hover:bg-prisma-blue/90">

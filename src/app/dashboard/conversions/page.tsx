@@ -1,23 +1,29 @@
 import { BarChart3, MousePointerClick, ShoppingBag, Target } from "lucide-react";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { requireUser } from "@/lib/auth/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
+
+const { videoEvents, videos } = schema;
 
 export const dynamic = "force-dynamic";
 
 export default async function ConversionsPage() {
   const userId = await requireUser("/dashboard/conversions");
-  const admin = createAdminClient();
-  const [{ data: events }, { data: videos }] = await Promise.all([
-    admin.from("video_events").select("video_id,session_id,event_type,created_at").eq("user_id", userId).in("event_type", ["play", "cta_click", "conversion"]).order("created_at", { ascending: false }).limit(10000),
-    admin.from("videos").select("id,title").eq("user_id", userId),
+  const [eventRows, videoRows] = await Promise.all([
+    db.select({ videoId: videoEvents.videoId, sessionId: videoEvents.sessionId, eventType: videoEvents.eventType })
+      .from(videoEvents)
+      .where(and(eq(videoEvents.userId, userId), inArray(videoEvents.eventType, ["play", "cta_click", "conversion"])))
+      .orderBy(desc(videoEvents.createdAt))
+      .limit(10000),
+    db.select({ id: videos.id, title: videos.title }).from(videos).where(eq(videos.userId, userId)),
   ]);
-  const titles = new Map((videos ?? []).map((video) => [video.id, video.title]));
-  const rows = [...new Set((events ?? []).map((event) => event.video_id))].map((videoId) => {
-    const videoEvents = (events ?? []).filter((event) => event.video_id === videoId);
-    const plays = new Set(videoEvents.filter((event) => event.event_type === "play").map((event) => event.session_id)).size;
-    const clicks = new Set(videoEvents.filter((event) => event.event_type === "cta_click").map((event) => event.session_id)).size;
-    const conversions = new Set(videoEvents.filter((event) => event.event_type === "conversion").map((event) => event.session_id)).size;
+  const titles = new Map(videoRows.map((video) => [video.id, video.title]));
+  const rows = [...new Set(eventRows.map((event) => event.videoId))].map((videoId) => {
+    const videoEventList = eventRows.filter((event) => event.videoId === videoId);
+    const plays = new Set(videoEventList.filter((event) => event.eventType === "play").map((event) => event.sessionId)).size;
+    const clicks = new Set(videoEventList.filter((event) => event.eventType === "cta_click").map((event) => event.sessionId)).size;
+    const conversions = new Set(videoEventList.filter((event) => event.eventType === "conversion").map((event) => event.sessionId)).size;
     return { videoId, title: titles.get(videoId) ?? "VSL removida", plays, clicks, conversions, rate: plays ? conversions / plays * 100 : 0 };
   }).sort((a, b) => b.conversions - a.conversions || b.clicks - a.clicks);
   const totals = rows.reduce((current, row) => ({ plays: current.plays + row.plays, clicks: current.clicks + row.clicks, conversions: current.conversions + row.conversions }), { plays: 0, clicks: 0, conversions: 0 });

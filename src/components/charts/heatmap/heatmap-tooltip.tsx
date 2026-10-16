@@ -91,4 +91,3 @@ export const HeatmapTooltip = memo(function HeatmapTooltip({
 
 HeatmapTooltip.displayName = "HeatmapTooltip";
 
-export default HeatmapTooltip;

@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/api/admin-guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { and, eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+
+const { seoTargets, visibilityChecks } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const platforms = new Set(["google-aio", "chatgpt", "perplexity", "gemini", "copilot"]);
@@ -18,16 +21,15 @@ export async function POST(request: Request) {
   const parsed = await readJsonBody<Record<string, unknown>>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body ?? {};
-  const admin = createAdminClient();
 
   if (typeof body.keyword === "string") {
     const keyword = body.keyword.trim().replace(/\s+/g, " ").slice(0, 200);
     if (keyword.length < 2) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
     const locale = String(body.locale ?? "pt-BR").slice(0, 20);
     const notes = String(body.notes ?? "").slice(0, 500);
-    const { data, error } = await admin.from("seo_targets").insert({ keyword, locale, notes }).select("id").single();
-    if (error || !data) return NextResponse.json({ error: "target_create_failed" }, { status: 400 });
-    return NextResponse.json({ created: true, id: data.id }, { headers: { "cache-control": "no-store" } });
+    const [created] = await db.insert(seoTargets).values({ keyword, locale, notes }).returning({ id: seoTargets.id });
+    if (!created) return NextResponse.json({ error: "target_create_failed" }, { status: 400 });
+    return NextResponse.json({ created: true, id: created.id }, { headers: { "cache-control": "no-store" } });
   }
 
   const targetId = String(body.targetId ?? "");
@@ -36,12 +38,13 @@ export async function POST(request: Request) {
   if (!uuid.test(targetId) || !platforms.has(platform) || runs < 1 || runs > 10) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
-  const { data: target } = await admin.from("seo_targets").select("id").eq("id", targetId).eq("is_active", true).maybeSingle();
+  const [target] = await db.select({ id: seoTargets.id }).from(seoTargets).where(and(eq(seoTargets.id, targetId), eq(seoTargets.isActive, true))).limit(1);
   if (!target) return NextResponse.json({ error: "target_not_found" }, { status: 404 });
-  const { error } = await admin.from("visibility_checks").insert({
-    target_id: targetId, platform, cited: body.cited === true, runs,
-  });
-  if (error) return NextResponse.json({ error: "check_log_failed" }, { status: 500 });
+  try {
+    await db.insert(visibilityChecks).values({ targetId, platform, cited: body.cited === true, runs });
+  } catch {
+    return NextResponse.json({ error: "check_log_failed" }, { status: 500 });
+  }
   return NextResponse.json({ logged: true }, { headers: { "cache-control": "no-store" } });
 }
 
@@ -58,8 +61,10 @@ export async function PATCH(request: Request) {
   if (!uuid.test(targetId) || typeof parsed.body?.isActive !== "boolean") {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
-  const admin = createAdminClient();
-  const { error } = await admin.from("seo_targets").update({ is_active: parsed.body.isActive }).eq("id", targetId);
-  if (error) return NextResponse.json({ error: "target_toggle_failed" }, { status: 400 });
+  try {
+    await db.update(seoTargets).set({ isActive: parsed.body.isActive }).where(eq(seoTargets.id, targetId));
+  } catch {
+    return NextResponse.json({ error: "target_toggle_failed" }, { status: 400 });
+  }
   return NextResponse.json({ updated: true }, { headers: { "cache-control": "no-store" } });
 }

@@ -6,7 +6,7 @@ import { groupLinesByYAxisId, normalizeYAxisId } from "./y-axis-scales";
 export type YDomain = [number, number];
 
 /** Apply visx `nice()` to raw domain endpoints for stable grid ticks. */
-export function niceYDomain(domain: YDomain): YDomain {
+function niceYDomain(domain: YDomain): YDomain {
   const scale = scaleLinear({ domain, range: [0, 1], nice: true });
   const niceDomain = scale.domain();
   return [niceDomain[0] ?? domain[0], niceDomain[1] ?? domain[1]];
@@ -48,7 +48,7 @@ export function isYDomainTweenPhase(phase: ChartPhase): boolean {
 }
 
 /** Phases where {@link ReferenceArea} bands are shown (fade in/out on transitions). */
-export function isReferenceAreaVisiblePhase(phase: ChartPhase): boolean {
+function isReferenceAreaVisiblePhase(phase: ChartPhase): boolean {
   return (
     phase === "ready" || phase === "revealing" || phase === "gridTweenReady"
   );
@@ -97,7 +97,7 @@ export function computeYDomainsByAxis({
 }
 
 /** Merge domain maps, normalizing axis ids to strings. */
-export function mergeYDomainRecords(
+function mergeYDomainRecords(
   ...records: Record<string, YDomain>[]
 ): Record<string, YDomain> {
   const merged: Record<string, YDomain> = {};

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+
 import { guard } from "@/lib/api/guard";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { rateLimit } from "@/lib/security/rate-limit";
+
+const { videoFolders } = schema;
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   const gate = await guard(request, { csrf: true, role: "edit", paid: true });
@@ -11,7 +15,10 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   if (limited) return limited;
 
   const { id } = await context.params;
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("video_folders").delete().eq("id", id).eq("user_id", gate.account.accountOwnerId);
-  return error ? NextResponse.json({ error: "folder_delete_failed" }, { status: 400 }) : NextResponse.json({ ok: true });
+  try {
+    await db.delete(videoFolders).where(and(eq(videoFolders.id, id), eq(videoFolders.userId, gate.account.accountOwnerId)));
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "folder_delete_failed" }, { status: 400 });
+  }
 }

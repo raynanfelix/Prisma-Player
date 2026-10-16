@@ -1,10 +1,13 @@
+import { and, asc, eq, gt, gte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { guard } from "@/lib/api/guard";
 import { signR2ReadUrl } from "@/lib/storage/r2";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { buildTimeline, pct, summarizeEvents, type AnalyticsEventRow } from "@/lib/analytics/summarize";
 import { ANALYTICS, VIDEO } from "@/lib/constants";
+
+const { videos, videoEvents, videoLiveSessions } = schema;
 
 export async function GET(request: Request, context: { params: Promise<{ videoId: string }> }) {
   const gate = await guard(request, { paid: true });
@@ -17,19 +20,109 @@ export async function GET(request: Request, context: { params: Promise<{ videoId
   if (limited) return limited;
 
   const { videoId } = await context.params;
-  const admin = createAdminClient();
-  const { data: video } = await admin.from("videos").select("id,title,duration_seconds,created_at,object_path,mime_type,storage_provider").eq("id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
+  // id inválido (não-UUID) viria a falhar no Postgres: captura a exceção e
+  // responde 404 (linha ausente).
+  let video: { title: string; durationSeconds: string | null; objectPath: string; mimeType: string } | undefined;
+  try {
+    [video] = await db
+      .select({ title: videos.title, durationSeconds: videos.durationSeconds, objectPath: videos.objectPath, mimeType: videos.mimeType })
+      .from(videos)
+      .where(and(eq(videos.id, videoId), eq(videos.userId, account.accountOwnerId)))
+      .limit(1);
+  } catch {
+    video = undefined;
+  }
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
 
   const range = Math.min(Math.max(Number(new URL(request.url).searchParams.get("days") ?? 30), 1), 3650);
   const now = Date.now(), since = new Date(now - range * 86400000).toISOString(), previousSince = new Date(now - range * 2 * 86400000).toISOString();
-  const [{ data, error }, { data: activeSessions, error: liveError }] = await Promise.all([
-    admin.from("video_events").select("session_id,event_type,progress_percent,watched_seconds,country_code,device_type,os_name,browser_name,traffic_source,campaign_id,creative_id,ad_id,risk_score,created_at").eq("video_id", videoId).gte("created_at", previousSince).order("created_at", { ascending: true }).limit(ANALYTICS.MAX_EVENTS_PER_ANALYSIS),
-    admin.from("video_live_sessions").select("session_id,country_code,device_type,progress_percent,last_seen_at").eq("video_id", videoId).gt("last_seen_at", new Date(Date.now() - 45_000).toISOString()).limit(500),
-  ]);
-  if (error) return NextResponse.json({ error: "analytics_load_failed" }, { status: 500 });
 
-  const allRows = (data ?? []) as AnalyticsEventRow[];
+  // Mesma tolerância do original: falha nos eventos derruba a rota (500);
+  // falha só nas sessões ao vivo zera o contador `live` e segue.
+  let eventRows: Array<{
+    sessionId: string;
+    eventType: string;
+    progressPercent: number;
+    watchedSeconds: string;
+    countryCode: string;
+    deviceType: string;
+    osName: string;
+    browserName: string;
+    trafficSource: string;
+    campaignId: string | null;
+    creativeId: string | null;
+    adId: string | null;
+    riskScore: number;
+    createdAt: Date;
+  }> = [];
+  try {
+    eventRows = await db
+      .select({
+        sessionId: videoEvents.sessionId,
+        eventType: videoEvents.eventType,
+        progressPercent: videoEvents.progressPercent,
+        watchedSeconds: videoEvents.watchedSeconds,
+        countryCode: videoEvents.countryCode,
+        deviceType: videoEvents.deviceType,
+        osName: videoEvents.osName,
+        browserName: videoEvents.browserName,
+        trafficSource: videoEvents.trafficSource,
+        campaignId: videoEvents.campaignId,
+        creativeId: videoEvents.creativeId,
+        adId: videoEvents.adId,
+        riskScore: videoEvents.riskScore,
+        createdAt: videoEvents.createdAt,
+      })
+      .from(videoEvents)
+      .where(and(eq(videoEvents.videoId, videoId), gte(videoEvents.createdAt, new Date(previousSince))))
+      .orderBy(asc(videoEvents.createdAt), asc(videoEvents.id))
+      .limit(ANALYTICS.MAX_EVENTS_PER_ANALYSIS);
+  } catch {
+    return NextResponse.json({ error: "analytics_load_failed" }, { status: 500 });
+  }
+
+  let liveRows: Array<{ sessionId: string; countryCode: string; deviceType: string; progressPercent: number; lastSeenAt: Date }> = [];
+  try {
+    liveRows = await db
+      .select({
+        sessionId: videoLiveSessions.sessionId,
+        countryCode: videoLiveSessions.countryCode,
+        deviceType: videoLiveSessions.deviceType,
+        progressPercent: videoLiveSessions.progressPercent,
+        lastSeenAt: videoLiveSessions.lastSeenAt,
+      })
+      .from(videoLiveSessions)
+      .where(and(eq(videoLiveSessions.videoId, videoId), gt(videoLiveSessions.lastSeenAt, new Date(Date.now() - 45_000))))
+      .limit(500);
+  } catch {
+    liveRows = [];
+  }
+
+  // Contrato preservado: summarizeEvents consome linhas snake_case com
+  // created_at ISO — numeric vem como string do driver e é normalizado.
+  const allRows: AnalyticsEventRow[] = eventRows.map((row) => ({
+    session_id: row.sessionId,
+    event_type: row.eventType,
+    progress_percent: row.progressPercent,
+    watched_seconds: Number(row.watchedSeconds ?? 0),
+    country_code: row.countryCode,
+    device_type: row.deviceType,
+    os_name: row.osName,
+    browser_name: row.browserName,
+    traffic_source: row.trafficSource,
+    campaign_id: row.campaignId,
+    creative_id: row.creativeId,
+    ad_id: row.adId,
+    risk_score: row.riskScore,
+    created_at: row.createdAt.toISOString(),
+  }));
+  const activeSessions = liveRows.map((row) => ({
+    session_id: row.sessionId,
+    country_code: row.countryCode,
+    device_type: row.deviceType,
+    progress_percent: row.progressPercent,
+    last_seen_at: row.lastSeenAt.toISOString(),
+  }));
   // O corte em 50 mil linhas era silencioso: o painel mostrava números truncados
   // como se fossem completos. Agora o cliente recebe o aviso junto com os dados.
   const truncated = allRows.length >= ANALYTICS.MAX_EVENTS_PER_ANALYSIS;
@@ -71,16 +164,15 @@ export async function GET(request: Request, context: { params: Promise<{ videoId
   if (summary.plays >= 10 && summary.completionRate >= 40) insights.push({ tone: "success", title: "Boa retenção final", detail: "A audiência que inicia permanece até o fim. Foque agora em CTA e taxa de conversão." });
   if (truncated) insights.push({ tone: "info", title: "Período muito grande para exibir por inteiro", detail: `Os números consideram os ${ANALYTICS.MAX_EVENTS_PER_ANALYSIS.toLocaleString("pt-BR")} eventos mais recentes deste intervalo. Reduza o período para ver o total exato.` });
 
-  const live = liveError ? 0 : new Set((activeSessions ?? []).map((row) => row.session_id)).size;
+  const live = new Set(activeSessions.map((row) => row.session_id)).size;
   const liveCountryMap = new Map<string, number>();
-  for (const session of activeSessions ?? []) liveCountryMap.set(session.country_code || "XX", (liveCountryMap.get(session.country_code || "XX") ?? 0) + 1);
+  for (const session of activeSessions) liveCountryMap.set(session.country_code || "XX", (liveCountryMap.get(session.country_code || "XX") ?? 0) + 1);
   const activeCountries = [...liveCountryMap.entries()].map(([name, viewers]) => ({ name, impressions: viewers, plays: viewers, playRate: 100, completes: 0, completionRate: 0 })).sort((a, b) => b.impressions - a.impressions);
 
   const attentionMap = retention.slice(1).map((point, index, list) => ({ ...point, drop: index ? Math.max(0, Math.round((list[index - 1].rate - point.rate) * 10) / 10) : Math.max(0, 100 - point.rate) }));
-  const previewSource = video.storage_provider === "r2"
-    ? await signR2ReadUrl(video.object_path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null)
-    : (await admin.storage.from("videos").createSignedUrl(video.object_path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS)).data?.signedUrl ?? null;
-  const publicVideo = { title: video.title, duration_seconds: video.duration_seconds, source: previewSource, type: video.mime_type };
+  // `storage_provider` é restrito a 'r2' no schema — R2 é o único storage.
+  const previewSource = await signR2ReadUrl(video.objectPath, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
+  const publicVideo = { title: video.title, duration_seconds: video.durationSeconds === null ? null : Number(video.durationSeconds), source: previewSource, type: video.mimeType };
 
   return NextResponse.json({
     video: publicVideo,

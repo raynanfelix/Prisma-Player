@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/api/admin-guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+
+const { adminAuditLog, billingPlans } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -21,15 +24,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const admin = createAdminClient();
-  const { data, error } = await admin.from("billing_plans").update({ is_active: parsed.body.isActive, updated_at: new Date().toISOString() }).eq("id", planId).select("slug").single();
-  if (error || !data) return NextResponse.json({ error: "plan_toggle_failed" }, { status: 400 });
+  const [updated] = await db.update(billingPlans)
+    .set({ isActive: parsed.body.isActive, updatedAt: new Date() })
+    .where(eq(billingPlans.id, planId))
+    .returning({ slug: billingPlans.slug });
+  if (!updated) return NextResponse.json({ error: "plan_toggle_failed" }, { status: 400 });
 
-  await admin.from("admin_audit_log").insert({
-    admin_user_id: gate.adminId,
+  await db.insert(adminAuditLog).values({
+    adminUserId: gate.adminId,
     action: "plan_change",
-    target_user_id: null,
-    details: { plan_slug: data.slug, is_active: parsed.body.isActive, scope: "catalog" },
+    targetUserId: null,
+    details: { plan_slug: updated.slug, is_active: parsed.body.isActive, scope: "catalog" },
   });
 
   return NextResponse.json({ updated: true }, { headers: { "cache-control": "no-store" } });

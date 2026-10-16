@@ -1,6 +1,6 @@
 import type { BandwidthSeries } from "@/lib/analytics/bandwidth";
 
-export type SettingsSection =
+type SettingsSection =
   | "overview"
   | "profile"
   | "team"

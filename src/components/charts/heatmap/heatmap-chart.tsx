@@ -730,4 +730,3 @@ export function HeatmapChart({
 
 HeatmapChart.displayName = "HeatmapChart";
 
-export default HeatmapChart;

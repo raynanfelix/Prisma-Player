@@ -1,4 +1,4 @@
-export type AutoplayCoverType = "standard" | "gif" | "image";
+type AutoplayCoverType = "standard" | "gif" | "image";
 
 export type AutoplayCover = { type: "standard" } | { type: "gif" | "image"; url: string };
 

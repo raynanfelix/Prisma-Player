@@ -27,7 +27,7 @@ interface WorldTopology extends Topology {
 /**
  * Servido pelo próprio app (`public/geo`). Antes vinha de raw.githubusercontent.com,
  * o que quebrava o mapa por dois motivos: a CSP só permite `connect-src 'self'`
- * (mais Supabase/R2/PostHog), e o mapa ficava refém de um host de terceiros.
+ * (mais R2/PostHog), e o mapa ficava refém de um host de terceiros.
  */
 const WORLD_DATA_URL = "/geo/world-countries.json";
 
@@ -98,7 +98,7 @@ const WorldDataContext = createContext<WorldDataContextValue>({
   isLoading: true,
 });
 
-export function WorldDataProvider({ children }: { children: ReactNode }) {
+function WorldDataProvider({ children }: { children: ReactNode }) {
   const [worldData, setWorldData] = useState<FeatureCollection<
     Geometry,
     CountryProperties
@@ -120,7 +120,7 @@ export function WorldDataProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useWorldData() {
+function useWorldData() {
   return useContext(WorldDataContext);
 }
 

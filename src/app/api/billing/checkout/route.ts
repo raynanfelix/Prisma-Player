@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
 import { readJsonBody } from "@/lib/api/request";
 import { getCurrentUserId } from "@/lib/auth/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createBillingCheckout } from "@/lib/billing/service";
+import { createBillingCheckout, toBillingPlan } from "@/lib/billing/service";
 import type { BillingPlan } from "@/lib/billing/catalog";
 import { AbacatePayError } from "@/lib/billing/abacatepay/client";
 import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { db, schema } from "@/lib/db";
+
+const { billingPlans } = schema;
 
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);
@@ -25,12 +28,15 @@ export async function POST(request: Request) {
   const method = body?.method === "pix" || body?.method === "card" ? body.method : null;
   if (!slug || !method) return NextResponse.json({ error: "invalid_checkout" }, { status: 400 });
 
-  const admin = createAdminClient();
-  const planResult = await admin.from("billing_plans").select("*").eq("slug", slug).eq("is_active", true).single();
-  if (planResult.error || !planResult.data) return NextResponse.json({ error: "plan_not_found" }, { status: 404 });
+  const [planRow] = await db
+    .select()
+    .from(billingPlans)
+    .where(and(eq(billingPlans.slug, slug), eq(billingPlans.isActive, true)))
+    .limit(1);
+  if (!planRow) return NextResponse.json({ error: "plan_not_found" }, { status: 404 });
 
   try {
-    const checkout = await createBillingCheckout(userId, planResult.data as BillingPlan, method === "pix" ? "pix" : "card_subscription");
+    const checkout = await createBillingCheckout(userId, toBillingPlan(planRow), method === "pix" ? "pix" : "card_subscription");
     return NextResponse.json(checkout, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "unknown_error";

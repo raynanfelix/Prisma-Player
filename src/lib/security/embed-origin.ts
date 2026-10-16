@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { safeLog } from "@/lib/utils/log";
 import { SECURITY } from "@/lib/constants";
+import { buildConfiguredSelfOrigins } from "@/lib/security/self-origins";
 
 const TOKEN_VERSION = "v1";
 const DEFAULT_MAX_AGE_SECONDS = 10 * 60;
@@ -34,7 +35,7 @@ export function domainAllowed(host: string, domains: string[]): boolean {
 function embedSecret(): string {
   const value = process.env.EMBED_ORIGIN_SECRET?.trim();
   if (!value) {
-    throw new Error("EMBED_ORIGIN_SECRET is not configured. Set this environment variable to a random secret string, independent of SUPABASE keys.");
+    throw new Error("EMBED_ORIGIN_SECRET is not configured. Set this environment variable to a random secret string, independent of the auth cookies secret.");
   }
   return value;
 }
@@ -53,28 +54,12 @@ function sign(value: string): string {
 }
 
 /**
- * Origens próprias da plataforma derivadas do ambiente (mesmo critério do
- * `csrf.ts`). Usadas apenas para ISENTAR o header de Origin/Referer self quando
- * conferimos o host reivindicado por um token — nunca como autoridade de
- * domínio para embeds.
+ * Origens próprias da plataforma (mesmo critério do `csrf.ts`, fonte única em
+ * self-origins.ts). Usadas apenas para ISENTAR o header de Origin/Referer self
+ * quando conferimos o host reivindicado por um token — nunca como autoridade
+ * de domínio para embeds.
  */
-function buildSelfOrigins(): ReadonlySet<string> {
-  const origins = new Set<string>();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (siteUrl) {
-    try { origins.add(new URL(siteUrl).origin); } catch {}
-  }
-  if (process.env.VERCEL_URL) {
-    try { origins.add(new URL(`https://${process.env.VERCEL_URL}`).origin); } catch {}
-  }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    try { origins.add(new URL(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`).origin); } catch {}
-  }
-  if (process.env.NODE_ENV !== "production") origins.add("http://localhost:3000");
-  return origins;
-}
-
-const SELF_ORIGINS = buildSelfOrigins();
+const SELF_ORIGINS = buildConfiguredSelfOrigins();
 
 export function isSelfOrigin(value: string): boolean {
   if (!value) return false;

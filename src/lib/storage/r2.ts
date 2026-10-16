@@ -7,6 +7,8 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
   S3Client,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
@@ -70,10 +72,6 @@ function required(name: string) {
   return value;
 }
 
-export function isR2Configured() {
-  return ["CLOUDFLARE_R2_ACCOUNT_ID", "CLOUDFLARE_R2_ACCESS_KEY_ID", "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "CLOUDFLARE_R2_BUCKET"].every((name) => Boolean(process.env[name]?.trim()));
-}
-
 function client() {
   return new S3Client({
     region: "auto",
@@ -116,6 +114,22 @@ export function headR2Object(key: string) {
 
 export function deleteR2Object(key: string) {
   return client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
+}
+
+/** Envia um objeto completo (assets de player: ≤10 MB, sem multipart). */
+export function uploadR2Object(key: string, body: Buffer | Uint8Array, contentType: string, cacheControl: string) {
+  return client().send(new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType, CacheControl: cacheControl }));
+}
+
+/**
+ * Lista objetos sob um prefixo (tamanho incluso). Usado para somar os bytes de
+ * assets já enviados por um vídeo na checagem de quota do estúdio.
+ */
+export async function listR2Objects(prefix: string, maxKeys = 100) {
+  const result = await client().send(new ListObjectsV2Command({ Bucket: bucket(), Prefix: prefix, MaxKeys: maxKeys }));
+  return (result.Contents ?? [])
+    .filter((item): item is { Key: string; Size?: number } => typeof item.Key === "string")
+    .map((item) => ({ key: item.Key, size: Number(item.Size ?? 0) }));
 }
 
 export function copyR2Object(sourceKey: string, destinationKey: string, contentType: string) {

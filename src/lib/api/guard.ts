@@ -37,6 +37,10 @@ function deny(error: string, status: number, message?: string): { ok: false; res
  * Porta única de entrada das rotas autenticadas: CSRF, sessão, papel na equipe
  * e acesso pago. Centralizar evita a classe de bug mais cara deste código —
  * uma rota nova que esquece uma das quatro verificações.
+ *
+ * Neon Auth (Managed Better Auth): `userId`/`accountOwnerId` são o id do
+ * usuário do Neon Auth (TEXT) — nenhuma query pode presumir UUID. A resolução
+ * de equipe/plano acontece via getTeamAccountContext/getAccountPlan.
  */
 export async function guard(request: Request, options: GuardOptions = {}): Promise<GuardResult> {
   if (options.csrf) {

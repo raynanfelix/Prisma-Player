@@ -1,6 +1,6 @@
 import type { ChoroplethFeature } from "@/components/charts";
 
-export const visitorsByCountry: Record<string, number> = {
+const visitorsByCountry: Record<string, number> = {
   "United States": 18,
   "United Kingdom": 12,
   Germany: 17,

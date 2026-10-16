@@ -30,7 +30,6 @@ export const AI = {
 export const VIDEO = {
   MAX_TITLE_LENGTH: 200,
   R2_SIGNED_URL_EXPIRY_SECONDS: 900,
-  SUPABASE_SIGNED_URL_EXPIRY_SECONDS: 900,
   LIST_PAGE_SIZE: 30,
   R2_DEFAULT_MAX_UPLOAD_BYTES: 20 * 1024 ** 3,
   SUPPORTED_MIME_PREFIXES: ["video/", "application/vnd.apple.mpegurl"],

@@ -5,48 +5,31 @@ import { reconcileBillingCheckout } from "@/lib/billing/reconcile";
 import { abacateRequest } from "@/lib/billing/abacatepay/client";
 import { shouldRequireHmac, verifyWebhookSecret, verifyWebhookSignature } from "@/lib/billing/abacatepay/webhook";
 import type { AbacateCheckout } from "@/lib/billing/abacatepay/types";
+import { currentFakeDb, insertedValues, resetFakeDb, updatedSets } from "./helpers/fake-db";
 
-// Admin client com chains update().eq().eq() awaitable (o ultimo .eq resolve) e
-// registro das chamadas .rpc para provar a decisao de estorno.
-const { adminCalls, makeAdmin } = vi.hoisted(() => {
-  const adminCalls: Array<{ rpc: string; params?: Record<string, unknown>; table?: string }> = [];
-  const makeEqChain = () => {
-    const p = Promise.resolve({ data: null, error: null });
-    const chain = Object.assign(p, {
-      eq: vi.fn(() => chain),
-    });
-    return chain;
-  };
-  const makeAdmin = () => ({
-    rpc: vi.fn(async (name: string, params?: Record<string, unknown>) => {
-      adminCalls.push({ rpc: name, params });
-      return { data: null, error: null };
-    }),
-    from: vi.fn((table: string) => {
-      if (table === "subscriptions") {
-        return { upsert: vi.fn(async () => ({ data: null, error: null })) };
-      }
-      return {
-        update: vi.fn(() => {
-          adminCalls.push({ rpc: "", table, params: { op: "update" } });
-          return makeEqChain();
-        }),
-        insert: vi.fn(async () => ({ data: null, error: null })),
-      };
-    }),
-  });
-  return { adminCalls, makeAdmin };
+vi.mock("@/lib/db", async () => {
+  const { installFakeDb } = await import("./helpers/fake-db");
+  const schema = await vi.importActual("../drizzle/schema");
+  const fake = installFakeDb();
+  return { db: fake.db, pool: {}, schema };
 });
-
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: vi.fn(() => makeAdmin()),
-}));
 
 vi.mock("@/lib/billing/abacatepay/client", () => ({
   abacateRequest: vi.fn(),
 }));
 
 const mockRequest = vi.mocked(abacateRequest);
+
+const fake = () => currentFakeDb();
+
+/**
+ * Linha devolvida pelos selects em `ai_credit_checkouts` (apply e revoke
+ * leem da mesma tabela): userId + status para o revoke e creditTotal
+ * (credits + bonus) para o apply.
+ */
+function setCreditCheckoutRow(row: Record<string, unknown> | null): void {
+  fake().state.selectRows["ai_credit_checkouts"] = row ? [row] : [];
+}
 
 function paidProvider(overrides: Partial<AbacateCheckout> = {}): AbacateCheckout {
   return {
@@ -80,57 +63,95 @@ const BILLING_CHECKOUT = {
   previous_provider_subscription_id: null,
 };
 
-function calls(): Array<{ rpc: string; params?: Record<string, unknown> }> {
-  return adminCalls.filter((call) => call.rpc !== "");
+// Total creditado simulado (credits + bonus_cents do produto).
+const CREDIT_TOTAL = 190;
+
+function ledgerInserts(): Array<Record<string, unknown>> {
+  return insertedValues(fake(), "ai_credit_ledger") as Array<Record<string, unknown>>;
 }
 
 describe("reconcileAiCreditCheckout (RM-05 / RH-01)", () => {
   beforeEach(() => {
-    adminCalls.length = 0;
+    resetFakeDb(fake());
     mockRequest.mockReset();
   });
 
   it("nao ativa quando o provedor esta em devMode", async () => {
     mockRequest.mockResolvedValue([paidProvider({ devMode: true })]);
     expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(false);
-    expect(calls().filter((call) => call.rpc === "apply_ai_credit_purchase")).toHaveLength(0);
+    expect(ledgerInserts()).toHaveLength(0);
   });
 
   it("nao ativa quando o amount diverge do amount_cents local", async () => {
     mockRequest.mockResolvedValue([paidProvider({ amount: 2000 })]);
     expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(false);
-    expect(calls().filter((call) => call.rpc === "apply_ai_credit_purchase")).toHaveLength(0);
+    expect(ledgerInserts()).toHaveLength(0);
   });
 
   it("nao ativa quando a currency nao e BRL", async () => {
     mockRequest.mockResolvedValue([paidProvider({ currency: "USD" })]);
     expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(false);
-    expect(calls().filter((call) => call.rpc === "apply_ai_credit_purchase")).toHaveLength(0);
+    expect(ledgerInserts()).toHaveLength(0);
   });
 
   it("ativa quando PAID e coerente (amount + currency + nao devMode)", async () => {
     mockRequest.mockResolvedValue([paidProvider()]);
+    setCreditCheckoutRow({ userId: CREDIT_CHECKOUT.user_id, status: "pending", creditTotal: CREDIT_TOTAL });
     expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(true);
-    const applyCalls = calls().filter((call) => call.rpc === "apply_ai_credit_purchase");
-    expect(applyCalls).toHaveLength(1);
-    expect(applyCalls[0].params).toEqual({
-      p_checkout_id: CREDIT_CHECKOUT.id,
-      p_provider_event_id: `ai-credit:${CREDIT_CHECKOUT.id}`,
+    // Idempotência de ledger: o lançamento de compra usa a referência única
+    // `ai-credit:<checkout_id>` — a segunda entrega não creditaria de novo.
+    const purchases = ledgerInserts().filter((row) => row.reason === "purchase");
+    expect(purchases).toHaveLength(1);
+    expect(purchases[0]).toEqual({
+      userId: CREDIT_CHECKOUT.user_id,
+      amount: CREDIT_TOTAL,
+      reason: "purchase",
+      reference: `ai-credit:${CREDIT_CHECKOUT.id}`,
+      metadata: { checkoutId: CREDIT_CHECKOUT.id },
     });
+    // A carteira só é incrementada junto com o lançamento inédito.
+    expect(insertedValues(fake(), "ai_credit_wallets")).toHaveLength(1);
   });
 
-  it("REFUNDED chama o RPC de revoke e marca refunded", async () => {
+  it("nao credita duas vezes: lancamento repetido nao toca a carteira", async () => {
+    mockRequest.mockResolvedValue([paidProvider()]);
+    setCreditCheckoutRow({ userId: CREDIT_CHECKOUT.user_id, status: "pending", creditTotal: CREDIT_TOTAL });
+    // ON CONFLICT (reference) DO NOTHING devolve vazio = entrega já aplicada.
+    fake().state.insertResults["ai_credit_ledger"] = [];
+    expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(true);
+    expect(ledgerInserts()).toHaveLength(1);
+    expect(insertedValues(fake(), "ai_credit_wallets")).toHaveLength(0);
+  });
+
+  it("REFUNDED reverte via ledger na mesma referencia da compra (idempotente)", async () => {
     mockRequest.mockResolvedValue([paidProvider({ status: "REFUNDED" })]);
+    // Só há o que estornar se o checkout está 'paid' e existe o lançamento de compra.
+    setCreditCheckoutRow({ userId: CREDIT_CHECKOUT.user_id, status: "paid", creditTotal: CREDIT_TOTAL });
+    fake().state.selectRows["ai_credit_ledger"] = [{ amount: CREDIT_TOTAL }];
     expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(false);
-    const revokeCalls = calls().filter((call) => call.rpc === "revoke_ai_credit_purchase");
-    expect(revokeCalls).toHaveLength(1);
-    expect(revokeCalls[0].params).toEqual({ p_checkout_id: CREDIT_CHECKOUT.id });
+    const refunds = ledgerInserts().filter((row) => row.reason === "refund");
+    expect(refunds).toHaveLength(1);
+    expect(refunds[0]).toMatchObject({
+      userId: CREDIT_CHECKOUT.user_id,
+      amount: -CREDIT_TOTAL,
+      reference: `ai-credit:${CREDIT_CHECKOUT.id}`,
+    });
+    // A carteira é decrementada (com piso 0) e o checkout marcado como refunded.
+    expect(updatedSets(fake(), "ai_credit_wallets")).toHaveLength(1);
+    expect(updatedSets(fake(), "ai_credit_checkouts").some((set) => (set as { status?: string }).status === "refunded")).toBe(true);
   });
 
-  it("EXPIRED apenas marca o checkout local, sem chamar revoke", async () => {
+  it("refund de compra nunca paga e no-op: nenhum lancamento de estorno", async () => {
+    mockRequest.mockResolvedValue([paidProvider({ status: "REFUNDED" })]);
+    setCreditCheckoutRow({ userId: CREDIT_CHECKOUT.user_id, status: "pending", creditTotal: CREDIT_TOTAL });
+    expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(false);
+    expect(ledgerInserts().filter((row) => row.reason === "refund")).toHaveLength(0);
+  });
+
+  it("EXPIRED apenas marca o checkout local, sem estorno", async () => {
     mockRequest.mockResolvedValue([paidProvider({ status: "EXPIRED" })]);
     expect(await reconcileAiCreditCheckout(CREDIT_CHECKOUT)).toBe(false);
-    expect(calls().filter((call) => call.rpc === "revoke_ai_credit_purchase")).toHaveLength(0);
+    expect(ledgerInserts()).toHaveLength(0);
   });
 
   it("nao consulta o provedor quando o checkout local ja esta terminal", async () => {
@@ -141,23 +162,36 @@ describe("reconcileAiCreditCheckout (RM-05 / RH-01)", () => {
 
 describe("reconcileBillingCheckout (RM-05)", () => {
   beforeEach(() => {
-    adminCalls.length = 0;
+    resetFakeDb(fake());
     mockRequest.mockReset();
   });
 
   it("nao ativa em devMode", async () => {
     mockRequest.mockResolvedValue([paidProvider({ externalId: "prisma_zzz", devMode: true })]);
     expect(await reconcileBillingCheckout(BILLING_CHECKOUT)).toBe(false);
+    expect(insertedValues(fake(), "subscriptions")).toHaveLength(0);
   });
 
   it("nao ativa quando o amount diverge", async () => {
     mockRequest.mockResolvedValue([paidProvider({ externalId: "prisma_zzz", amount: 12345 })]);
     expect(await reconcileBillingCheckout(BILLING_CHECKOUT)).toBe(false);
+    expect(insertedValues(fake(), "subscriptions")).toHaveLength(0);
   });
 
   it("ativa quando PAID e coerente", async () => {
     mockRequest.mockResolvedValue([paidProvider({ externalId: "prisma_zzz", amount: 9700 })]);
     expect(await reconcileBillingCheckout(BILLING_CHECKOUT)).toBe(true);
+    // Checkout marcado como pago e assinatura do titular criada (upsert por user_id).
+    const paidSets = updatedSets(fake(), "billing_checkouts") as Array<Record<string, unknown>>;
+    expect(paidSets.some((set) => set.status === "paid")).toBe(true);
+    const subscriptionUpserts = insertedValues(fake(), "subscriptions") as Array<Record<string, unknown>>;
+    expect(subscriptionUpserts).toHaveLength(1);
+    expect(subscriptionUpserts[0]).toMatchObject({
+      userId: BILLING_CHECKOUT.user_id,
+      planId: BILLING_CHECKOUT.plan_id,
+      billingMethod: "pix",
+      status: "active",
+    });
   });
 });
 

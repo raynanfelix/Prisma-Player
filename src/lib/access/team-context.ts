@@ -1,5 +1,10 @@
 import "server-only";
-import { createAdminClient } from "@/lib/supabase/admin";
+
+import { and, asc, eq } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
+
+const { accountTeamMembers, accountTeams } = schema;
 
 export type TeamRole = "owner" | "admin" | "editor" | "analyst" | "viewer";
 
@@ -13,39 +18,39 @@ export type TeamAccountContext = {
 };
 
 export async function getTeamAccountContext(userId: string): Promise<TeamAccountContext> {
-  const admin = createAdminClient();
-
   // A equipe própria sempre vence. O trigger de signup cria a equipe do usuário
   // e as adesões vindas de convite na MESMA transação, então `joined_at` é
   // idêntico e ordenar só por ele não tem desempate: um usuário convidado antes
   // de se cadastrar podia acordar dentro da conta de quem o convidou.
-  const ownTeam = await admin.from("account_teams").select("id").eq("owner_id", userId).maybeSingle();
-  if (ownTeam.data) {
-    return { actorUserId: userId, accountOwnerId: userId, teamId: ownTeam.data.id, role: "owner", canEditContent: true, canManageAccount: true };
+  const [ownTeam] = await db
+    .select({ id: accountTeams.id })
+    .from(accountTeams)
+    .where(eq(accountTeams.ownerId, userId))
+    .limit(1);
+  if (ownTeam) {
+    return { actorUserId: userId, accountOwnerId: userId, teamId: ownTeam.id, role: "owner", canEditContent: true, canManageAccount: true };
   }
 
-  const membership = await admin.from("account_team_members")
-    .select("team_id,role")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("joined_at")
-    .order("team_id")
-    .limit(1)
-    .maybeSingle();
+  const [membership] = await db
+    .select({ teamId: accountTeamMembers.teamId, role: accountTeamMembers.role })
+    .from(accountTeamMembers)
+    .where(and(eq(accountTeamMembers.userId, userId), eq(accountTeamMembers.status, "active")))
+    .orderBy(asc(accountTeamMembers.joinedAt), asc(accountTeamMembers.teamId))
+    .limit(1);
 
-  if (!membership.data) return { actorUserId: userId, accountOwnerId: userId, teamId: null, role: "owner", canEditContent: true, canManageAccount: true };
-  const team = await admin.from("account_teams").select("owner_id").eq("id", membership.data.team_id).maybeSingle();
-  const role = (["owner", "admin", "editor", "analyst", "viewer"].includes(String(membership.data.role)) ? membership.data.role : "viewer") as TeamRole;
+  if (!membership) return { actorUserId: userId, accountOwnerId: userId, teamId: null, role: "owner", canEditContent: true, canManageAccount: true };
+  const [team] = await db
+    .select({ ownerId: accountTeams.ownerId })
+    .from(accountTeams)
+    .where(eq(accountTeams.id, membership.teamId))
+    .limit(1);
+  const role = (["owner", "admin", "editor", "analyst", "viewer"].includes(membership.role) ? membership.role : "viewer") as TeamRole;
   return {
     actorUserId: userId,
-    accountOwnerId: team.data?.owner_id ?? userId,
-    teamId: membership.data.team_id,
+    accountOwnerId: team?.ownerId ?? userId,
+    teamId: membership.teamId,
     role,
     canEditContent: ["owner", "admin", "editor"].includes(role),
     canManageAccount: ["owner", "admin"].includes(role),
   };
-}
-
-export function forbiddenForRole() {
-  return Response.json({ error: "team_role_forbidden", message: "Seu cargo permite visualizar, mas não alterar este recurso." }, { status: 403 });
 }

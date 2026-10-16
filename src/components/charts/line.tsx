@@ -3,9 +3,9 @@
 import { curveNatural } from "@visx/curve";
 import { LinePath } from "@visx/shape";
 
-// Curva do visx/d3: reexporta o tipo real da @types/d3-shape (via @visx/vendor)
-// em vez de `any` — a fábrica é opaca ao consumo aqui, só é repassada adiante.
-import type { CurveFactory } from "@visx/vendor/d3-shape";
+// Fábrica de curva opaca ao consumo: tipo real de @types/d3-shape — d3-shape é
+// dependência direta do projeto; a fábrica só é repassada adiante ao @visx/shape.
+import type { CurveFactory } from "d3-shape";
 
 import {
   type RefObject,
@@ -403,4 +403,3 @@ export function Line({
 
 Line.displayName = "Line";
 
-export default Line;

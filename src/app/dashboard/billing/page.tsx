@@ -1,34 +1,66 @@
 import { Check, CreditCard, Info, QrCode } from "lucide-react";
 import Image from "next/image";
+import { asc, eq } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
 import CancelSubscriptionButton from "@/features/billing/components/CancelSubscriptionButton";
 import CheckoutActions from "@/features/billing/components/CheckoutActions";
 import AiCreditCheckoutButton from "@/features/billing/components/AiCreditCheckoutButton";
 import { requireUser } from "@/lib/auth/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { toBillingPlan } from "@/lib/billing/service";
 import { formatBRL, formatPlayOverage, formatStorageOverage, getPlanBenefits, type BillingPlan } from "@/lib/billing/catalog";
 import { getAccountAccess, isSubscriptionEffective } from "@/lib/access/service";
 import { reconcilePendingAiCreditCheckouts } from "@/lib/billing/ai-credit-reconcile";
+import { db, schema } from "@/lib/db";
+
+const { aiCreditProducts, aiCreditWallets, billingPlans, subscriptions } = schema;
 
 export const dynamic = "force-dynamic";
 
 export default async function BillingPage() {
   const userId = await requireUser("/dashboard/billing");
-  const admin = createAdminClient();
   await reconcilePendingAiCreditCheckouts(userId).catch((error) => console.error("Credit reconciliation failed", error instanceof Error ? error.message : "unknown_error"));
-  const [subscriptionResult, plansResult, creditsResult, walletResult, access] = await Promise.all([
-    admin.from("subscriptions").select("status,billing_method,current_period_end,cancelled_at,plan:billing_plans(slug,name,amount_cents)").eq("user_id", userId).maybeSingle(),
-    admin.from("billing_plans").select("*").eq("is_active", true).order("display_order"),
-    admin.from("ai_credit_products").select("*").eq("is_active", true).order("display_order"),
-    admin.from("ai_credit_wallets").select("balance").eq("user_id", userId).maybeSingle(), getAccountAccess(userId),
+  const [subscriptionRows, planRows, creditRows, walletRows, access] = await Promise.all([
+    db.select({
+      status: subscriptions.status,
+      billingMethod: subscriptions.billingMethod,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      planSlug: billingPlans.slug,
+      planName: billingPlans.name,
+    })
+      .from(subscriptions)
+      .leftJoin(billingPlans, eq(billingPlans.id, subscriptions.planId))
+      .where(eq(subscriptions.userId, userId))
+      .limit(1),
+    db.select().from(billingPlans).where(eq(billingPlans.isActive, true)).orderBy(asc(billingPlans.displayOrder)),
+    db.select({
+      id: aiCreditProducts.id,
+      slug: aiCreditProducts.slug,
+      name: aiCreditProducts.name,
+      credits: aiCreditProducts.credits,
+      bonusCredits: aiCreditProducts.bonusCredits,
+      amountCents: aiCreditProducts.amountCents,
+    })
+      .from(aiCreditProducts)
+      .where(eq(aiCreditProducts.isActive, true))
+      .orderBy(asc(aiCreditProducts.displayOrder)),
+    db.select({ balance: aiCreditWallets.balance }).from(aiCreditWallets).where(eq(aiCreditWallets.userId, userId)).limit(1),
+    getAccountAccess(userId),
   ]);
-  const subscription = subscriptionResult.data;
-  const plan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan;
+  const subscriptionRow = subscriptionRows[0];
+  // Shapes snake_case preservados para não tocar no JSX.
+  const subscription = subscriptionRow ? {
+    status: subscriptionRow.status,
+    billing_method: subscriptionRow.billingMethod,
+    current_period_end: subscriptionRow.currentPeriodEnd ? subscriptionRow.currentPeriodEnd.toISOString() : null,
+    plan: subscriptionRow.planSlug ? { slug: subscriptionRow.planSlug, name: subscriptionRow.planName ?? "" } : null,
+  } : null;
+  const plan = subscription?.plan ?? null;
   // Verdade efetiva, não status cru: linha `active` com período vencido é
   // plano terminado (o cron marca `expired`, mas a tela não pode mentir).
   const subActive = isSubscriptionEffective(subscription ? { status: subscription.status, current_period_end: subscription.current_period_end } : null);
   const planOrder = ["prisma-prime", "prisma-growth", "prisma-scale"];
   const currentPlanIndex = plan && subActive ? planOrder.indexOf(plan.slug) : -1;
+  const plans: BillingPlan[] = planRows.map(toBillingPlan);
 
   return (
     <main className="dashboard-content pb-16 space-y-6">
@@ -94,7 +126,7 @@ export default async function BillingPage() {
         </p>
 
         <div className="mt-4 grid items-stretch gap-5 xl:grid-cols-3">
-          {(plansResult.data as BillingPlan[] ?? []).map((item) => {
+          {plans.map((item) => {
             const isCurrentPlan = subscription?.status === "active" && plan?.slug === item.slug;
             return (
               <article
@@ -163,12 +195,12 @@ export default async function BillingPage() {
             Créditos Prisma IA
           </h2>
           <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-            Saldo atual: <strong className="font-bold text-[#191A23] dark:text-white">{walletResult.data?.balance ?? 0} créditos</strong>. Os créditos não expiram.
+            Saldo atual: <strong className="font-bold text-[#191A23] dark:text-white">{walletRows[0]?.balance ?? 0} créditos</strong>. Os créditos não expiram.
           </p>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {(creditsResult.data ?? []).map((item) => (
+          {creditRows.map((item) => (
             <article
               key={item.id}
               className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs space-y-2.5"
@@ -176,14 +208,14 @@ export default async function BillingPage() {
               <Image src="/prisma-credits.png" width={56} height={56} alt="" aria-hidden="true" className="absolute right-4 top-4 h-10 w-10 object-contain opacity-80" />
               <p className="pr-14 text-sm font-bold text-[#191A23] dark:text-white">{item.name}</p>
               <p className="text-2xl font-bold text-[#191A23] dark:text-white">
-                {item.credits + item.bonus_credits} <span className="text-xs font-normal text-slate-400 dark:text-zinc-500">créditos</span>
+                {item.credits + item.bonusCredits} <span className="text-xs font-normal text-slate-400 dark:text-zinc-500">créditos</span>
               </p>
-              {item.bonus_credits > 0 && (
+              {item.bonusCredits > 0 && (
                 <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-full px-2.5 py-0.5 w-fit">
-                  +{item.bonus_credits} de bônus incluídos
+                  +{item.bonusCredits} de bônus incluídos
                 </p>
               )}
-              <p className="text-xl font-bold text-[#191A23] dark:text-white">{formatBRL(item.amount_cents)}</p>
+              <p className="text-xl font-bold text-[#191A23] dark:text-white">{formatBRL(item.amountCents)}</p>
               <AiCreditCheckoutButton product={item.slug} />
             </article>
           ))}

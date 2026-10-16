@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { and, eq, gt, ne, sql } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
 import { createBoundEmbedEventTokenSafely, domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { signR2ReadUrl } from "@/lib/storage/r2";
@@ -10,9 +12,43 @@ import { clientIpFromHeaders, isVpnOrProxy } from "@/lib/security/vpn";
 import { envInt } from "@/lib/config/env";
 import { VIDEO } from "@/lib/constants";
 
+const { playerConfigs, videoLiveSessions, videos } = schema;
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMBED_CONFIG_RATE_LIMIT_MAX = envInt("EMBED_CONFIG_RATE_LIMIT_MAX", 300);
 const EMBED_CONFIG_RATE_LIMIT_WINDOW_MS = envInt("EMBED_CONFIG_RATE_LIMIT_WINDOW_MS", 60_000);
+
+type PlayerConfigRow = {
+  id: string;
+  videoId: string;
+  userId: string;
+  config: unknown;
+  allowedDomains: string[];
+  published: boolean;
+};
+
+const PLAYER_CONFIG_FIELDS = {
+  id: playerConfigs.id,
+  videoId: playerConfigs.videoId,
+  userId: playerConfigs.userId,
+  config: playerConfigs.config,
+  allowedDomains: playerConfigs.allowedDomains,
+  published: playerConfigs.published,
+};
+
+function databaseErrorDetails(error: unknown) {
+  const shape = error as { code?: string; message?: string };
+  return { code: shape?.code ?? "database_error", message: shape?.message ?? "unknown" };
+}
+
+/** Player publicado por id de config; cai para o id de vídeo (mesma busca dupla do SDK antigo). */
+async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | null> {
+  const [byPlayerId, byVideoId] = await Promise.all([
+    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
+    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
+  ]);
+  return byPlayerId ?? byVideoId;
+}
 
 function requestDevice(userAgent: string) {
   if (/ipad|tablet/i.test(userAgent)) return "tablet";
@@ -32,28 +68,18 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const limited = await rateLimit(request, `embed-config:${id}`, { max: EMBED_CONFIG_RATE_LIMIT_MAX, windowMs: EMBED_CONFIG_RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
-  const supabase = createAdminClient();
-  const fields = "id,video_id,user_id,config,allowed_domains,published";
-  const byPlayerId = await supabase.from("player_configs").select(fields).eq("id", id).eq("published", true).maybeSingle();
-  if (byPlayerId.error) {
-    console.error("embed player lookup failed", { code: byPlayerId.error.code, message: byPlayerId.error.message });
+  let playerConfig: PlayerConfigRow | null = null;
+  try {
+    playerConfig = await findPublishedPlayerConfig(id);
+  } catch (error) {
+    console.error("embed player lookup failed", databaseErrorDetails(error));
     return NextResponse.json({ error: "player_lookup_failed" }, { status: 503 });
   }
-  let playerConfig = byPlayerId.data;
-  if (!playerConfig) {
-    const byVideoId = await supabase.from("player_configs").select(fields).eq("video_id", id).eq("published", true).maybeSingle();
-    if (byVideoId.error) {
-      console.error("embed video config lookup failed", { code: byVideoId.error.code, message: byVideoId.error.message });
-      return NextResponse.json({ error: "player_lookup_failed" }, { status: 503 });
-    }
-    playerConfig = byVideoId.data;
-  }
-
   if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
 
   // O embed é a entrega do produto. Sem esta verificação, cancelar a assinatura
   // não tirava nada do ar: a VSL continuava hospedada e servida indefinidamente.
-  const ownerAccess = await getAccountAccess(playerConfig.user_id);
+  const ownerAccess = await getAccountAccess(playerConfig.userId);
   if (!ownerAccess.hasAccess) {
     return NextResponse.json({ error: "player_unavailable" }, { status: 402, headers: { "cache-control": "private, no-store" } });
   }
@@ -79,7 +105,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // `pp_embed` que o proxy setou na resposta da página. Token sem nonce (não
   // amarrado a nenhum render) ou com nonce sem o cookie é rejeitado.
   if (!verifiedOrigin.nonce || !verifyEmbedRenderCookie(request.headers, verifiedOrigin.nonce)) return NextResponse.json({ error: "render_not_confirmed" }, { status: 403 });
-  const domains = Array.isArray(playerConfig.allowed_domains) ? playerConfig.allowed_domains.map((domain) => domain.trim()).filter(Boolean) : [];
+  const domains = Array.isArray(playerConfig.allowedDomains) ? playerConfig.allowedDomains.map((domain) => domain.trim()).filter(Boolean) : [];
   if (domains.length > 0 && !domainAllowed(host, domains)) return NextResponse.json({ error: "domain_not_allowed" }, { status: 403 });
 
   const config = playerConfig.config && typeof playerConfig.config === "object" ? { ...playerConfig.config } as Record<string, unknown> : {};
@@ -116,29 +142,53 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const session = uuid.test(rawSession) ? rawSession : "";
     if (viewer && session) {
       const countryHeader = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toLowerCase();
-      const { error: liveError } = await supabase.from("video_live_sessions").upsert({ video_id: playerConfig.video_id, user_id: playerConfig.user_id, session_id: session, viewer_id: viewer, country_code: countryHeader.length === 2 ? countryHeader.toUpperCase() : "XX", last_seen_at: new Date().toISOString() }, { onConflict: "video_id,session_id" });
-      if (liveError) console.error("live session upsert failed", liveError.message);
-      const freshSince = new Date(Date.now() - 75_000).toISOString();
-      const { count } = await supabase.from("video_live_sessions").select("session_id", { count: "exact", head: true }).eq("video_id", playerConfig.video_id).eq("viewer_id", viewer).neq("session_id", session).gt("last_seen_at", freshSince);
-      if ((count ?? 0) >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
+      const countryCode = countryHeader.length === 2 ? countryHeader.toUpperCase() : "XX";
+      try {
+        await db
+          .insert(videoLiveSessions)
+          .values({ videoId: playerConfig.videoId, userId: playerConfig.userId, sessionId: session, viewerId: viewer, countryCode, lastSeenAt: new Date() })
+          .onConflictDoUpdate({
+            target: [videoLiveSessions.videoId, videoLiveSessions.sessionId],
+            set: { viewerId: viewer, countryCode, lastSeenAt: new Date() },
+          });
+      } catch (error) {
+        console.error("live session upsert failed", error instanceof Error ? error.message : String(error));
+      }
+      const freshSince = new Date(Date.now() - 75_000);
+      const activeSessions = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(videoLiveSessions)
+        .where(and(
+          eq(videoLiveSessions.videoId, playerConfig.videoId),
+          eq(videoLiveSessions.viewerId, viewer),
+          ne(videoLiveSessions.sessionId, session),
+          gt(videoLiveSessions.lastSeenAt, freshSince),
+        ))
+        .then((rows) => rows[0]?.count ?? 0)
+        .catch(() => 0);
+      if (activeSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
     }
   }
 
-  const { data: video } = await supabase.from("videos").select("id,title,object_path,mime_type,user_id,storage_provider").eq("id", playerConfig.video_id).eq("status", "ready").maybeSingle();
+  const video = await db
+    .select({ id: videos.id, title: videos.title, objectPath: videos.objectPath, mimeType: videos.mimeType, userId: videos.userId })
+    .from(videos)
+    .where(and(eq(videos.id, playerConfig.videoId), eq(videos.status, "ready")))
+    .limit(1)
+    .then((rows) => rows[0] ?? null)
+    .catch(() => null);
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
-  const source = video.storage_provider === "r2"
-    ? await signR2ReadUrl(video.object_path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null)
-    : (await supabase.storage.from("videos").createSignedUrl(video.object_path, VIDEO.SUPABASE_SIGNED_URL_EXPIRY_SECONDS)).data?.signedUrl ?? null;
+  const source = await signR2ReadUrl(video.objectPath, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
   if (!source) return NextResponse.json({ error: "source_unavailable" }, { status: 503 });
 
   if (Number(config.radius) === 12) config.radius = 0;
   // Só assina assets do próprio dono do player: `config` é jsonb livre gravado
   // pelo usuário e antes qualquer caminho colocado ali era assinado.
-  const assets = ownedAssetPaths(config.assets, video.user_id);
+  const assets = ownedAssetPaths(config.assets, video.userId);
   const assetUrls: Record<string, string> = {};
   await Promise.all(Object.entries(assets).map(async ([kind, path]) => {
-    const { data } = await supabase.storage.from("player-assets").createSignedUrl(path, VIDEO.SUPABASE_SIGNED_URL_EXPIRY_SECONDS);
-    if (data?.signedUrl) assetUrls[kind] = data.signedUrl;
+    const signedUrl = await signR2ReadUrl(path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
+    if (signedUrl) assetUrls[kind] = signedUrl;
   }));
   config.assets = assets;
   config.assetUrls = assetUrls;
@@ -150,5 +200,5 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const eventSessionId = sessionIdParam && uuid.test(sessionIdParam) ? sessionIdParam : undefined;
   const eventToken = createBoundEmbedEventTokenSafely({ videoId: video.id, host, sessionId: eventSessionId, nonce: verifiedOrigin.nonce });
 
-  return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.video_id, title: video.title, source, type: video.mime_type, config, eventToken }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
+  return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.videoId, title: video.title, source, type: video.mimeType, config, eventToken }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
 }

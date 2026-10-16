@@ -16,7 +16,7 @@ import {
   resolveHeatmapHoverStyle,
 } from "./heatmap-utils";
 
-export const HEATMAP_LEGEND_LEVELS = [0, 1, 2, 3, 4] as const;
+const HEATMAP_LEGEND_LEVELS = [0, 1, 2, 3, 4] as const;
 
 const HEATMAP_INACTIVE_OPACITY = 0.3;
 /** Smooth tween for inactive opacity + scale on hover. */
@@ -213,4 +213,3 @@ export const HeatmapLegend = memo(function HeatmapLegend({
 
 HeatmapLegend.displayName = "HeatmapLegend";
 
-export default HeatmapLegend;

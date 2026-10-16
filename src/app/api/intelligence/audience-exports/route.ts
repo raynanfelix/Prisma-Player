@@ -1,9 +1,12 @@
+import { and, desc, eq, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { ANALYTICS } from "@/lib/constants";
+
+const { videos, videoEvents } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const segments = new Set(["all", "buyers", "completers", "engagers_75", "cta_clickers"]);
@@ -30,13 +33,51 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
   const videoId = parsed.body?.videoId ?? "", segment = parsed.body?.segment ?? "engagers_75";
   if (!uuid.test(videoId) || !segments.has(segment)) return NextResponse.json({ error: "invalid_export_request" }, { status: 400 });
-  const admin = createAdminClient();
-  const { data: video } = await admin.from("videos").select("id,title").eq("id", videoId).eq("user_id", ownerId).eq("status", "ready").maybeSingle();
-  if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
-  const { data: events, error } = await admin.from("video_events").select("session_id,event_type,progress_percent,country_code,device_type,os_name,browser_name,traffic_source,campaign_id,utm_campaign,risk_score").eq("video_id", videoId).eq("user_id", ownerId).lt("risk_score", 70).order("created_at", { ascending: false }).limit(ANALYTICS.MAX_EVENTS_PER_ANALYSIS);
-  if (error) return NextResponse.json({ error: "audience_unavailable" }, { status: 503 });
+
+  let video: { title: string } | undefined;
+  let events: Array<{ session_id: string; event_type: string; progress_percent: number; country_code: string; device_type: string; os_name: string; browser_name: string; traffic_source: string; campaign_id: string | null; utm_campaign: string | null; risk_score: number }> = [];
+  try {
+    [video] = await db.select({ id: videos.id, title: videos.title }).from(videos).where(and(eq(videos.id, videoId), eq(videos.userId, ownerId), eq(videos.status, "ready"))).limit(1);
+    if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+    const rows = await db
+      .select({
+        sessionId: videoEvents.sessionId,
+        eventType: videoEvents.eventType,
+        progressPercent: videoEvents.progressPercent,
+        countryCode: videoEvents.countryCode,
+        deviceType: videoEvents.deviceType,
+        osName: videoEvents.osName,
+        browserName: videoEvents.browserName,
+        trafficSource: videoEvents.trafficSource,
+        campaignId: videoEvents.campaignId,
+        utmCampaign: videoEvents.utmCampaign,
+        riskScore: videoEvents.riskScore,
+      })
+      .from(videoEvents)
+      .where(and(eq(videoEvents.videoId, videoId), eq(videoEvents.userId, ownerId), lt(videoEvents.riskScore, 70)))
+      .orderBy(desc(videoEvents.createdAt), desc(videoEvents.id))
+      .limit(ANALYTICS.MAX_EVENTS_PER_ANALYSIS);
+    // Mesmo shape snake_case do contrato anterior (agregação abaixo consome
+    // as chaves originais).
+    events = rows.map((row) => ({
+      session_id: row.sessionId,
+      event_type: row.eventType,
+      progress_percent: row.progressPercent,
+      country_code: row.countryCode,
+      device_type: row.deviceType,
+      os_name: row.osName,
+      browser_name: row.browserName,
+      traffic_source: row.trafficSource,
+      campaign_id: row.campaignId,
+      utm_campaign: row.utmCampaign,
+      risk_score: row.riskScore,
+    }));
+  } catch {
+    return NextResponse.json({ error: "audience_unavailable" }, { status: 503 });
+  }
+
   const map = new Map<string, Session>();
-  for (const event of events ?? []) {
+  for (const event of events) {
     const row = map.get(event.session_id) ?? { country: event.country_code ?? "XX", device: event.device_type ?? "other", os: event.os_name ?? "Other", browser: event.browser_name ?? "Other", source: event.traffic_source ?? "Direto", campaign: event.utm_campaign ?? event.campaign_id ?? "Não informado", maxProgress: 0, conversion: false, complete: false, cta: false };
     row.maxProgress = Math.max(row.maxProgress, event.progress_percent ?? 0); row.conversion ||= event.event_type === "conversion"; row.complete ||= event.event_type === "complete"; row.cta ||= event.event_type === "cta_click"; map.set(event.session_id, row);
   }

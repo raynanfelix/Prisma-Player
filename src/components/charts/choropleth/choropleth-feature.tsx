@@ -336,4 +336,3 @@ export const ChoroplethFeature = memo(function ChoroplethFeature({
 
 ChoroplethFeature.displayName = "ChoroplethFeature";
 
-export default ChoroplethFeature;

@@ -20,7 +20,7 @@ export interface ChartStatFlowFormat {
   unitDisplay?: "short" | "long" | "narrow";
 }
 
-export const defaultChartStatFlowFormat: ChartStatFlowFormat = {
+const defaultChartStatFlowFormat: ChartStatFlowFormat = {
   notation: "standard",
   maximumFractionDigits: 0,
 };

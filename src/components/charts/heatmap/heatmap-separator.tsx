@@ -243,4 +243,3 @@ export const HeatmapSeparator = memo(function HeatmapSeparator({
 
 HeatmapSeparator.displayName = "HeatmapSeparator";
 
-export default HeatmapSeparator;

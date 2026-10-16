@@ -6,7 +6,7 @@ export const CHART_SCALE_VARS = [
   "var(--chart-scale-05)",
 ] as const;
 
-export type ChartScaleVars = typeof CHART_SCALE_VARS;
+type ChartScaleVars = typeof CHART_SCALE_VARS;
 
 export const chartScaleCssVars = {
   scale01: CHART_SCALE_VARS[0],

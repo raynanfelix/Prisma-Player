@@ -108,4 +108,3 @@ export const HeatmapLegendGradient = memo(function HeatmapLegendGradient({
 
 HeatmapLegendGradient.displayName = "HeatmapLegendGradient";
 
-export default HeatmapLegendGradient;

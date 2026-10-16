@@ -1,7 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 
-export const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
+const DEFAULT_MAX_BODY_BYTES = 64 * 1024;
 
 export type ParsedBody<T> = { ok: true; body: T } | { ok: false; response: NextResponse };
 

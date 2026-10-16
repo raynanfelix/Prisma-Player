@@ -31,7 +31,7 @@ export const HEATMAP_LOADING_BASE_CELL_OPACITY = 0.2;
 export const HEATMAP_LOADING_CONCEAL_MS = 450;
 
 /** Share of the enter window used for random fade-in delays. */
-export const HEATMAP_ENTER_STAGGER_SPREAD = 0.6;
+const HEATMAP_ENTER_STAGGER_SPREAD = 0.6;
 
 function seededRandom(seed: number): () => number {
   let state = seed % 2_147_483_647;
@@ -44,7 +44,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-export function heatmapCellSeed(column: number, row: number): number {
+function heatmapCellSeed(column: number, row: number): number {
   return column * 1009 + row * 9176;
 }
 
@@ -54,7 +54,7 @@ export interface HeatmapLevelRange {
 }
 
 /** Min/max contribution levels present in the dataset. */
-export function computeHeatmapLevelRange(
+function computeHeatmapLevelRange(
   data: HeatmapColumn[]
 ): HeatmapLevelRange {
   let min = Number.POSITIVE_INFINITY;

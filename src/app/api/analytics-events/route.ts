@@ -1,7 +1,8 @@
+import { and, eq } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { validateOrigin } from "@/lib/security/csrf";
 import { domainAllowed, normalizeHost, originHeaderDisagrees, verifyEmbedEventTokenContext, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { deliverWebhook } from "@/lib/webhooks/delivery";
@@ -12,6 +13,8 @@ import { pixelIntegrations } from "@/lib/player/pixels";
 import { deliverServerPurchase } from "@/services/ads/server-events";
 import { normalizeAnalyticsBatch, type NormalizedAnalyticsEvent } from "@/lib/player/analytics-batch";
 import { isValidViewerId } from "@/lib/player/viewer-id";
+
+const { videos, playerConfigs, videoEvents, videoLiveSessions, intelligenceControls } = schema;
 
 function clientContext(request: Request) {
   const ua = request.headers.get("user-agent") ?? "";
@@ -69,12 +72,13 @@ function platformPeerIp(request: Request): string {
 }
 
 /**
- * Apenas o evento realmente persistido dispara efeitos laterais. Com lotes,
- * `.select("id")` do upsert devolve as linhas novas; comparamos os índices com
- * os eventos da requisição para nunca reenviar um webhook duplicado.
+ * Apenas o evento realmente persistido dispara efeitos laterais. O upsert com
+ * `.onConflictDoNothing().returning()` devolve só as linhas novas (duplicatas
+ * de dedupe não voltam); comparamos as chaves com os eventos da requisição
+ * para nunca reenviar um webhook duplicado.
  */
-function persistedEventKeys(writtenRows: Array<{ id?: unknown; event_type?: string; progress_percent?: number }> | null) {
-  return new Set((writtenRows ?? []).map((row) => `${row.event_type}:${row.progress_percent}`));
+function persistedEventKeys(writtenRows: Array<{ eventType: string; progressPercent: number }>) {
+  return new Set(writtenRows.map((row) => `${row.eventType}:${row.progressPercent}`));
 }
 
 export async function POST(request: Request) {
@@ -103,17 +107,24 @@ export async function POST(request: Request) {
   const limited = await rateLimit(request, `analytics:${videoId}:${sessionId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
-  const supabase = createAdminClient();
-  const [{ data: video }, { data: player }] = await Promise.all([
-    supabase.from("videos").select("id,user_id,status,title").eq("id", videoId).maybeSingle(),
-    supabase.from("player_configs").select("id,allowed_domains,config").eq("video_id", videoId).eq("published", true).maybeSingle(),
-  ]);
+  let video: { id: string; userId: string; status: string; title: string } | undefined;
+  let player: { id: string; allowedDomains: string[]; config: unknown } | undefined;
+  try {
+    [video] = await db.select({ id: videos.id, userId: videos.userId, status: videos.status, title: videos.title }).from(videos).where(eq(videos.id, videoId)).limit(1);
+  } catch {
+    video = undefined;
+  }
+  try {
+    [player] = await db.select({ id: playerConfigs.id, allowedDomains: playerConfigs.allowedDomains, config: playerConfigs.config }).from(playerConfigs).where(and(eq(playerConfigs.videoId, videoId), eq(playerConfigs.published, true))).limit(1);
+  } catch {
+    player = undefined;
+  }
   if (!video || video.status !== "ready") return NextResponse.json({ error: "video_not_found" }, { status: 404 });
   if (!player) return NextResponse.json({ error: "player_not_published" }, { status: 409 });
   const requestOrigin = request.headers.get("origin") ?? "";
   if (!firstPartyOrigin) {
     const originHost = normalizeHost(requestOrigin);
-    const allowedDomains = Array.isArray(player.allowed_domains) ? player.allowed_domains.filter((item): item is string => typeof item === "string") : [];
+    const allowedDomains = Array.isArray(player.allowedDomains) ? player.allowedDomains.filter((item): item is string => typeof item === "string") : [];
     if (!originHost || !domainAllowed(originHost, allowedDomains)) return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
   }
 
@@ -126,8 +137,28 @@ export async function POST(request: Request) {
   const viewerId = rawViewerId && rawViewerId.length <= 64 && isValidViewerId(rawViewerId) ? rawViewerId : undefined;
 
   const lastEvent = events[events.length - 1];
-  const { error: liveError } = await supabase.from("video_live_sessions").upsert({ video_id: video.id, user_id: video.user_id, session_id: sessionId, country_code: country.length === 2 ? country : "XX", device_type: context.device, progress_percent: lastEvent.progressPercent, last_seen_at: new Date().toISOString(), ...(viewerId ? { viewer_id: viewerId } : {}) }, { onConflict: "video_id,session_id" });
-  if (liveError) return NextResponse.json({ error: "live_session_write_failed" }, { status: 500 });
+  const countryCode = country.length === 2 ? country : "XX";
+  const lastSeenAt = new Date();
+  try {
+    // Upsert com a MESMA chave de antes (video_id, session_id — PK composta de
+    // video_live_sessions). viewer_id entra no update apenas quando presente —
+    // sem viewer, o valor anterior permanece (mesma semântica de omitir o campo
+    // no payload do upsert anterior).
+    const liveUpsert = {
+      userId: video.userId,
+      countryCode,
+      deviceType: context.device,
+      progressPercent: lastEvent.progressPercent,
+      lastSeenAt,
+      ...(viewerId ? { viewerId } : {}),
+    };
+    await db
+      .insert(videoLiveSessions)
+      .values({ videoId: video.id, sessionId, ...liveUpsert })
+      .onConflictDoUpdate({ target: [videoLiveSessions.videoId, videoLiveSessions.sessionId], set: liveUpsert });
+  } catch {
+    return NextResponse.json({ error: "live_session_write_failed" }, { status: 500 });
+  }
 
   const actionable = events.filter((event) => event.eventType !== "heartbeat");
   if (actionable.length === 0) return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
@@ -137,7 +168,7 @@ export async function POST(request: Request) {
   // negados aqui. O consumo real é exposto em /api/account/overview.
   let quotaHeaders: Record<string, string> = {};
   try {
-    const [plan, monthPlays] = await Promise.all([getAccountPlan(video.user_id), getMonthPlaysUsed(video.user_id)]);
+    const [plan, monthPlays] = await Promise.all([getAccountPlan(video.userId), getMonthPlaysUsed(video.userId)]);
     const limit = plan.quotas.includedPlays;
     if (limit !== null && limit !== undefined) {
       quotaHeaders = {
@@ -154,37 +185,54 @@ export async function POST(request: Request) {
     const riskReasons = riskReasonsFor(context.ua, event);
     const riskScore = Math.min(100, riskReasons.reduce((score, reason) => score + (reason === "missing_user_agent" ? 25 : 50), 0));
     return {
-      user_id: video.user_id, video_id: video.id, session_id: sessionId, event_type: event.eventType, progress_percent: event.progressPercent, watched_seconds: event.watchedSeconds,
-      country_code: country.length === 2 ? country : "XX", device_type: context.device, os_name: context.os, browser_name: context.browser, traffic_source: page.source,
-      page_url: page.pageUrl, campaign_id: first(page.params, ["campaign_id", "fb_campaign_id", "utm_campaign"]), creative_id: first(page.params, ["creative_id", "adset_id", "utm_content"]),
-      ad_id: first(page.params, ["ad_id", "fb_ad_id"]), utm_source: first(page.params, ["utm_source"]), utm_medium: first(page.params, ["utm_medium"]), utm_campaign: first(page.params, ["utm_campaign"]), risk_score: riskScore, risk_reasons: riskReasons,
-      transaction_id: event.transactionId, conversion_value: event.value, currency: event.currency, advertising_consent: event.advertisingConsent,
-      ...(viewerId ? { viewer_id: viewerId } : {}),
+      userId: video.userId, videoId: video.id, sessionId, eventType: event.eventType, progressPercent: event.progressPercent, watchedSeconds: String(event.watchedSeconds),
+      countryCode, deviceType: context.device, osName: context.os, browserName: context.browser, trafficSource: page.source,
+      pageUrl: page.pageUrl, campaignId: first(page.params, ["campaign_id", "fb_campaign_id", "utm_campaign"]), creativeId: first(page.params, ["creative_id", "adset_id", "utm_content"]),
+      adId: first(page.params, ["ad_id", "fb_ad_id"]), utmSource: first(page.params, ["utm_source"]), utmMedium: first(page.params, ["utm_medium"]), utmCampaign: first(page.params, ["utm_campaign"]), riskScore, riskReasons,
+      transactionId: event.transactionId, conversionValue: event.value === null ? null : String(event.value), currency: event.currency, advertisingConsent: event.advertisingConsent,
+      ...(viewerId ? { viewerId } : {}),
     };
   });
 
-  const { data: writtenRows, error } = await supabase.from("video_events")
-    .upsert(persisting, { onConflict: "video_id,session_id,event_type,progress_percent", ignoreDuplicates: true })
-    .select("id,event_type,progress_percent");
-  if (error && error.code !== "23505") return NextResponse.json({ error: "event_write_failed" }, { status: 500 });
+  // Chave de dedupe (video_id,session_id,event_type,
+  // progress_percent => video_events_session_event_key). DO NOTHING absorve
+  // duplicatas — inclusive dentro do mesmo lote — e `.returning()` devolve só
+  // as linhas realmente persistidas, que é o que o after() usa.
+  let writtenRows: Array<{ eventType: string; progressPercent: number }> = [];
+  try {
+    writtenRows = await db
+      .insert(videoEvents)
+      .values(persisting)
+      .onConflictDoNothing({ target: [videoEvents.videoId, videoEvents.sessionId, videoEvents.eventType, videoEvents.progressPercent] })
+      .returning({ eventType: videoEvents.eventType, progressPercent: videoEvents.progressPercent });
+  } catch {
+    return NextResponse.json({ error: "event_write_failed" }, { status: 500 });
+  }
 
   const persistedKeys = persistedEventKeys(writtenRows);
   const playerConfig = (player.config && typeof player.config === "object" ? player.config : {}) as Record<string, unknown>;
-  const videoInfo = { id: video.id, user_id: video.user_id, title: video.title };
+  const videoInfo = { id: video.id, user_id: video.userId, title: video.title };
   // RM-03 item 2: IP confiável da plataforma, nunca o `x-forwarded-for` do cliente.
   const peerIp = platformPeerIp(request);
   after(async () => {
-    const supabaseInner = createAdminClient();
     for (const event of actionable) {
       if (!persistedKeys.has(`${event.eventType}:${event.progressPercent}`)) continue;
       // RM-03 item 2: requisição não-first-party (só pode ser conversões) não
       // dispara efeitos laterais pagos (webhook + CAPI). O atacante que forja
       // Origin batendo com o host do token ainda falha aqui.
       if (!firstPartyOrigin) continue;
-      const [{ data: controls }, plan] = await Promise.all([
-        supabaseInner.from("intelligence_controls").select("outgoing_webhooks_enabled,webhook_url,webhook_events").eq("user_id", videoInfo.user_id).maybeSingle(),
-        getAccountPlan(videoInfo.user_id),
-      ]);
+      let controls: { outgoingWebhooksEnabled: boolean; webhookUrl: string | null; webhookEvents: string[] } | undefined;
+      let plan: Awaited<ReturnType<typeof getAccountPlan>>;
+      try {
+        const [controlRows, planResult] = await Promise.all([
+          db.select({ outgoingWebhooksEnabled: intelligenceControls.outgoingWebhooksEnabled, webhookUrl: intelligenceControls.webhookUrl, webhookEvents: intelligenceControls.webhookEvents }).from(intelligenceControls).where(eq(intelligenceControls.userId, videoInfo.user_id)).limit(1),
+          getAccountPlan(videoInfo.user_id),
+        ]);
+        controls = controlRows[0];
+        plan = planResult;
+      } catch {
+        continue;
+      }
       if (event.eventType === "conversion" && event.advertisingConsent) {
         await deliverServerPurchase({
           integrations: pixelIntegrations(playerConfig),
@@ -200,8 +248,8 @@ export async function POST(request: Request) {
       // Webhook de saída é recurso de plano superior: a checagem existia apenas na
       // tela, então quem tivesse ativado a chave uma vez continuava recebendo.
       if (!plan.capabilities.outgoing_webhooks) continue;
-      if (controls?.outgoing_webhooks_enabled && controls.webhook_url && Array.isArray(controls.webhook_events) && controls.webhook_events.includes(event.eventType)) {
-        await deliverWebhook(controls.webhook_url, { id: randomUUID(), event: `vsl.${event.eventType}`, timestamp: new Date().toISOString(), data: { video_id: videoInfo.id, video_title: videoInfo.title, session_id: sessionId, progress_percent: event.progressPercent, watched_seconds: event.watchedSeconds, country_code: country, device_type: context.device } }).catch(() => undefined);
+      if (controls?.outgoingWebhooksEnabled && controls.webhookUrl && Array.isArray(controls.webhookEvents) && controls.webhookEvents.includes(event.eventType)) {
+        await deliverWebhook(controls.webhookUrl, { id: randomUUID(), event: `vsl.${event.eventType}`, timestamp: new Date().toISOString(), data: { video_id: videoInfo.id, video_title: videoInfo.title, session_id: sessionId, progress_percent: event.progressPercent, watched_seconds: event.watchedSeconds, country_code: country, device_type: context.device } }).catch(() => undefined);
       }
     }
   });

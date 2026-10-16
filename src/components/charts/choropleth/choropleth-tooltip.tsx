@@ -128,4 +128,3 @@ export function ChoroplethTooltip({
 
 ChoroplethTooltip.displayName = "ChoroplethTooltip";
 
-export default ChoroplethTooltip;

@@ -1,8 +1,12 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { lt, sql } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
 import { SECURITY } from "@/lib/constants";
+
+const { rateLimits } = schema;
 
 let lastCleanup = 0;
 
@@ -11,8 +15,7 @@ async function cleanupExpired(): Promise<void> {
   if (now - lastCleanup < SECURITY.RATE_LIMIT_CLEANUP_INTERVAL_MS) return;
   lastCleanup = now;
   try {
-    const admin = createAdminClient();
-    await admin.rpc("cleanup_rate_limits");
+    await db.delete(rateLimits).where(lt(rateLimits.expiresAt, new Date()));
   } catch {
   }
 }
@@ -84,31 +87,44 @@ export type RateLimitResult =
   | { limited: false; headers: Record<string, string> };
 
 /**
- * `failClosed` decides what happens when the counter store is unreachable.
- * Authentication-adjacent endpoints pass `true` so an outage cannot silently
- * disable brute-force protection; telemetry endpoints stay open so a database
- * hiccup does not drop customer analytics.
+ * Incremento atômico em janela fixa (equivalente ao upsert da migration
+ * `20260721120000_atomic_rate_limit.sql`): INSERT ... ON CONFLICT (key) DO
+ * UPDATE ... RETURNING executa leitura e escrita numa única statement, então
+ * requisições concorrentes com a mesma chave nunca leem a mesma contagem —
+ * o padrão read-then-update antigo deixava a rajada passar do limite.
+ *
+ * A janela é fixa: o primeiro hit define `expires_at` e os hits seguintes
+ * apenas incrementam até a janela expirar. Janela deslizante prendia o
+ * cliente em bloqueio permanente enquanto ele continuasse tentando.
  */
 export async function consumeRateLimit(request: Request, scope: string, options: RateLimitOptions): Promise<RateLimitResult> {
   await cleanupExpired();
 
   // A janela chegava como NaN quando a variável de ambiente usava "60_000";
-  // o valor virava `null` no RPC e a janela caía para 1 segundo.
+  // o valor virava `null` na janela e ela caía para 1 segundo.
   const windowMs = Number.isFinite(options.windowMs) && options.windowMs > 0 ? Math.round(options.windowMs) : 60_000;
+  const windowSeconds = Math.max(windowMs, 1000) / 1000;
   const key = `${scope}:${options.identifier ?? clientIp(request)}`;
 
   try {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-      .rpc("consume_rate_limit", { p_key: key, p_window_ms: windowMs })
-      .maybeSingle<{ hit_count: number; window_expires_at: string }>();
+    const [hit] = await db
+      .insert(rateLimits)
+      .values({ key, count: 1, expiresAt: new Date(Date.now() + windowMs) })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: sql`case when ${rateLimits.expiresAt} <= now() then 1 else ${rateLimits.count} + 1 end`,
+          expiresAt: sql`case when ${rateLimits.expiresAt} <= now() then now() + make_interval(secs => ${windowSeconds}) else ${rateLimits.expiresAt} end`,
+        },
+      })
+      .returning({ hitCount: rateLimits.count, windowExpiresAt: rateLimits.expiresAt });
 
-    if (error || !data) throw error ?? new Error("rate_limit_unavailable");
-    const resetEpochSeconds = Math.ceil(new Date(data.window_expires_at).getTime() / 1000);
-    if (data.hit_count <= options.max) {
-      return { limited: false, headers: limitHeaders(options.max, options.max - data.hit_count, resetEpochSeconds) };
+    if (!hit) throw new Error("rate_limit_unavailable");
+    const resetEpochSeconds = Math.ceil(hit.windowExpiresAt.getTime() / 1000);
+    if (hit.hitCount <= options.max) {
+      return { limited: false, headers: limitHeaders(options.max, options.max - hit.hitCount, resetEpochSeconds) };
     }
-    const retryAfter = Math.ceil((new Date(data.window_expires_at).getTime() - Date.now()) / 1000);
+    const retryAfter = Math.ceil((hit.windowExpiresAt.getTime() - Date.now()) / 1000);
     return { limited: true, response: limitedResponse(options.max, retryAfter, resetEpochSeconds) };
   } catch {
     const resetEpochSeconds = Math.ceil((Date.now() + windowMs) / 1000);

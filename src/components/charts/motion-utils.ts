@@ -16,7 +16,7 @@ export interface SpringOptions {
   mass?: number;
 }
 
-export function springOptionsFromTransition(
+function springOptionsFromTransition(
   transition?: Transition,
   fallback: SpringOptions = { stiffness: 60, damping: 20 }
 ): SpringOptions {

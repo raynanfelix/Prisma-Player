@@ -1,13 +1,33 @@
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+
 import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { purgeEmbedManifest } from "@/lib/cache/embed-purge";
 import { normalizePixelConfig, pixelConfigErrors } from "@/lib/player/pixels";
 import { rateLimit } from "@/lib/security/rate-limit";
 
+const { playerConfigs, videos } = schema;
+
 const MAX_CONFIG_BYTES = 100_000;
+
+type PlayerConfigRow = typeof playerConfigs.$inferSelect;
+
+/** Contrato da UI: colunas snake_case como o SDK antigo devolvia. */
+function serializePlayerConfig(row: PlayerConfigRow) {
+  return {
+    id: row.id,
+    user_id: row.userId,
+    video_id: row.videoId,
+    config: row.config,
+    allowed_domains: row.allowedDomains,
+    published: row.published,
+    created_at: row.createdAt.toISOString(),
+    updated_at: row.updatedAt.toISOString(),
+  };
+}
 
 export async function GET(request: Request) {
   const gate = await guard(request, { paid: true });
@@ -16,13 +36,24 @@ export async function GET(request: Request) {
 
   const videoId = new URL(request.url).searchParams.get("videoId");
   if (!videoId) return NextResponse.json({ error: "invalid_video_id" }, { status: 400 });
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.from("player_configs").select("id, config, allowed_domains, published, updated_at").eq("video_id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
-  if (error) return NextResponse.json({ error: "config_load_failed" }, { status: 400 });
-  // Leitura pura: a normalização legada de `radius` acontece no PUT e no
-  // embed em leitura. Escrever aqui transformava um GET autenticado numa
-  // mutação sem CSRF e sem paywall.
-  return NextResponse.json({ playerConfig: data });
+
+  try {
+    const [row] = await db
+      .select({ id: playerConfigs.id, config: playerConfigs.config, allowedDomains: playerConfigs.allowedDomains, published: playerConfigs.published, updatedAt: playerConfigs.updatedAt })
+      .from(playerConfigs)
+      .where(and(eq(playerConfigs.videoId, videoId), eq(playerConfigs.userId, account.accountOwnerId)))
+      .limit(1);
+    // Leitura pura: a normalização legada de `radius` acontece no PUT e no
+    // embed em leitura. Escrever aqui transformava um GET autenticado numa
+    // mutação sem CSRF e sem paywall.
+    return NextResponse.json({
+      playerConfig: row
+        ? { id: row.id, config: row.config, allowed_domains: row.allowedDomains, published: row.published, updated_at: row.updatedAt.toISOString() }
+        : null,
+    });
+  } catch {
+    return NextResponse.json({ error: "config_load_failed" }, { status: 400 });
+  }
 }
 
 export async function PUT(request: Request) {
@@ -39,9 +70,12 @@ export async function PUT(request: Request) {
   if (typeof body?.videoId !== "string" || !body.config || typeof body.config !== "object") return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   if (JSON.stringify(body.config).length > MAX_CONFIG_BYTES) return NextResponse.json({ error: "config_too_large" }, { status: 413 });
 
-  const supabase = createAdminClient();
-  const { data: ownedVideo } = await supabase.from("videos").select("id").eq("id", body.videoId).eq("user_id", account.accountOwnerId).maybeSingle();
-  if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  try {
+    const [ownedVideo] = await db.select({ id: videos.id }).from(videos).where(and(eq(videos.id, body.videoId), eq(videos.userId, account.accountOwnerId))).limit(1);
+    if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  } catch {
+    return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+  }
 
   const domains = Array.isArray(body.domains) ? body.domains.filter((item): item is string => typeof item === "string").slice(0, 100) : [];
   const pixelErrors = pixelConfigErrors(body.config as Record<string, unknown>);
@@ -56,11 +90,27 @@ export async function PUT(request: Request) {
   // pertencem a esta conta, para que nenhum embed consiga assinar arquivo alheio.
   config.assets = ownedAssetPaths(config.assets, account.accountOwnerId);
 
-  const { data, error } = await supabase.from("player_configs").upsert({ user_id: account.accountOwnerId, video_id: body.videoId, config, allowed_domains: domains, published: true, updated_at: new Date().toISOString() }, { onConflict: "video_id" }).select().single();
-  if (error) return NextResponse.json({ error: "config_save_failed" }, { status: 400 });
-  await supabase.from("videos").update({ status: "ready", updated_at: new Date().toISOString() }).eq("id", body.videoId).eq("user_id", account.accountOwnerId);
-  void purgeEmbedManifest(data.id);
-  return NextResponse.json({ playerConfig: data });
+  try {
+    const [row] = await db
+      .insert(playerConfigs)
+      .values({ userId: account.accountOwnerId, videoId: body.videoId, config, allowedDomains: domains, published: true, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: playerConfigs.videoId,
+        set: { config, allowedDomains: domains, published: true, updatedAt: new Date() },
+      })
+      .returning();
+    // Reafirma o vídeo como pronto (best effort, como antes: erro aqui não
+    // invalida a config já salva).
+    await db
+      .update(videos)
+      .set({ status: "ready", updatedAt: new Date() })
+      .where(and(eq(videos.id, body.videoId), eq(videos.userId, account.accountOwnerId)))
+      .catch(() => undefined);
+    void purgeEmbedManifest(row.id);
+    return NextResponse.json({ playerConfig: serializePlayerConfig(row) });
+  } catch {
+    return NextResponse.json({ error: "config_save_failed" }, { status: 400 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -76,18 +126,34 @@ export async function POST(request: Request) {
   const videoId = parsed.body?.videoId;
   if (typeof videoId !== "string") return NextResponse.json({ error: "invalid_video_id" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data: ownedVideo } = await supabase.from("videos").select("id").eq("id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
-  if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
-  const { data: existing } = await supabase.from("player_configs").select("id,published").eq("video_id", videoId).eq("user_id", account.accountOwnerId).maybeSingle();
-  if (existing) {
-    if (!existing.published) {
-      await supabase.from("player_configs").update({ published: true, updated_at: new Date().toISOString() }).eq("id", existing.id).eq("user_id", account.accountOwnerId);
-      void purgeEmbedManifest(existing.id);
+  try {
+    const [ownedVideo] = await db.select({ id: videos.id }).from(videos).where(and(eq(videos.id, videoId), eq(videos.userId, account.accountOwnerId))).limit(1);
+    if (!ownedVideo) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
+
+    const [existing] = await db
+      .select({ id: playerConfigs.id, published: playerConfigs.published })
+      .from(playerConfigs)
+      .where(and(eq(playerConfigs.videoId, videoId), eq(playerConfigs.userId, account.accountOwnerId)))
+      .limit(1);
+    if (existing) {
+      if (!existing.published) {
+        await db
+          .update(playerConfigs)
+          .set({ published: true, updatedAt: new Date() })
+          .where(and(eq(playerConfigs.id, existing.id), eq(playerConfigs.userId, account.accountOwnerId)))
+          .catch(() => undefined);
+        void purgeEmbedManifest(existing.id);
+      }
+      return NextResponse.json({ playerConfig: { id: existing.id, published: true } });
     }
-    return NextResponse.json({ playerConfig: { ...existing, published: true } });
+
+    const [row] = await db
+      .insert(playerConfigs)
+      .values({ userId: account.accountOwnerId, videoId, config: {}, allowedDomains: [], published: true })
+      .returning({ id: playerConfigs.id, published: playerConfigs.published });
+    void purgeEmbedManifest(row.id);
+    return NextResponse.json({ playerConfig: row }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "player_create_failed" }, { status: 400 });
   }
-  const { data, error } = await supabase.from("player_configs").insert({ user_id: account.accountOwnerId, video_id: videoId, config: {}, allowed_domains: [], published: true }).select("id,published").single();
-  if (data) void purgeEmbedManifest(data.id);
-  return error ? NextResponse.json({ error: "player_create_failed" }, { status: 400 }) : NextResponse.json({ playerConfig: data }, { status: 201 });
 }

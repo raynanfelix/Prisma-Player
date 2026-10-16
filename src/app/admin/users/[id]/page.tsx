@@ -1,13 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { AdminHeader, AdminMetric, AdminPanel, StatusPill } from "@/components/admin/AdminUi";
 import UserActions from "@/components/admin/UserActions";
 import { isSubscriptionEffective, subscriptionDisplayStatus } from "@/lib/access/service";
 import { CreditCard, HardDrive, Radio, Video, Wallet } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { db, schema } from "@/lib/db";
+import { isoOrNull } from "@/lib/datetime";
+import { formatBrlFromCents as money } from "@/lib/format/money";
+
+const {
+  accountAccess,
+  adminAuditLog,
+  aiCreditLedger,
+  aiCreditWallets,
+  billingCheckouts,
+  billingPlans,
+  profiles,
+  subscriptions,
+  videoEvents,
+  videos: videosTable,
+} = schema;
 
 export const dynamic = "force-dynamic";
-const money = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -17,38 +32,119 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!uuid.test(id)) notFound();
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id,email,full_name,created_at").eq("id", id).maybeSingle();
-  if (!profile) notFound();
+  const [profileRow] = await db.select({ id: profiles.id, email: profiles.email, fullName: profiles.fullName, createdAt: profiles.createdAt })
+    .from(profiles).where(eq(profiles.id, id)).limit(1);
+  if (!profileRow) notFound();
 
-  const [subscriptionRes, accessRes, walletRes, videosRes, checkoutsRes, eventsRes, ledgerRes, logsRes, plansRes] = await Promise.all([
-    admin.from("subscriptions").select("status,billing_method,current_period_start,current_period_end,cancelled_at,plan:billing_plans(slug,name,amount_cents,storage_gb,included_plays,team_seats)").eq("user_id", id).maybeSingle(),
-    admin.from("account_access").select("trial_status,trial_ends_at,onboarding_completed").eq("user_id", id).maybeSingle(),
-    admin.from("ai_credit_wallets").select("balance,lifetime_purchased,lifetime_used").eq("user_id", id).maybeSingle(),
-    admin.from("videos").select("id,title,status,size_bytes,created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(50),
-    admin.from("billing_checkouts").select("id,amount_cents,checkout_type,status,paid_at,created_at,plan:billing_plans(name)").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-    admin.from("video_events").select("id", { count: "exact", head: true }).eq("user_id", id),
-    admin.from("ai_credit_ledger").select("amount,reason,reference,created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-    admin.from("admin_audit_log").select("action,admin_user_id,details,created_at").eq("target_user_id", id).order("created_at", { ascending: false }).limit(20),
-    admin.from("billing_plans").select("slug,name").eq("is_active", true).order("display_order"),
+  const [subscriptionRows, accessRows, walletRows, videoRows, checkoutRows, eventsCountRows, ledgerRows, logRows, planRows] = await Promise.all([
+    db.select({
+      status: subscriptions.status,
+      billingMethod: subscriptions.billingMethod,
+      currentPeriodStart: subscriptions.currentPeriodStart,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      planSlug: billingPlans.slug,
+      planName: billingPlans.name,
+      planAmountCents: billingPlans.amountCents,
+      planStorageGb: billingPlans.storageGb,
+      planIncludedPlays: billingPlans.includedPlays,
+      planTeamSeats: billingPlans.teamSeats,
+    })
+      .from(subscriptions)
+      .leftJoin(billingPlans, eq(billingPlans.id, subscriptions.planId))
+      .where(eq(subscriptions.userId, id))
+      .limit(1),
+    db.select({ trialStatus: accountAccess.trialStatus, trialEndsAt: accountAccess.trialEndsAt, onboardingCompleted: accountAccess.onboardingCompleted })
+      .from(accountAccess).where(eq(accountAccess.userId, id)).limit(1),
+    db.select({ balance: aiCreditWallets.balance, lifetimePurchased: aiCreditWallets.lifetimePurchased, lifetimeUsed: aiCreditWallets.lifetimeUsed })
+      .from(aiCreditWallets).where(eq(aiCreditWallets.userId, id)).limit(1),
+    db.select({ id: videosTable.id, title: videosTable.title, status: videosTable.status, sizeBytes: videosTable.sizeBytes, createdAt: videosTable.createdAt })
+      .from(videosTable).where(eq(videosTable.userId, id)).orderBy(desc(videosTable.createdAt)).limit(50),
+    db.select({
+      id: billingCheckouts.id,
+      amountCents: billingCheckouts.amountCents,
+      checkoutType: billingCheckouts.checkoutType,
+      status: billingCheckouts.status,
+      paidAt: billingCheckouts.paidAt,
+      createdAt: billingCheckouts.createdAt,
+      planName: billingPlans.name,
+    })
+      .from(billingCheckouts)
+      .leftJoin(billingPlans, eq(billingPlans.id, billingCheckouts.planId))
+      .where(eq(billingCheckouts.userId, id))
+      .orderBy(desc(billingCheckouts.createdAt))
+      .limit(20),
+    db.select({ count: sql<number>`count(*)::int` }).from(videoEvents).where(eq(videoEvents.userId, id)),
+    db.select({ amount: aiCreditLedger.amount, reason: aiCreditLedger.reason, reference: aiCreditLedger.reference, createdAt: aiCreditLedger.createdAt })
+      .from(aiCreditLedger).where(eq(aiCreditLedger.userId, id)).orderBy(desc(aiCreditLedger.createdAt)).limit(20),
+    db.select({ action: adminAuditLog.action, adminUserId: adminAuditLog.adminUserId, details: adminAuditLog.details, createdAt: adminAuditLog.createdAt })
+      .from(adminAuditLog).where(eq(adminAuditLog.targetUserId, id)).orderBy(desc(adminAuditLog.createdAt)).limit(20),
+    db.select({ slug: billingPlans.slug, name: billingPlans.name }).from(billingPlans).where(eq(billingPlans.isActive, true)).orderBy(asc(billingPlans.displayOrder)),
   ]);
-  const subscription = subscriptionRes.data;
-  const access = accessRes.data;
-  const wallet = walletRes.data;
-  const videos = videosRes.data ?? [];
-  const checkouts = checkoutsRes.data ?? [];
-  const ledger = ledgerRes.data ?? [];
-  const logs = logsRes.data ?? [];
-  const plans = plansRes.data ?? [];
-  const eventsCount = eventsRes.count ?? 0;
 
-  const plan = Array.isArray(subscription?.plan) ? subscription.plan[0] : subscription?.plan;
+  const subscription = subscriptionRows[0] ? {
+    status: subscriptionRows[0].status,
+    billing_method: subscriptionRows[0].billingMethod,
+    current_period_start: isoOrNull(subscriptionRows[0].currentPeriodStart),
+    current_period_end: isoOrNull(subscriptionRows[0].currentPeriodEnd),
+    plan: subscriptionRows[0].planSlug ? {
+      slug: subscriptionRows[0].planSlug,
+      name: subscriptionRows[0].planName ?? "",
+      amount_cents: subscriptionRows[0].planAmountCents ?? 0,
+      storage_gb: subscriptionRows[0].planStorageGb ?? 0,
+      included_plays: subscriptionRows[0].planIncludedPlays ?? 0,
+      team_seats: subscriptionRows[0].planTeamSeats ?? 1,
+    } : null,
+  } : null;
+  const access = accessRows[0] ? {
+    trial_status: accessRows[0].trialStatus,
+    trial_ends_at: isoOrNull(accessRows[0].trialEndsAt),
+    onboarding_completed: accessRows[0].onboardingCompleted,
+  } : null;
+  const wallet = walletRows[0] ?? null;
+  const videos = videoRows.map((video) => ({
+    id: video.id,
+    title: video.title,
+    status: video.status,
+    size_bytes: video.sizeBytes,
+    created_at: video.createdAt.toISOString(),
+  }));
+  const checkouts = checkoutRows.map((checkout) => ({
+    id: checkout.id,
+    amount_cents: checkout.amountCents,
+    checkout_type: checkout.checkoutType,
+    status: checkout.status,
+    paid_at: isoOrNull(checkout.paidAt),
+    created_at: checkout.createdAt.toISOString(),
+    plan: checkout.planName ? { name: checkout.planName } : null,
+  }));
+  const ledger = ledgerRows.map((entry) => ({
+    amount: entry.amount,
+    reason: entry.reason,
+    reference: entry.reference,
+    created_at: entry.createdAt.toISOString(),
+  }));
+  const logs = logRows.map((log) => ({
+    action: log.action,
+    admin_user_id: log.adminUserId,
+    details: log.details,
+    created_at: log.createdAt.toISOString(),
+  }));
+  const plans = planRows;
+  const eventsCount = eventsCountRows[0]?.count ?? 0;
+  const profile = {
+    id: profileRow.id,
+    email: profileRow.email,
+    full_name: profileRow.fullName,
+    created_at: profileRow.createdAt.toISOString(),
+  };
+
+  const plan = subscription?.plan ?? null;
   const storageBytes = videos.reduce((sum, item) => sum + Number(item.size_bytes || 0), 0);
   const storageGb = storageBytes / 1024 ** 3;
   const quotaGb = plan?.storage_gb ?? 5;
   const adminIds = [...new Set(logs.map((log) => log.admin_user_id))];
-  const operators = adminIds.length ? await admin.from("profiles").select("id,email").in("id", adminIds) : { data: [] as Array<{ id: string; email: string }> };
-  const operatorEmail = new Map((operators.data ?? []).map((item) => [item.id, item.email]));
+  const operators = adminIds.length ? await db.select({ id: profiles.id, email: profiles.email }).from(profiles).where(inArray(profiles.id, adminIds)) : [];
+  const operatorEmail = new Map(operators.map((item) => [item.id, item.email]));
   const actionLabel: Record<string, string> = { plan_change: "Troca de plano", subscription_suspend: "Suspensão", subscription_reactivate: "Reativação", trial_extend: "Trial estendido", trial_reset: "Trial resetado", credit_adjust: "Ajuste de créditos" };
 
   return <div>
@@ -57,7 +153,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       <AdminMetric label="Assinatura" value={subscriptionDisplayStatus(subscription ?? null)} detail={plan ? `${plan.name} · ${money(plan.amount_cents)}/mês` : "sem plano"} icon={CreditCard} tone={isSubscriptionEffective(subscription ?? null) ? "green" : "red"} />
       <AdminMetric label="Trial" value={access?.trial_status ?? "—"} detail={access?.trial_ends_at ? `até ${new Date(access.trial_ends_at).toLocaleDateString("pt-BR")}` : "sem trial ativo"} icon={Video} />
       <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`limite ${quotaGb} GB · ${videos.length} vídeos`} icon={HardDrive} tone={storageGb > quotaGb ? "red" : "blue"} />
-      <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetime_used ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
+      <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetimeUsed ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
     </section>
 
     <div className="mt-6"><AdminPanel title="Ações de suporte" description="Toda ação exige confirmação e motivo, e entra na trilha abaixo."><div className="max-w-xl p-5"><UserActions userId={id} email={profile.email} plans={plans} subStatus={subscription?.status ?? null} /></div></AdminPanel></div>

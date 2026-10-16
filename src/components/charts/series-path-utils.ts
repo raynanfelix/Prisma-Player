@@ -1,5 +1,5 @@
 import { line as d3Line } from "d3-shape";
-import type { CurveFactory } from "@visx/vendor/d3-shape";
+import type { CurveFactory } from "d3-shape";
 
 export interface SeriesPathPoint {
   x: number;

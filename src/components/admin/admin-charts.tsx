@@ -15,9 +15,7 @@ import {
   RingLegend,
   type RingData,
 } from "@/components/charts";
-
-const money = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { formatBrlFromCents as money } from "@/lib/format/money";
 
 export interface AdminRevenueChartProps {
   series: { date: string; value: number }[];

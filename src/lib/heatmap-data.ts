@@ -56,7 +56,7 @@ export function buildHeatmapColumns(
  * calibrados para contagem de commits — com centenas de plays por dia todos os
  * dias cairiam no nível máximo e o mapa ficaria chapado.
  */
-export function buildQuantileColorScale(
+function buildQuantileColorScale(
   columns: HeatmapColumn[],
   levelColors: readonly string[],
 ): (count: number | null | undefined) => string {

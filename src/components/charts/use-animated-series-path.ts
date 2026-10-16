@@ -2,7 +2,7 @@
 
 import { animate, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CurveFactory } from "@visx/vendor/d3-shape";
+import type { CurveFactory } from "d3-shape";
 import { LINE_LOADING_PULSE_EASE } from "./line-loading-timing";
 import {
   computeSeriesPathPoints,

@@ -2,18 +2,18 @@ import type { HeatmapLevelStyles } from "./heatmap-colors";
 import type { HeatmapBin, HeatmapColumn } from "./heatmap-context";
 
 /** Calendar months shown in default one-year contribution grids. */
-export const HEATMAP_MONTHS_ONE_YEAR = 12;
+const HEATMAP_MONTHS_ONE_YEAR = 12;
 
 /** Half-year contribution grids (gallery card demos). */
-export const HEATMAP_MONTHS_SIX = 6;
+const HEATMAP_MONTHS_SIX = 6;
 
 /** Nominal week count for one year (~52). Default data uses calendar-month math instead. */
-export const HEATMAP_WEEKS_ONE_YEAR = 52;
+const HEATMAP_WEEKS_ONE_YEAR = 52;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_WEEK = MS_PER_DAY * 7;
 
-export function getHeatmapCalendarRangeStart(
+function getHeatmapCalendarRangeStart(
   today: Date,
   months: number
 ): Date {
@@ -27,18 +27,18 @@ export function getHeatmapCalendarRangeStart(
   return start;
 }
 
-export function getHeatmapYearStartMonth(today: Date): Date {
+function getHeatmapYearStartMonth(today: Date): Date {
   return getHeatmapCalendarRangeStart(today, HEATMAP_MONTHS_ONE_YEAR);
 }
 
-export function getHeatmapWeekStartSunday(date: Date): Date {
+function getHeatmapWeekStartSunday(date: Date): Date {
   const sunday = new Date(date);
   sunday.setDate(sunday.getDate() - sunday.getDay());
   sunday.setHours(0, 0, 0, 0);
   return sunday;
 }
 
-export function getHeatmapWeekCount(startSunday: Date, endDate: Date): number {
+function getHeatmapWeekCount(startSunday: Date, endDate: Date): number {
   const endSunday = getHeatmapWeekStartSunday(endDate);
   return (
     Math.floor((endSunday.getTime() - startSunday.getTime()) / MS_PER_WEEK) + 1
@@ -46,7 +46,7 @@ export function getHeatmapWeekCount(startSunday: Date, endDate: Date): number {
 }
 
 /** Days in a Sun–Sat column on or after `threshold` (for trimming partial lead weeks). */
-export function countHeatmapWeekDaysOnOrAfter(
+function countHeatmapWeekDaysOnOrAfter(
   weekStart: Date,
   threshold: Date
 ): number {
@@ -70,7 +70,7 @@ export function countHeatmapWeekDaysOnOrAfter(
  * First Sunday week column where enough days fall on/after `rangeStart`.
  * Skips a lead week that is mostly before the range (e.g. late July before Aug 1).
  */
-export function getHeatmapWeekStartAlignedToRange(
+function getHeatmapWeekStartAlignedToRange(
   rangeStart: Date,
   minDaysInFirstWeek = 4
 ): Date {
@@ -93,7 +93,7 @@ export function getHeatmapWeekStartAlignedToRange(
 }
 
 /** Column index for a month label — snaps to separator group start when layout is set. */
-export function getHeatmapMonthLabelColumnIndex(
+function getHeatmapMonthLabelColumnIndex(
   columnIndex: number,
   separatorLayout: Pick<HeatmapSeparatorLayout, "atColumns"> | null
 ): number {
@@ -115,7 +115,7 @@ export interface HeatmapWeekRange {
 }
 
 /** Default `weeks` uses 12 calendar months; other values use a rolling week window. */
-export function resolveHeatmapWeekRange(
+function resolveHeatmapWeekRange(
   today: Date,
   weeks: number = HEATMAP_WEEKS_ONE_YEAR
 ): HeatmapWeekRange {
@@ -162,11 +162,11 @@ export function getHeatmapColumnMonthAnchor(
   return new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
 }
 
-export function getHeatmapColumnStartDate(column: HeatmapColumn): Date | null {
+function getHeatmapColumnStartDate(column: HeatmapColumn): Date | null {
   return column.bins[0]?.date ?? null;
 }
 
-export function getHeatmapColumnEndDate(column: HeatmapColumn): Date | null {
+function getHeatmapColumnEndDate(column: HeatmapColumn): Date | null {
   const lastBin = column.bins.at(-1);
   return lastBin?.date ?? null;
 }
@@ -244,7 +244,7 @@ export function formatHeatmapContributionLabel(count: number): string {
 }
 
 /** PATCH LOCAL — rótulos das linhas em pt-BR, começando no domingo. */
-export const HEATMAP_DAY_LABELS = [
+const HEATMAP_DAY_LABELS = [
   "Dom",
   "Seg",
   "Ter",
@@ -415,14 +415,14 @@ export function resolveHeatmapSeparatorStrokeDasharray(
 }
 
 /** Calendar quarter (1–4) for Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec. */
-export function getCalendarQuarter(date: Date): number {
+function getCalendarQuarter(date: Date): number {
   return Math.floor(date.getMonth() / 3) + 1;
 }
 
 const CALENDAR_QUARTER_START_MONTHS = [0, 3, 6, 9] as const;
 
 /** Jan/Apr/Jul/Oct 1 dates strictly after `gridStart` and on or before `gridEnd`. */
-export function getCalendarQuarterStartDatesBetween(
+function getCalendarQuarterStartDatesBetween(
   gridStart: Date,
   gridEnd: Date
 ): Date[] {
@@ -449,7 +449,7 @@ export function getCalendarQuarterStartDatesBetween(
 }
 
 /** Week column index whose Sun–Sat span contains `date`. */
-export function findHeatmapColumnIndexForDate(
+function findHeatmapColumnIndexForDate(
   columns: HeatmapColumn[],
   date: Date
 ): number | null {
@@ -480,7 +480,7 @@ export function findHeatmapColumnIndexForDate(
 }
 
 /** Quarter anchor for a week column — prefers the 1st of a quarter month, else the quarter of the first bin. */
-export function getHeatmapColumnQuarterAnchor(column: HeatmapColumn): {
+function getHeatmapColumnQuarterAnchor(column: HeatmapColumn): {
   quarter: number;
   year: number;
   date: Date;
@@ -513,7 +513,7 @@ export function getHeatmapColumnQuarterAnchor(column: HeatmapColumn): {
 }
 
 /** Label column snapped to the start of a separator group. */
-export function getHeatmapSeparatorGroupStartColumn(
+function getHeatmapSeparatorGroupStartColumn(
   columnIndex: number,
   atColumns: number[]
 ): number {
@@ -531,7 +531,7 @@ export function getHeatmapSeparatorGroupStartColumn(
 }
 
 /** Column indices (0-based) where a vertical separator is drawn (fixed interval). */
-export function getHeatmapSeparatorColumnIndices(
+function getHeatmapSeparatorColumnIndices(
   columnCount: number,
   every: number
 ): number[] {
@@ -551,7 +551,7 @@ export function getHeatmapSeparatorColumnIndices(
 }
 
 /** Matches demo-style calendar grids to their range start (Jan 1, etc.). */
-export function inferHeatmapCalendarRangeStart(
+function inferHeatmapCalendarRangeStart(
   columns: HeatmapColumn[]
 ): Date | null {
   const firstColumn = columns[0];
@@ -578,7 +578,7 @@ export function inferHeatmapCalendarRangeStart(
   return null;
 }
 
-export function buildHeatmapQuarterSeparatorGroups(
+function buildHeatmapQuarterSeparatorGroups(
   columns: HeatmapColumn[]
 ): HeatmapSeparatorGroup[] {
   if (columns.length === 0) {
@@ -836,7 +836,7 @@ export function isHeatmapHoverEffectEnabled(
 }
 
 /** Whether inactive hover styling runs (disabled when both props are 1). */
-export function isHeatmapInactiveEffectEnabled(
+function isHeatmapInactiveEffectEnabled(
   inactiveOpacity: number,
   inactiveScale: number
 ): boolean {
@@ -868,7 +868,7 @@ export function resolveHeatmapHoverStyle(
 }
 
 /** Opacity and scale for an inactive cell or legend swatch. */
-export function resolveHeatmapInactiveStyle(
+function resolveHeatmapInactiveStyle(
   isInactive: boolean,
   inactiveOpacity: number,
   inactiveScale: number
@@ -901,7 +901,7 @@ export function resolveHeatmapRowOpacity(
  * Pass explicit row indices (e.g. `[5, 6]` for display Sat/Sun when `weekStartDay={1}`)
  * or a predicate — `(row) => row >= 5` fades the last two rows.
  */
-export function buildHeatmapRowOpacity(
+function buildHeatmapRowOpacity(
   match: readonly number[] | ((row: number) => boolean),
   fadedOpacity = 0.35,
   activeOpacity = 1,

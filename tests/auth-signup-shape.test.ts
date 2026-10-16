@@ -9,19 +9,23 @@ vi.mock("@/lib/security/auth-events", () => ({
   recordAuthFailure: vi.fn(async () => undefined),
 }));
 
-const { signupResult } = vi.hoisted(() => ({
-  signupResult: {
+const { signUpResult } = vi.hoisted(() => ({
+  signUpResult: {
     data: {
-      user: { id: "user-1", email: "a@b.c" },
-      session: { access_token: "SECRET-ACCESS", refresh_token: "SECRET-REFRESH", user: { id: "user-1" } },
+      user: { id: "user-1", email: "a@b.c", name: "A", emailVerified: false },
+      // Token só existe quando o Managed emite sessão imediata (sem
+      // verificação de e-mail obrigatória no branch).
+      token: "SECRET-SESSION-TOKEN" as string | null,
     },
-    error: null,
+    error: null as null | { code?: string; message?: string },
   },
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(async () => ({
-    auth: { signUp: vi.fn(async () => signupResult) },
+vi.mock("@/lib/auth/server", () => ({
+  getAuth: vi.fn(() => ({
+    signUp: {
+      email: vi.fn(async () => signUpResult),
+    },
   })),
 }));
 
@@ -37,15 +41,22 @@ function post(body: unknown, origin = "https://prisma.test") {
 
 describe("signup não expõe sessão (AUTH-02/A11)", () => {
   beforeEach(() => {
-    signupResult.error = null;
+    signUpResult.error = null;
+    signUpResult.data.token = "SECRET-SESSION-TOKEN";
   });
 
   it("responde só { user, hasSession }, sem tokens", async () => {
     const response = await POST(post({ name: "A", email: "a@b.c", password: "segredo123" }));
     expect(response.status).toBe(200);
     const text = await response.text();
-    expect(text).not.toContain("SECRET-ACCESS");
-    expect(text).not.toContain("SECRET-REFRESH");
+    expect(text).not.toContain("SECRET-SESSION-TOKEN");
     expect(JSON.parse(text)).toMatchObject({ user: { id: "user-1" }, hasSession: true });
+  });
+
+  it("sem sessão imediata (e-mail pendente de verificação): hasSession false", async () => {
+    signUpResult.data.token = null;
+    const response = await POST(post({ name: "A", email: "a@b.c", password: "segredo123" }));
+    expect(response.status).toBe(200);
+    expect(JSON.parse(await response.text())).toMatchObject({ user: { id: "user-1" }, hasSession: false });
   });
 });

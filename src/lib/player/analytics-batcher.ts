@@ -28,11 +28,22 @@ export function createAnalyticsBatcher(options: AnalyticsBatcherOptions): Analyt
   };
 
   const flushNow = async () => {
-    if (destroyed || queue.length === 0 || inFlight) return true;
+    if (destroyed) {
+      void queue.splice(0); // clear queue
+      return false;
+    }
+    if (queue.length === 0) return true;
+    if (inFlight) {
+      // already flushing; skip this round, next interval will try again
+      return true;
+    }
     const batch = queue.splice(0);
     inFlight = true;
     let ok = false;
     try {
+      // O contrato de AnalyticsFlushHandler é Promise<boolean> (o chamador
+      // decide o que conta como sucesso, inclusive respostas HTTP 4xx que
+      // já foram processadas pelo servidor).
       ok = await options.flush(batch);
     } catch {
       ok = false;
@@ -42,6 +53,7 @@ export function createAnalyticsBatcher(options: AnalyticsBatcherOptions): Analyt
     if (ok && queue.length > 0) {
       void flushNow();
     } else if (!ok) {
+      // re-encapsulate for retry on next flush cycle
       queue.push(...batch);
     }
     return ok;
