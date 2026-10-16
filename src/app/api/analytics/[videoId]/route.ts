@@ -146,15 +146,17 @@ const DIMENSION_KEYS: Array<[key: string, column: string]> = [
  */
 function dimensionsOf(rows: DimensionSqlRow[]): Record<string, DimensionRow[]> {
   const grouped = new Map<string, Array<{ name: string; impressions: number; plays: number; completes: number }>>();
-  for (const [key] of DIMENSION_KEYS) grouped.set(key, []);
+  // O SQL devolve uma linha por grupo com o nome da COLUNA agregada
+  // ('country_code', ...); o mapa é indexado por ela.
+  for (const [, column] of DIMENSION_KEYS) grouped.set(column, []);
   for (const row of rows) {
     const list = grouped.get(String(row.dimension));
     if (!list) continue;
     list.push({ name: String(row.name ?? "Não informado"), impressions: num(row.impressions), plays: num(row.plays), completes: num(row.completes) });
   }
   const dimensions: Record<string, DimensionRow[]> = {};
-  for (const [key] of DIMENSION_KEYS) {
-    dimensions[key] = (grouped.get(key) ?? [])
+  for (const [key, column] of DIMENSION_KEYS) {
+    dimensions[key] = (grouped.get(column) ?? [])
       .sort((a, b) => b.impressions - a.impressions)
       .slice(0, 30)
       .map((entry) => ({

@@ -122,6 +122,19 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   if (domains.length > 0 && !domainAllowed(host, domains)) return NextResponse.json({ error: "domain_not_allowed" }, { status: 403 });
 
   const config = playerConfig.config && typeof playerConfig.config === "object" ? { ...playerConfig.config } as Record<string, unknown> : {};
+
+  // DRM: "Exigir Token Assinado por Sessão" — quando o dono ativa, a config só
+  // é entregue a requisições identificadas pelo player real (viewerId + sessionId
+  // no query, como o EmbedPlayer sempre envia). Chamadas de API sem sessão são
+  // rejeitadas. Legado (chave ausente) mantém o comportamento atual.
+  if (config.drmSignedTokenEnabled === true) {
+    const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
+    const rawSession = requestUrl.searchParams.get("sessionId") ?? "";
+    if (!isValidViewerId(rawViewer) || !uuid.test(rawSession)) {
+      return NextResponse.json({ error: "session_required" }, { status: 403 });
+    }
+  }
+
   if (Boolean(config.trafficEnabled)) {
     const countryPolicy = String(config.allowedCountries || "Todos").trim().toLowerCase();
     if (countryPolicy === "nenhum") return NextResponse.json({ error: "country_not_allowed" }, { status: 403 });
@@ -205,6 +218,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const sessionIdParam = requestUrl.searchParams.get("sessionId");
   const eventSessionId = sessionIdParam && uuid.test(sessionIdParam) ? sessionIdParam : undefined;
   const eventToken = createBoundEmbedEventTokenSafely({ videoId: video.id, host, sessionId: eventSessionId, nonce: verifiedOrigin.nonce });
+  // IP real do espectador (dado de quem assiste/baixa) para a marca d'água.
+  // Vazio quando o deploy não repassa x-forwarded-for/x-real-ip.
+  const viewerIp = clientIpFromHeaders(request.headers);
 
-  return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.videoId, title: video.title, source, type: video.mimeType, config, eventToken }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
+  return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.videoId, title: video.title, source, type: video.mimeType, config, eventToken, viewerIp }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
 }
