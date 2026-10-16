@@ -386,8 +386,10 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     // botão direito arma fora de hora em qualquer modo (handleVideoContextMenu).
     if (!payload || !Boolean(payload.config.watermarkEnabled)) return;
     if (payload.config.watermarkType === "static") {
-      setWatermarkArmed(true);
-      return;
+      // Arm adiada: setState sincrono no corpo do efeito viola
+      // react-hooks/set-state-in-effect (mesma regra do identityTimer).
+      const armTimer = window.setTimeout(() => setWatermarkArmed(true), 0);
+      return () => window.clearTimeout(armTimer);
     }
     const value = Math.max(3, Math.min(600, Number(payload.config.watermarkIntervalValue) || 10));
     const intervalMs = value * (payload.config.watermarkIntervalUnit === "minute" ? 60_000 : 1_000);
