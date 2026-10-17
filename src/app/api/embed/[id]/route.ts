@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, gt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
-import { createBoundEmbedEventTokenSafely, domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
+import { createBoundEmbedEventTokenSafely, domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
@@ -131,6 +131,16 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
     const rawSession = requestUrl.searchParams.get("sessionId") ?? "";
     if (!isValidViewerId(rawViewer) || !uuid.test(rawSession)) {
+      return NextResponse.json({ error: "session_required" }, { status: 403 });
+    }
+    // Review de segurança (MEDIUM): validar só o FORMATO dos ids não prova
+    // nada — viewerId/sessionId são gerados no cliente e forjáveis; quem tem
+    // originToken+cookie aprovava qualquer par de UUIDs no query. Com o toggle
+    // ativo, a config exige também um sessionToken HMAC mintado pelo servidor
+    // (POST /api/embed/:id/session), amarrado a ESTE player + viewer + sessão +
+    // nonce do render. O par certo sem assinatura do servidor morre aqui.
+    const sessionToken = requestUrl.searchParams.get("sessionToken");
+    if (!sessionToken || !verifyEmbedSessionToken(sessionToken, { playerId: id, viewerId: rawViewer, sessionId: rawSession, nonce: verifiedOrigin.nonce })) {
       return NextResponse.json({ error: "session_required" }, { status: 403 });
     }
   }

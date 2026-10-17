@@ -315,6 +315,81 @@ export function verifyEmbedOriginToken(token: string | null | undefined, playerI
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* DRM "Exigir Token Assinado por Sessão" — token de sessão assinado    */
+/* ------------------------------------------------------------------ */
+
+// Versão do formato do token (segmento literal na frente do payload).
+const EMBED_SESSION_TOKEN_VERSION = "v1";
+// TTL curto: o token de sessão cobre o boot do player, não a visita inteira.
+const EMBED_SESSION_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;
+
+export interface EmbedSessionTokenClaims {
+  playerId: string;
+  viewerId: string;
+  sessionId: string;
+  nonce: string;
+}
+
+/**
+ * Mint do token de sessão do DRM "Exigir Token Assinado por Sessão".
+ *
+ * Formato: `v1.<base64url payload>.<hmac>` com payload `{pid, vid, sid, n, exp}`
+ * (exp em epoch millis, Date.now()+15min). A assinatura é o mesmo HMAC-SHA256
+ * da família (EMBED_ORIGIN_SECRET), então quem tem o token tem uma declaração
+ * do SERVIDOR de que aquela tríade player/viewer/sessão passou pelo pipeline
+ * de origem+render num render específico (nonce). UUIDs inventados no cliente
+ * nunca reproduzem a assinatura — é isso que mata o bypass do review MEDIUM.
+ */
+export function mintEmbedSessionToken(input: EmbedSessionTokenClaims): string {
+  const payload = base64url(JSON.stringify({
+    pid: input.playerId,
+    vid: input.viewerId,
+    sid: input.sessionId,
+    n: input.nonce,
+    exp: Date.now() + EMBED_SESSION_TOKEN_MAX_AGE_MS,
+  }));
+  return `${EMBED_SESSION_TOKEN_VERSION}.${payload}.${sign(payload)}`;
+}
+
+/**
+ * Verifica o token de sessão contra os claims exigidos pelo chamador: TODOS
+ * precisam bater (playerId, viewerId, sessionId, nonce do render) e o token
+ * não pode estar expirado. Assinatura em comparação timing-safe (mesmo
+ * padrão de verifyEmbedOriginToken); claims são valores que o próprio
+ * chamador conhece e fornece — nada a vazar por timing.
+ */
+export function verifyEmbedSessionToken(token: string | null | undefined, expected: EmbedSessionTokenClaims): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts[0] !== EMBED_SESSION_TOKEN_VERSION) return false;
+  const [, payload, signature] = parts;
+  if (!payload || !signature) return false;
+
+  let expectedSignature: string;
+  try {
+    expectedSignature = sign(payload);
+  } catch {
+    return false;
+  }
+  if (!expectedSignature) return false;
+
+  const expectedBuffer = Buffer.from(expectedSignature, "base64url");
+  const actualBuffer = Buffer.from(signature, "base64url");
+  if (expectedBuffer.length !== actualBuffer.length || !timingSafeEqual(expectedBuffer, actualBuffer)) return false;
+
+  try {
+    const parsed = JSON.parse(fromBase64url(payload)) as { pid?: string; vid?: string; sid?: string; n?: string; exp?: number };
+    if (!parsed.exp || parsed.exp < Date.now()) return false;
+    return parsed.pid === expected.playerId
+      && parsed.vid === expected.viewerId
+      && parsed.sid === expected.sessionId
+      && parsed.n === expected.nonce;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Lê o cookie de render do embed (`pp_embed`) enviado na requisição.
  * O cookie é setado pelo proxy no response da página /embed e só quem de fato

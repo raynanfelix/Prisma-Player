@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { sanitizeCoverUrl } from "@/lib/player/autoplay-cover";
+import { ownedAssetPaths } from "@/lib/player/assets";
+import { signR2ReadUrl } from "@/lib/storage/r2";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
 import { envInt } from "@/lib/config/env";
@@ -117,12 +119,27 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // allowedDomains, que só lá decide se o player roda naquele host.
   const domains = Array.isArray(playerConfig.allowedDomains) ? playerConfig.allowedDomains.map((d) => d.trim()).filter(Boolean) : [];
 
-  const config = playerConfig.config && typeof playerConfig.config === "object"
-    ? sanitizeConfigForManifest(playerConfig.config as Record<string, unknown>)
+  const rawConfig = playerConfig.config && typeof playerConfig.config === "object"
+    ? playerConfig.config as Record<string, unknown>
     : {};
+  const config = sanitizeConfigForManifest(rawConfig);
+
+  // POSTER instantâneo do shell (borrow do padrão Vturb): URL assinada do
+  // thumbnailStart para o EmbedPlayer pintar o poster antes de a config
+  // dinâmica chegar. A assinatura É a proteção — mesma política dos assets do
+  // endpoint dinâmico (ownedAssetPaths só aceita caminhos do próprio
+  // titular) — e o campo é public-cacheável porque o poster é exatamente o
+  // que qualquer espectador já vê renderizado no player. Como todo o
+  // handler, a assinatura roda só em cache miss: a borda revalida em ≤60s
+  // (+300s de stale-while-revalidate), dentro do TTL de 900s da URL. Sem
+  // thumbnail do titular (ou falha ao assinar) o campo fica ausente — o
+  // shell cai no box preto de hoje. "assets" não integra a allowlist de
+  // config, então o poster sai como campo próprio, extraído do config raw.
+  const posterPath = ownedAssetPaths(rawConfig.assets, playerConfig.userId).thumbnailStart;
+  const posterUrl = posterPath ? await signR2ReadUrl(posterPath).catch(() => null) : null;
 
   return NextResponse.json(
-    { id: playerConfig.id, videoId: playerConfig.videoId, config, allowedDomains: domains },
+    { id: playerConfig.id, videoId: playerConfig.videoId, config, allowedDomains: domains, ...(posterUrl ? { posterUrl } : {}) },
     {
       headers: {
         "content-type": "application/json; charset=utf-8",

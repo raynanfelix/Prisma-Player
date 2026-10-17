@@ -27,7 +27,12 @@ export default function InboxButton() {
   }, []);
 
   async function read(id: string) {
-    await fetch("/api/account/inbox", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+    // Mesma política do dismiss(): sem confirmação do servidor (rede caiu ou
+    // resposta non-ok) a mensagem NÃO é marcada como lida localmente —
+    // senão sumia do dropdown e voltava como não-lida no próximo fetch, e a
+    // rejeição do fetch virava unhandled rejection no console.
+    const response = await fetch("/api/account/inbox", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
+    if (!response?.ok) return;
     setItems((current) => current.map((item) => (item.id === id ? { ...item, read_at: new Date().toISOString() } : item)));
   }
 
@@ -73,8 +78,12 @@ export default function InboxButton() {
             <p className="text-sm font-bold text-[#191A23] dark:text-white flex items-center gap-2">
               <Inbox size={15} /> Inbox Prisma
             </p>
+            {/* Coerência do header: com 0 não-lidas (mesmo havendo lidas
+                não-dispensadas) "0 não lidas" destoava do estado vazio
+                "Nenhuma notificação nova." logo abaixo; 1 não-lida também
+                exibia plural. */}
             <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
-              {unread} não lidas
+              {unread === 0 ? "nenhuma nova" : `${unread} não ${unread === 1 ? "lida" : "lidas"}`}
             </span>
           </div>
 

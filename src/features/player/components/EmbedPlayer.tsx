@@ -40,11 +40,11 @@ function embedErrorMessage(code: string, status: number): string {
 
 export default function EmbedPlayer({ playerId, tracking, originToken }: { playerId: string; tracking?: Tracking; originToken?: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
-  // Boot em duas fases (Plano A de escala): config pública do manifest —
-  // cacheável na borda — pinta o shell de apresentação antes de a config
-  // dinâmica chegar. O playerId viaja junto para nunca pintar o shell de um
-  // player por outro.
-  const [manifestShell, setManifestShell] = useState<{ playerId: string; config: Record<string, unknown> } | null>(null);
+  // Boot em duas fases (Plano A de escala): config pública + poster do
+  // manifest — cacheáveis na borda — pintam o shell de apresentação antes
+  // de a config dinâmica chegar. O playerId viaja junto para nunca pintar o
+  // shell de um player por outro.
+  const [manifestShell, setManifestShell] = useState<{ playerId: string; config: Record<string, unknown>; posterUrl: string } | null>(null);
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -206,14 +206,56 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   }, [playerId, payload]);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (originToken) params.set("originToken", originToken);
-    if (sessionId.current) params.set("sessionId", sessionId.current);
-    try { params.set("viewerId", getOrCreateViewerId()); } catch { /* sem viewer: limites por navegador inativos */ }
-    // RM-04: no fluxo A/B o token foi mintado no escopo do TESTE (playerId =
-    // testId + claim `abTest`). A API precisa do id do teste para verificar o
-    // token no escopo certo — sem ele, o consumo do player variante rejeita.
-    if (trackingTestId) params.set("abTestId", trackingTestId);
+    // DRM "Exigir Token Assinado por Sessão": quando o dono ativa o toggle, a
+    // config dinâmica recusa (403 session_required) chamadas sem um
+    // sessionToken HMAC mintado pelo servidor. Pede um via POST
+    // /api/embed/:id/session (mesmos viewerId/sessionId já gerados neste
+    // render) e refaz o fetch da config UMA única vez. Players com o toggle
+    // desligado nunca veem este caminho — seguem pagando 1 request como hoje.
+    const requestSessionToken = async (): Promise<string> => {
+      const sessionParams = new URLSearchParams();
+      if (originToken) sessionParams.set("originToken", originToken);
+      if (trackingTestId) sessionParams.set("abTestId", trackingTestId);
+      try {
+        const response = await fetch(`/api/embed/${encodeURIComponent(playerId)}/session${sessionParams.size ? `?${sessionParams.toString()}` : ""}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ viewerId: viewerIdRef.current, sessionId: sessionId.current }),
+        });
+        if (!response.ok) return "";
+        const data = await response.json().catch(() => null) as { sessionToken?: unknown } | null;
+        return typeof data?.sessionToken === "string" && data.sessionToken ? data.sessionToken : "";
+      } catch {
+        return "";
+      }
+    };
+
+    const fetchConfig = (sessionToken: string): Promise<Payload> => {
+      const params = new URLSearchParams();
+      if (originToken) params.set("originToken", originToken);
+      if (sessionId.current) params.set("sessionId", sessionId.current);
+      try { params.set("viewerId", getOrCreateViewerId()); } catch { /* sem viewer: limites por navegador inativos */ }
+      // RM-04: no fluxo A/B o token foi mintado no escopo do TESTE (playerId =
+      // testId + claim `abTest`). A API precisa do id do teste para verificar o
+      // token no escopo certo — sem ele, o consumo do player variante rejeita.
+      if (trackingTestId) params.set("abTestId", trackingTestId);
+      if (sessionToken) params.set("sessionToken", sessionToken);
+      return fetch(`/api/embed/${encodeURIComponent(playerId)}${params.size ? `?${params.toString()}` : ""}`, { cache: "no-store" })
+        .then(async (response) => {
+          const data = await response.json().catch(() => null) as (Payload & { error?: string }) | null;
+          // Toggle DRM ativo e sem token ainda: a config só sai com sessão
+          // assinada pelo servidor. Pede o token e refaz UMA vez; falha
+          // repetida cai no erro amigável do mapa (session_required).
+          if (response.status === 403 && data?.error === "session_required" && !sessionToken) {
+            const token = await requestSessionToken();
+            if (token) return fetchConfig(token);
+          }
+          if (!response.ok) throw new Error(embedErrorMessage(data?.error ?? "", response.status));
+          if (!data) throw new Error(embedErrorMessage("", response.status));
+          return data;
+        });
+    };
+
     // FAST-PATH do manifest (Plano A): busca em PARALELO à config dinâmica o
     // manifest público (cacheável na borda) que pinta o shell instantâneo.
     // O embed A/B (trackingTestId) NÃO usa manifest — o fluxo dele fica como
@@ -224,19 +266,18 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       fetch(`/api/embed/${encodeURIComponent(playerId)}/manifest`)
         .then(async (response) => {
           if (!response.ok) return null;
-          const manifest = await response.json().catch(() => null) as { config?: unknown } | null;
-          return manifest?.config && typeof manifest.config === "object" ? manifest.config as Record<string, unknown> : null;
+          const manifest = await response.json().catch(() => null) as { config?: unknown; posterUrl?: unknown } | null;
+          if (!manifest?.config || typeof manifest.config !== "object") return null;
+          // posterUrl é a URL R2 assinada do thumbnailStart: a rota só emite
+          // https da nossa própria assinatura; qualquer outra forma é
+          // ignorada (nunca vira <img src>).
+          const posterUrl = typeof manifest.posterUrl === "string" && /^https:\/\//i.test(manifest.posterUrl) ? manifest.posterUrl : "";
+          return { config: manifest.config as Record<string, unknown>, posterUrl };
         })
-        .then((config) => { if (config && !payloadRef.current) setManifestShell({ playerId, config }); })
+        .then((shell) => { if (shell && !payloadRef.current) setManifestShell({ playerId, config: shell.config, posterUrl: shell.posterUrl }); })
         .catch(() => { /* fast-path falhou: segue o fluxo atual */ });
     }
-    fetch(`/api/embed/${encodeURIComponent(playerId)}${params.size ? `?${params.toString()}` : ""}`, { cache: "no-store" })
-      .then(async (response) => {
-        const data = await response.json().catch(() => null) as (Payload & { error?: string }) | null;
-        if (!response.ok) throw new Error(embedErrorMessage(data?.error ?? "", response.status));
-        if (!data) throw new Error(embedErrorMessage("", response.status));
-        return data;
-      })
+    fetchConfig("")
       .then((data) => {
         const config = { ...data.config };
         const variants = Array.isArray(config.headlineVariants) ? config.headlineVariants.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
@@ -456,7 +497,8 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
 
   if (error) return <main className="grid min-h-dvh place-items-center bg-transparent p-6 text-center text-[#6e6e73]"><section role="alert" className="max-w-sm"><h1 className="mb-2 text-base font-semibold text-[#1d1d1f]">Reprodução indisponível</h1><p className="text-sm leading-6">{error}</p></section></main>;
   if (!payload) {
-    const shell = manifestShell && manifestShell.playerId === playerId ? manifestShell.config : null;
+    const shellSource = manifestShell && manifestShell.playerId === playerId ? manifestShell : null;
+    const shell = shellSource?.config ?? null;
     // Sem manifest ainda (ou de outro player): placeholder neutro de hoje.
     if (!shell) return <main className="grid min-h-dvh place-items-center bg-transparent p-4"><div className="w-full max-w-3xl"><div className="grid aspect-video w-full place-items-center overflow-hidden rounded-2xl bg-black"><span className="flex flex-col items-center gap-3"><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden className="animate-pulse"><circle cx="22" cy="22" r="21" fill="rgba(255,255,255,0.08)" /><path d="M18 14.5v15l12-7.5z" fill="rgba(255,255,255,0.85)" /></svg><span className="animate-pulse text-[12px] font-semibold text-white/70">Carregando VSL…</span></span></div></div></main>;
     // SHELL do manifest (boot em duas fases): pintura instantânea de
@@ -486,7 +528,16 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
             />
           )}
           <div className="relative order-2 mx-auto grid aspect-video w-full place-items-center overflow-hidden bg-black" style={{ borderRadius: `${Number(shell.radius ?? 0)}px` }}>
-            <span role="status" aria-label="Carregando vídeo" className="block h-7 w-7 animate-spin rounded-full border-2 border-white/25 border-t-white motion-reduce:animate-none" />
+            {/* Poster instantâneo (borrow do padrão Vturb): o thumbnailStart
+                assinado do manifest cobre o box por baixo do spinner — o
+                primeiro paint deixa de ser um retângulo preto. alt vazio +
+                aria-hidden: o poster é decoração do loading; o spinner
+                (role="status") continua sendo o anúncio para leitores de
+                tela. O spinner ganha relative z-10 porque um elemento
+                posicionado (o img) pinta acima do conteúdo in-flow mesmo
+                vindo antes no DOM. */}
+            {shellSource?.posterUrl && <img src={shellSource.posterUrl} alt="" aria-hidden="true" loading="eager" decoding="async" className="absolute inset-0 h-full w-full object-cover" />}
+            <span role="status" aria-label="Carregando vídeo" className="relative z-10 block h-7 w-7 animate-spin rounded-full border-2 border-white/25 border-t-white motion-reduce:animate-none" />
           </div>
         </div>
       </main>

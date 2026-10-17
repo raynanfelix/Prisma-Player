@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createHmac } from "node:crypto";
 import { currentFakeDb, insertedValues, resetFakeDb, type FakeDb } from "./helpers/fake-db";
 
 const { accessState, vpnState } = vi.hoisted(() => ({
@@ -39,17 +40,19 @@ vi.mock("@/lib/db", async () => {
 
 // O módulo de origem é o REAL (criptografia pura, sem rede): os tokens são
 // mintados e verificados com o mesmo código de produção.
-import { createEmbedOriginToken, verifyEmbedEventTokenContext } from "@/lib/security/embed-origin";
+import { createEmbedOriginToken, mintEmbedSessionToken, verifyEmbedEventTokenContext, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
 import { resetAccessCacheForTests } from "@/lib/access/access-cache";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { GET as getEmbedConfig } from "@/app/api/embed/[id]/route";
 import { GET as getEmbedManifest } from "@/app/api/embed/[id]/manifest/route";
+import { POST as postEmbedSession } from "@/app/api/embed/[id]/session/route";
 
 const OWNER = "user-owner";
 const PLAYER_ID = "aaaaaaaa-0000-4000-8000-000000000001";
 const OTHER_PLAYER_ID = "bbbbbbbb-0000-4000-8000-000000000002";
 const VIDEO_ID = "cccccccc-0000-4000-8000-000000000003";
 const SESSION_ID = "dddddddd-0000-4000-8000-000000000004";
+const OTHER_SESSION_ID = "dddddddd-0000-4000-8000-000000000099";
 const VIEWER_ID = "eeeeeeee-0000-4000-8000-000000000005";
 const NONCE = "nonce-abc";
 const HOST = "site.com";
@@ -109,6 +112,37 @@ function confirmedRequest(id: string, options: Parameters<typeof embedRequest>[1
     token: options.token ?? mint(),
     headers: { cookie: `pp_embed=${NONCE}`, ...(options.headers ?? {}) },
   });
+}
+
+/** POST para o mint de sessionToken, com body JSON e headers opcionais. */
+function sessionRequest(
+  id: string,
+  options: { token?: string; headers?: Record<string, string>; query?: Record<string, string>; body?: Record<string, unknown> } = {},
+): Request {
+  const url = new URL(`https://prisma.test/api/embed/${id}/session`);
+  for (const [key, value] of Object.entries(options.query ?? {})) url.searchParams.set(key, value);
+  if (options.token) url.searchParams.set("originToken", options.token);
+  return new Request(url, {
+    method: "POST",
+    headers: new Headers({ "content-type": "application/json", ...(options.headers ?? {}) }),
+    body: JSON.stringify(options.body ?? {}),
+  });
+}
+
+/** POST de sessão com origem confirmada (mesmo pipeline da config). */
+function confirmedSessionRequest(id: string, options: Parameters<typeof sessionRequest>[1] = {}) {
+  return sessionRequest(id, {
+    ...options,
+    token: options.token ?? mint(),
+    headers: { cookie: `pp_embed=${NONCE}`, ...(options.headers ?? {}) },
+  });
+}
+
+/** Token de sessão "v1.<payload>.<hmac>" forjado com a MESMA secret do beforeAll — para variantes (exp vencida, claims trocados). */
+function forgedSessionToken(claims: Record<string, unknown>): string {
+  const payload = Buffer.from(JSON.stringify(claims), "utf8").toString("base64url");
+  const signature = createHmac("sha256", "test-embed-origin-secret").update(payload).digest("base64url");
+  return `v1.${payload}.${signature}`;
 }
 
 beforeAll(() => {
@@ -285,10 +319,52 @@ describe("GET /api/embed/[id] — entrega", () => {
     expect(await response.json()).toEqual({ error: "session_required" });
   });
 
-  it("drmSignedTokenEnabled ativo entrega a config quando a sessão é válida", async () => {
+  it("drmSignedTokenEnabled ativo: viewerId/sessionId válidos mas SEM sessionToken é 403 (o bypass de UUIDs forjados morre)", async () => {
+    // Review MEDIUM: antes bastava o FORMATO dos ids — qualquer par de UUIDs
+    // gerados no cliente era aprovado com originToken+cookie. Agora a
+    // assinatura do servidor é obrigatória: ids válidos sem token não passam.
     fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
     const response = await getEmbedConfig(
       confirmedRequest(PLAYER_ID, { query: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "session_required" });
+  });
+
+  it("drmSignedTokenEnabled ativo entrega a config quando a sessão é válida", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
+    // O EmbedPlayer real obtém este token via POST /session; o teste minta
+    // com a mesma secret do beforeAll (código real de produção).
+    const sessionToken = mintEmbedSessionToken({ playerId: PLAYER_ID, viewerId: VIEWER_ID, sessionId: SESSION_ID, nonce: NONCE });
+    const response = await getEmbedConfig(
+      confirmedRequest(PLAYER_ID, { query: { viewerId: VIEWER_ID, sessionId: SESSION_ID, sessionToken } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it("sessionToken mintado para OUTRA sessão não vale para este request: 403 session_required", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
+    const sessionToken = mintEmbedSessionToken({ playerId: PLAYER_ID, viewerId: VIEWER_ID, sessionId: OTHER_SESSION_ID, nonce: NONCE });
+    const response = await getEmbedConfig(
+      confirmedRequest(PLAYER_ID, { query: { viewerId: VIEWER_ID, sessionId: SESSION_ID, sessionToken } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "session_required" });
+  });
+
+  it("fluxo ponta a ponta: sessionToken mintado pela rota /session libera a config com o toggle ativo", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
+    const sessionResponse = await postEmbedSession(
+      confirmedSessionRequest(PLAYER_ID, { body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(sessionResponse.status).toBe(200);
+    const { sessionToken } = (await sessionResponse.json()) as { sessionToken: string };
+    const response = await getEmbedConfig(
+      confirmedRequest(PLAYER_ID, { query: { viewerId: VIEWER_ID, sessionId: SESSION_ID, sessionToken } }),
       ctx(PLAYER_ID),
     );
     expect(response.status).toBe(200);
@@ -420,6 +496,112 @@ describe("GET /api/embed/[id] — limite de fluxos simultâneos", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* POST /api/embed/[id]/session — mint do token de sessão do DRM         */
+/* ------------------------------------------------------------------ */
+
+describe("POST /api/embed/[id]/session — mint do sessionToken", () => {
+  it("id não-UUID devolve 404 player_not_found (não 500)", async () => {
+    const response = await postEmbedSession(
+      confirmedSessionRequest("not-a-uuid", { body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx("not-a-uuid"),
+    );
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "player_not_found" });
+  });
+
+  it("sem originToken válido devolve 403 invalid_origin_token", async () => {
+    const response = await postEmbedSession(
+      sessionRequest(PLAYER_ID, { headers: { cookie: `pp_embed=${NONCE}` }, body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "invalid_origin_token" });
+  });
+
+  it("originToken de outro player não vale: 403 invalid_origin_token", async () => {
+    const response = await postEmbedSession(
+      confirmedSessionRequest(PLAYER_ID, { token: mint({ playerId: OTHER_PLAYER_ID }), body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "invalid_origin_token" });
+  });
+
+  it("cookie de render ausente devolve 403 render_not_confirmed", async () => {
+    const response = await postEmbedSession(
+      sessionRequest(PLAYER_ID, { token: mint(), body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "render_not_confirmed" });
+  });
+
+  it("Origin header divergente do host do token devolve 403 origin_mismatch", async () => {
+    const response = await postEmbedSession(
+      confirmedSessionRequest(PLAYER_ID, { headers: { origin: "https://evil.com" }, body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "origin_mismatch" });
+  });
+
+  it("viewerId/sessionId fora do formato UUID devolve 403 session_required (sem mint)", async () => {
+    const response = await postEmbedSession(
+      confirmedSessionRequest(PLAYER_ID, { body: { viewerId: "forjado-no-cliente", sessionId: "tambem-forjado" } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "session_required" });
+  });
+
+  it("origem confirmada minta sessionToken verificável (formato v1 + round-trip dos claims)", async () => {
+    const response = await postEmbedSession(
+      confirmedSessionRequest(PLAYER_ID, { body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
+      ctx(PLAYER_ID),
+    );
+    expect(response.status).toBe(200);
+    // Token de sessão é material assinado: nunca cacheia.
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow, noarchive");
+
+    const body = (await response.json()) as { sessionToken: string };
+    // Formato: v1.<base64url payload>.<hmac>.
+    const parts = body.sessionToken.split(".");
+    expect(parts).toHaveLength(3);
+    expect(parts[0]).toBe("v1");
+
+    const claims = { playerId: PLAYER_ID, viewerId: VIEWER_ID, sessionId: SESSION_ID, nonce: NONCE };
+    expect(verifyEmbedSessionToken(body.sessionToken, claims)).toBe(true);
+    // Qualquer claim divergente rejeita: o token é intransferível entre
+    // players, viewers, sessões e renders (nonce).
+    expect(verifyEmbedSessionToken(body.sessionToken, { ...claims, playerId: OTHER_PLAYER_ID })).toBe(false);
+    expect(verifyEmbedSessionToken(body.sessionToken, { ...claims, sessionId: OTHER_SESSION_ID })).toBe(false);
+    expect(verifyEmbedSessionToken(body.sessionToken, { ...claims, viewerId: OTHER_SESSION_ID })).toBe(false);
+    expect(verifyEmbedSessionToken(body.sessionToken, { ...claims, nonce: "nonce-OUTRO" })).toBe(false);
+    expect(verifyEmbedSessionToken("", claims)).toBe(false);
+    expect(verifyEmbedSessionToken("v1.lixo.assinatura", claims)).toBe(false);
+  });
+
+  it("sessionToken assinado mas EXPIRADO não verifica (exp é checado)", async () => {
+    // Forjado com a MESMA secret (beforeAll) e TTL vencido: assinatura
+    // válida, expiração vencida — a verificação precisa recusar.
+    const expired = forgedSessionToken({ pid: PLAYER_ID, vid: VIEWER_ID, sid: SESSION_ID, n: NONCE, exp: Date.now() - 1000 });
+    const claims = { playerId: PLAYER_ID, viewerId: VIEWER_ID, sessionId: SESSION_ID, nonce: NONCE };
+    expect(verifyEmbedSessionToken(expired, claims)).toBe(false);
+    // Contraste: o mint real (exp = agora + 15min) verifica.
+    expect(verifyEmbedSessionToken(mintEmbedSessionToken(claims), claims)).toBe(true);
+  });
+
+  it("sessionToken sem assinatura válida não verifica (HMAC da família)", async () => {
+    const claims = { playerId: PLAYER_ID, viewerId: VIEWER_ID, sessionId: SESSION_ID, nonce: NONCE };
+    const payload = Buffer.from(JSON.stringify({ pid: PLAYER_ID, vid: VIEWER_ID, sid: SESSION_ID, n: NONCE, exp: Date.now() + 900_000 }), "utf8").toString("base64url");
+    const wrongKey = createHmac("sha256", "secret-ERRADA").update(payload).digest("base64url");
+    expect(verifyEmbedSessionToken(`v1.${payload}.${wrongKey}`, claims)).toBe(false);
+    expect(verifyEmbedSessionToken(`${payload}.${wrongKey}`, claims)).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* GET /api/embed/[id]/manifest — config pública cacheável              */
 /* ------------------------------------------------------------------ */
 
@@ -515,5 +697,53 @@ describe("GET /api/embed/[id]/manifest", () => {
     expect(config).not.toHaveProperty("metaPixelId");
     expect(config).not.toHaveProperty("trafficEnabled");
     expect(config).not.toHaveProperty("allowedCountries");
+  });
+
+  it("thumbnailStart do titular vira posterUrl assinada no manifest", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({
+      config: { assets: { thumbnailStart: `${OWNER}/thumb.png` } },
+    })];
+    const response = await manifestRequest();
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body.posterUrl).toBe(`https://r2.signed.test/${OWNER}/thumb.png`);
+    // "assets" não vaza no config sanitizado: o poster sai como campo próprio.
+    expect(body.config).not.toHaveProperty("assets");
+    // O manifest assina SÓ o poster — a fonte do vídeo continua exclusiva
+    // do endpoint dinâmico.
+    const signedKeys = vi.mocked(signR2ReadUrl).mock.calls.map(([key]) => key);
+    expect(signedKeys).toEqual([`${OWNER}/thumb.png`]);
+  });
+
+  it("sem thumbnailStart o manifest não tem posterUrl (campo ausente, não vazio)", async () => {
+    const response = await manifestRequest();
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("posterUrl");
+    expect(vi.mocked(signR2ReadUrl).mock.calls).toHaveLength(0);
+  });
+
+  it("thumbnail de outro titular não é assinado: posterUrl ausente", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({
+      config: { assets: { thumbnailStart: "user-outro/thumb.png" } },
+    })];
+    const response = await manifestRequest();
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("posterUrl");
+    const signedKeys = vi.mocked(signR2ReadUrl).mock.calls.map(([key]) => key);
+    expect(signedKeys).not.toContain("user-outro/thumb.png");
+  });
+
+  it("falha ao assinar o poster não derruba o manifest: 200 sem posterUrl", async () => {
+    fake().state.selectRows["player_configs"] = [playerConfigRow({
+      config: { assets: { thumbnailStart: `${OWNER}/thumb.png` } },
+    })];
+    vi.mocked(signR2ReadUrl).mockRejectedValueOnce(new Error("r2 down"));
+    const response = await manifestRequest();
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("posterUrl");
   });
 });
