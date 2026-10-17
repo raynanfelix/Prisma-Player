@@ -30,6 +30,13 @@ export async function POST(request: Request) {
 
   const { data, error } = await getAuth().signIn.email({ email, password });
   if (error || !data?.user) {
+    // Observabilidade: o código/mensagem REAL do Better Auth no log da Vercel —
+    // sem isso um código não mapeado vira fallback genérico e fica invisível.
+    console.error("login_failed", {
+      code: error?.code ?? "no_code",
+      status: error?.status ?? "no_status",
+      message: error?.message ?? "no_message",
+    });
     await recordAuthFailure("login_failed", email, request);
     const message = getAuthErrorMessage(error, "Não foi possível entrar agora. Tente novamente.");
     return NextResponse.json({ error: "auth_failed", message }, { status: 401 });

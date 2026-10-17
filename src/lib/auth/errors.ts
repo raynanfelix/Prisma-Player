@@ -26,7 +26,7 @@ export function getAuthErrorMessage(error: AuthMethodError, fallback: string): s
   if (code === "INVALID_EMAIL_OR_PASSWORD" || code === "INVALID_PASSWORD" || code === "CREDENTIAL_ACCOUNT_NOT_FOUND" || message.includes("invalid email or password")) {
     return "E-mail ou senha inválidos.";
   }
-  if (code === "EMAIL_NOT_VERIFIED") {
+  if (code === "EMAIL_NOT_VERIFIED" || code.includes("NOT_VERIFIED") || code.includes("UNVERIFIED") || message.includes("not verified") || message.includes("unverified") || message.includes("verifique seu e-mail")) {
     return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.";
   }
   if (code === "INVALID_OTP" || code === "OTP_EXPIRED" || message.includes("invalid otp") || message.includes("otp has expired")) {
