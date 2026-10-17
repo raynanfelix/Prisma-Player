@@ -8,6 +8,7 @@ import {
   Shield,
   Target,
   Video,
+  Webhook,
 } from "lucide-react";
 
 export type NavigationMessageKey =
@@ -39,6 +40,7 @@ export const navGroups: SidebarNavGroup[] = [{
     { title: "Inbox & Notificações", path: "/dashboard/inbox", icon: <Inbox className="size-4" /> },
     { title: "Segurança", messageKey: "security", path: "/dashboard/security", icon: <Shield className="size-4" /> },
     { title: "Conversões", messageKey: "conversions", path: "/dashboard/conversions", icon: <Target className="size-4" /> },
+    { title: "Integrações", path: "/dashboard/integracoes", icon: <Webhook className="size-4" /> },
     { title: "Configurações", messageKey: "settings", path: "/dashboard/settings", icon: <Settings className="size-4" /> },
     { title: "Plano", messageKey: "plan", path: "/dashboard/billing", icon: <CreditCard className="size-4" /> },
   ],
