@@ -208,6 +208,7 @@ const HOOK_TYPE_META: Record<MiniHookType, { label: string; hint: string }> = {
 };
 
 const initialConfig: StudioConfig = {
+  metaCapiToken: "",
   accent: "#0066cc", background: "#000000", gradientEnd: "#2997ff", colorStyle: "solid", radius: 0, bigPlay: true, playPause: true, disablePause: false, progressBar: true, time: true, seekBackward: false, seekForward: false, volume: true, fullscreen: true, pictureInPicture: true, speedControl: true,
   smartProgress: true, progressColor: "#0066cc", progressHeight: 6,
   smartAutoplay: true, autoplayMessage: "Seu vídeo já começou. Clique para ouvir.", autoplayTextColor: "#191A23", autoplayBackground: "#B9FF66", autoplayRadius: 16,
