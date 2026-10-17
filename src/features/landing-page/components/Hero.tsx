@@ -21,7 +21,7 @@ export default function Hero() {
             </h1>
 
             <p className="text-lg sm:text-xl font-normal text-[#191A23]/80 leading-relaxed">
-              Pitch delay sincronizado, analytics de retenção, testes A/B e proteção anti-download — feito para operações de lançamento que colocam VSL no ar todos os dias.
+              Pitch delay sincronizado, analytics de retenção, testes A/B e proteção anti-download. Feito para operações de lançamento que colocam VSL no ar todos os dias.
             </p>
 
             {/* CTAs */}

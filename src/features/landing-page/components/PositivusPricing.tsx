@@ -105,7 +105,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
               Escolha a capacidade de plays ideal para sua operação de VSL e comece a testar agora.
             </p>
 
-            {/* Monthly / Annual Toggle — Anual ativo por padrão */}
+            {/* Monthly / Annual Toggle, Anual ativo por padrão */}
             <div className="pt-4 flex justify-center">
               <div
                 role="group"
@@ -186,7 +186,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                       </div>
                       <p className={`mt-1 text-xs font-medium ${p.textColor} opacity-70`}>
                         {isAnnual
-                          ? `no plano anual — cobrado ${p.annualTotal} à vista`
+                          ? `no plano anual, cobrado ${p.annualTotal} à vista`
                           : "na cobrança mensal, sem fidelidade"}
                       </p>
                     </div>

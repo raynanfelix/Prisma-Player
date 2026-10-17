@@ -91,7 +91,7 @@ export default function PricingSection() {
     },
     {
       q: "Existem taxas adicionais ou cobranças surpresa por tráfego?",
-      a: "Não. Todos os planos incluem cota mensal transparente de plays. Se a sua operação ultrapassar o limite, cada play adicional custa R$ 0,02 — informado antecipadamente, sem interromper o funcionamento do seu player.",
+      a: "Não. Todos os planos incluem cota mensal transparente de plays. Se a sua operação ultrapassar o limite, cada play adicional custa R$ 0,02, informado antecipadamente, sem interromper o funcionamento do seu player.",
     },
     {
       q: "Posso alterar ou cancelar meu plano a qualquer momento?",
@@ -127,11 +127,11 @@ export default function PricingSection() {
             </div>
           </div>
           <p className="max-w-2xl text-lg text-[#191A23]/80 font-medium">
-            Preços transparentes para impulsionar a retenção e as vendas da sua VSL. A cobrança anual economiza 34% — é a opção que mais clientes escolhem.
+            Preços transparentes para impulsionar a retenção e as vendas da sua VSL. A cobrança anual economiza 34%, e é a opção que mais clientes escolhem.
           </p>
         </div>
 
-        {/* Monthly / Annual Toggle — Anual ativo por padrão */}
+        {/* Monthly / Annual Toggle, Anual ativo por padrão */}
         <div className="flex justify-center">
           <div
             role="group"
@@ -199,7 +199,7 @@ export default function PricingSection() {
                   </div>
                   <p className={`mt-1 text-xs font-medium ${plan.textColor} opacity-70`}>
                     {isAnnual
-                      ? `no plano anual — cobrado ${plan.annualTotal} à vista`
+                      ? `no plano anual, cobrado ${plan.annualTotal} à vista`
                       : "na cobrança mensal, sem fidelidade"}
                   </p>
 

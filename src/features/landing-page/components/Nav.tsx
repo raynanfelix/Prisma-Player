@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X, Play } from "lucide-react";
 
@@ -10,6 +10,34 @@ interface NavProps {
 
 export default function Nav({ account }: NavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Navbar aberta por padrão: esconde com efeito ao rolar para baixo e
+  // volta compacta ao rolar para cima.
+  const [hidden, setHidden] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const lastYRef = useRef(0);
+
+  useEffect(() => {
+    let raf = 0;
+    lastYRef.current = window.scrollY;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY;
+        const delta = y - lastYRef.current;
+        lastYRef.current = y;
+        setScrolled(y > 40);
+        if (y <= 80) setHidden(false);
+        else if (delta > 8) setHidden(true);
+        else if (delta < -8) setHidden(false);
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
 
   const navLinks = [
     { name: "Serviços", href: "/services" },
@@ -21,10 +49,20 @@ export default function Nav({ account }: NavProps) {
   ];
 
   return (
-    <header className="sticky top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 transition-all">
+    <header
+      className={`sticky top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 transition-all duration-300 ease-out will-change-transform ${
+        hidden
+          ? "-translate-y-[130%] opacity-0 pointer-events-none"
+          : "translate-y-0 opacity-100"
+      }`}
+    >
       {/* Floating Pill Container */}
-      <div className="rounded-full border-2 border-[#191A23] bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 shadow-[4px_4px_0px_#191A23] flex items-center justify-between">
-        
+      <div
+        className={`rounded-full border-2 border-[#191A23] bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between transition-all duration-300 ${
+          scrolled ? "py-2 shadow-[2px_2px_0px_#191A23]" : "py-2.5 shadow-[4px_4px_0px_#191A23]"
+        }`}
+      >
+
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#191A23] text-[#B9FF66] shadow-[2px_2px_0px_#191A23] group-hover:scale-105 transition-transform">

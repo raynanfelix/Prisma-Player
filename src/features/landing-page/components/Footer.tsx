@@ -67,7 +67,7 @@ export default function Footer() {
                 WhatsApp: +55 (11) 98765-4321
               </p>
               <p className="text-sm font-medium text-white/80 leading-relaxed">
-                Atendimento de Segunda a Domingo — Suporte Técnico 24/7
+                Atendimento de Segunda a Domingo com Suporte Técnico 24/7
               </p>
             </div>
 
