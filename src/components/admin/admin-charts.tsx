@@ -9,12 +9,14 @@ import {
   LineChartTooltip,
   LineGrid,
   LineXAxis,
+} from "@/components/charts";
+import {
+  Legend as RingLegend,
   Ring,
   RingCenter,
   RingChart,
-  RingLegend,
   type RingData,
-} from "@/components/charts";
+} from "@/components/ui/charts";
 import { formatBrlFromCents as money } from "@/lib/format/money";
 
 export interface AdminRevenueChartProps {
@@ -107,7 +109,7 @@ export function AdminCheckoutRing({ data }: AdminCheckoutRingProps) {
         />
       </RingChart>
       <RingLegend
-        data={data}
+        items={data}
         hoveredIndex={hoveredIndex}
         onHoverChange={setHoveredIndex}
         className="w-full xl:w-auto text-xs font-semibold"

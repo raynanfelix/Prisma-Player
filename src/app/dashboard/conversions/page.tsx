@@ -3,6 +3,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { requireUser } from "@/lib/auth/server";
 import { db, schema } from "@/lib/db";
+import { ConversionsDonut, ConversionsPerformanceChart } from "./performance-charts";
 
 const { videoEvents, videos } = schema;
 
@@ -55,6 +56,30 @@ export default async function ConversionsPage() {
           );
         })}
       </section>
+
+      {rows.length > 0 && (
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
+          <article className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs">
+            <h2 className="text-base font-bold text-[#191A23] dark:text-white">Desempenho por VSL</h2>
+            <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
+              Plays e cliques por VSL (barras) e a taxa de conversão (% — eixo direito).
+            </p>
+            <div className="mt-4">
+              <ConversionsPerformanceChart rows={rows} />
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs">
+            <h2 className="text-base font-bold text-[#191A23] dark:text-white">Cliques na CTA</h2>
+            <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
+              Cliques e compras como fatia do total de plays.
+            </p>
+            <div className="mt-6">
+              <ConversionsDonut plays={totals.plays} clicks={totals.clicks} conversions={totals.conversions} />
+            </div>
+          </article>
+        </section>
+      )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card shadow-xs">
         <div className="border-b border-slate-100 dark:border-zinc-800 px-6 py-4">

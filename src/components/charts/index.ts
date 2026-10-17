@@ -7,12 +7,11 @@ export { Grid as LineGrid } from "./grid";
 export { XAxis as LineXAxis } from "./x-axis";
 export { ChartTooltip as LineChartTooltip } from "./tooltip";
 export { ChartStatFlow } from "./chart-stat-flow";
-;
 
 // Custom charts added for Prisma Player
-export { FunnelChart,    } from "./funnel-chart";
-export { RingChart, Ring, RingCenter, Legend as RingLegend, type RingData } from "./ring-chart";
+export { FunnelChart } from "./funnel-chart";
 export { AreaChart, Area, Grid, XAxis as AreaXAxis, ChartTooltip as AreaChartTooltip } from "./area-chart";
+// RingChart migrado para os primitivos composáveis em "@/components/ui/charts".
 
 // Choropleth chart exports
 export * from "./choropleth";

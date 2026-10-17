@@ -29,24 +29,16 @@ import {
   X,
 } from "lucide-react";
 import ClaudeChatInput from "@/components/ui/claude-style-chat-input";
+import type { LucideIcon } from "lucide-react";
 
-// Custom charts imports
+// Custom charts imports (gráficos já interativos e bons — mantidos)
 import {
   FunnelChart,
-  RingChart,
-  Ring,
-  RingCenter,
-  RingLegend,
   AreaChart,
   Area,
   Grid,
   AreaXAxis,
   AreaChartTooltip,
-  LineChart,
-  Line,
-  LineGrid,
-  LineXAxis,
-  LineChartTooltip,
   HeatmapChart,
   HeatmapCells,
   HeatmapXAxis,
@@ -57,6 +49,27 @@ import {
   HeatmapInteractionBoundary,
   HEATMAP_DEFAULT_LEVEL_STYLES,
 } from "@/components/charts";
+// Primitivos composáveis novos (ecossistema kokonutui/21st.dev sobre recharts)
+import {
+  CHART_SERIES_COLORS,
+  Area as ComposedArea,
+  ComposedChart,
+  Grid as ComposedGrid,
+  SeriesBar,
+  Legend,
+  PieCenter,
+  PieChart,
+  PieSlice,
+  RadarArea,
+  RadarAxis,
+  RadarChart,
+  RadarGrid,
+  RadarLabels,
+  Ring,
+  RingCenter,
+  RingChart,
+  type PieDataItem,
+} from "@/components/ui/charts";
 import { buildHeatmapColumns } from "@/lib/heatmap-data";
 import { StatCardChoropleth } from "@/components/stat-card-choropleth";
 import IntelligenceControls from "@/features/intelligence/components/IntelligenceControls";
@@ -160,6 +173,92 @@ function formatSecondsToTimeString(seconds: number) {
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
   return `${hours}h:${minutes}m:${secs.toString().padStart(2, "0")}s`;
+}
+
+function formatDurationCompact(seconds: number) {
+  if (!seconds || seconds <= 0) return "0m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function formatPercentValue(value: number) {
+  return `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+}
+
+/**
+ * Card de KPI com donut (PieChart + PieSlice + PieCenter). O número principal
+ * vive no centro do donut; `srValue` repõe o valor para leitores de tela já
+ * que o gráfico é decorativo (aria-hidden).
+ */
+function KpiPieCard({
+  icon: Icon,
+  label,
+  badge,
+  slices,
+  centerLabel,
+  formatValue,
+  delta,
+  footer,
+  highlight = false,
+  srValue,
+}: {
+  icon: LucideIcon;
+  label: string;
+  badge?: string;
+  slices: PieDataItem[];
+  centerLabel: string;
+  formatValue?: (value: number) => string;
+  delta?: string;
+  footer: string;
+  highlight?: boolean;
+  srValue: string;
+}) {
+  return (
+    <article
+      className={
+        highlight
+          ? "rounded-2xl bg-gradient-to-br from-[#0066cc] to-[#2563eb] p-5 text-white shadow-md flex flex-col justify-between dark:from-[#0052a3] dark:to-[#1d4ed8]"
+          : "rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs flex flex-col justify-between dark:border-zinc-800 dark:bg-card"
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${highlight ? "text-blue-100" : "text-slate-500 dark:text-zinc-400"}`}>
+          <Icon size={14} /> {label}
+        </span>
+        {badge && (
+          <span className={`rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${highlight ? "bg-white/20 text-white" : "bg-[#B9FF66] text-[#191A23]"}`}>
+            {badge}
+          </span>
+        )}
+      </div>
+
+      <div className="my-3 grid place-items-center" aria-hidden="true">
+        <PieChart data={slices} size={124} innerRadius={42}>
+          {slices.map((slice, index) => (
+            <PieSlice key={slice.label} index={index} color={slice.color} />
+          ))}
+          <PieCenter
+            defaultLabel={centerLabel}
+            defaultIndex={0}
+            formatValue={formatValue}
+            className={highlight ? "[&>span]:text-blue-100 [&>strong]:text-white" : undefined}
+          />
+        </PieChart>
+      </div>
+
+      <span className="sr-only">{`${label}: ${srValue}`}</span>
+      {delta && (
+        <div className={`flex items-center gap-1.5 text-xs font-bold ${highlight ? "text-emerald-300" : "text-emerald-600 dark:text-emerald-400"}`}>
+          <TrendingUp size={14} />
+          <span>{delta}</span>
+        </div>
+      )}
+      <span className={`mt-2 text-[11px] font-medium ${highlight ? "text-blue-100" : "text-slate-400 dark:text-zinc-500"}`}>
+        {footer}
+      </span>
+    </article>
+  );
 }
 
 function DimensionTable({ title, rows, isCountry = false, onRowClick }: { title: string; rows: Dimension[]; isCountry?: boolean; onRowClick?: (row: Dimension) => void }) {
@@ -340,11 +439,10 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
     }));
   }, [data]);
 
-  const retentionLineData = useMemo(() => {
+  const retentionComposedData = useMemo(() => {
     if (!data?.retention) return [];
-    return data.retention.map((p, index) => ({
-      date: new Date(2000, 0, 1 + index),
-      point: p.point,
+    return data.retention.map((p) => ({
+      point: `${p.point}%`,
       rate: p.rate,
       viewers: p.viewers,
     }));
@@ -407,6 +505,36 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
       maxValue: total || 1,
     }));
   }, [data]);
+
+  // Anéis dos países (performance tab): participação de impressões por país.
+  const countriesRingData = useMemo(() => {
+    const rows = data?.dimensions?.countries ?? [];
+    const total = rows.reduce((sum, c) => sum + c.impressions, 0);
+    return rows.slice(0, 4).map((c) => ({
+      label: getCountryName(c.name),
+      value: c.impressions,
+      maxValue: total || 1,
+    }));
+  }, [data]);
+
+  // Raios do radar de tráfego: cada fonte é um eixo; valor = impressões.
+  const trafficRadarData = useMemo(() => {
+    const rows = data?.dimensions?.traffic ?? [];
+    return rows.slice(0, 6).map((s) => ({ label: s.name, impressions: s.impressions }));
+  }, [data]);
+
+  // Donut de CTA (funil): cliques e conversões como fatia do total de plays.
+  const ctaRingData = useMemo(() => {
+    if (!data) return [];
+    const plays = Math.max(data.summary.plays, 1);
+    return [
+      { label: "Cliques na CTA", value: data.summary.ctaClicks, maxValue: plays },
+      { label: "Conversões", value: data.summary.conversions, maxValue: plays },
+    ];
+  }, [data]);
+
+  const [hoveredCountriesIndex, setHoveredCountriesIndex] = useState<number | null>(null);
+  const [hoveredCtaIndex, setHoveredCtaIndex] = useState<number | null>(null);
 
   // Derived watch duration totals
   const totalPlayTimeSeconds = useMemo(() => {
@@ -575,60 +703,73 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
             {tab === "performance" && (
               <>
                 <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  {/* Highlighted Primary KPI Card */}
-                  <div className="rounded-2xl bg-gradient-to-br from-[#0066cc] to-[#2563eb] dark:from-[#0052a3] dark:to-[#1d4ed8] p-5 text-white shadow-md flex flex-col justify-between lg:col-span-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-100 flex items-center gap-1.5">
-                        <Eye size={14} /> Visualizações
-                      </span>
-                      <span className="rounded-md bg-white/20 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white">
-                        KPI Principal
-                      </span>
-                    </div>
+                  {/* KPI principal: donut de plays (fatia = play rate) */}
+                  <KpiPieCard
+                    highlight
+                    icon={Eye}
+                    label="Visualizações"
+                    badge="KPI Principal"
+                    slices={[
+                      { label: "Plays", value: data.summary.plays, color: CHART_SERIES_COLORS[0] },
+                      { label: "Impressões sem play", value: Math.max(0, data.summary.impressions - data.summary.plays), color: "transparent" },
+                    ]}
+                    centerLabel="Total"
+                    delta={`+${data.comparison.delta.plays >= 0 ? data.comparison.delta.plays : 20}% vs período anterior`}
+                    footer={`Últimos ${days} dias ativos`}
+                    srValue={format(data.summary.plays)}
+                  />
 
-                    <div className="my-3">
-                      <strong className="text-4xl font-extrabold tracking-tight">{format(data.summary.plays)}</strong>
-                      <div className="mt-2 flex items-center gap-1.5 text-xs font-bold text-emerald-300">
-                        <TrendingUp size={14} />
-                        <span>+{data.comparison.delta.plays >= 0 ? data.comparison.delta.plays : 20}% vs período anterior</span>
-                      </div>
-                    </div>
+                  <KpiPieCard
+                    icon={Clock}
+                    label="Tempo total reproduzido"
+                    slices={[
+                      { label: "Reproduzido", value: totalPlayTimeSeconds, color: CHART_SERIES_COLORS[0] },
+                      { label: "Potencial restante", value: Math.max(0, Math.round(data.summary.plays * (data.video.duration_seconds || 120) - totalPlayTimeSeconds)), color: "transparent" },
+                    ]}
+                    centerLabel="Reproduzido"
+                    formatValue={formatDurationCompact}
+                    footer={formatSecondsToTimeString(totalPlayTimeSeconds)}
+                    srValue={formatSecondsToTimeString(totalPlayTimeSeconds)}
+                  />
 
-                    <span className="text-[10px] font-medium text-blue-100">Últimos {days} dias ativos</span>
-                  </div>
+                  <KpiPieCard
+                    icon={Clock3}
+                    label="Tempo médio assistido"
+                    slices={[
+                      { label: "Média assistida", value: avgWatchTimeSeconds, color: CHART_SERIES_COLORS[0] },
+                      { label: "Restante do vídeo", value: Math.max(0, (data.video.duration_seconds || 120) - avgWatchTimeSeconds), color: "transparent" },
+                    ]}
+                    centerLabel="Média"
+                    formatValue={(value) => `${Math.round(value)}s`}
+                    footer="Por espectador"
+                    srValue={`${avgWatchTimeSeconds}s`}
+                  />
 
-                  {/* Secondary Summary Metric Cards */}
-                  <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs flex flex-col justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <Clock size={14} className="text-slate-400 dark:text-zinc-500" /> Tempo total reproduzido
-                    </span>
-                    <strong className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{formatSecondsToTimeString(totalPlayTimeSeconds)}</strong>
-                    <span className="mt-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">Tempo total acumulado</span>
-                  </div>
+                  <KpiPieCard
+                    icon={UserCheck}
+                    label="Conclusão do vídeo"
+                    slices={[
+                      { label: "Concluíram", value: data.summary.completionRate, color: CHART_SERIES_COLORS[0] },
+                      { label: "Restante", value: Math.max(0, 100 - data.summary.completionRate), color: "transparent" },
+                    ]}
+                    centerLabel="Conclusão"
+                    formatValue={formatPercentValue}
+                    footer={`${data.summary.completed} de ${data.summary.plays} espectadores`}
+                    srValue={format(data.summary.completionRate, true)}
+                  />
 
-                  <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs flex flex-col justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <Clock3 size={14} className="text-slate-400 dark:text-zinc-500" /> Tempo médio assistido
-                    </span>
-                    <strong className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{avgWatchTimeSeconds}s</strong>
-                    <span className="mt-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">Por espectador</span>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs flex flex-col justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <UserCheck size={14} className="text-slate-400 dark:text-zinc-500" /> Conclusão do vídeo
-                    </span>
-                    <strong className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{format(data.summary.completionRate, true)}</strong>
-                    <span className="mt-2 text-[11px] font-medium text-slate-400 dark:text-zinc-500">{data.summary.completed} de {data.summary.plays} espectadores</span>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs flex flex-col justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <MousePointerClick size={14} className="text-slate-400 dark:text-zinc-500" /> Conversões
-                    </span>
-                    <strong className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{format(data.summary.conversions)}</strong>
-                    <span className="mt-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">+{data.summary.ctaClicks} cliques no botão CTA</span>
-                  </div>
+                  <KpiPieCard
+                    icon={MousePointerClick}
+                    label="Conversões"
+                    slices={[
+                      { label: "Conversões", value: data.summary.conversions, color: CHART_SERIES_COLORS[0] },
+                      { label: "Sem conversão", value: Math.max(0, data.summary.plays - data.summary.conversions), color: "transparent" },
+                    ]}
+                    centerLabel="Conversões"
+                    delta={`+${data.summary.ctaClicks} cliques no botão CTA`}
+                    footer="Do total de plays"
+                    srValue={format(data.summary.conversions)}
+                  />
                 </section>
 
                 {/* TIKTOK STUDIO HOURLY / DAILY VIEWS CHART */}
@@ -712,7 +853,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     </div>
                   </div>
 
-                  {/* Card 2: Traffic source */}
+                  {/* Card 2: Traffic source — radar das fontes (dimensions.traffic) */}
                   <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
                     <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center justify-between">
                       <span>Origem do tráfego</span>
@@ -722,65 +863,80 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       Canais que trouxeram audiência para o player.
                     </p>
 
-                    <div className="space-y-3 pt-2">
-                      {(data.dimensions.traffic?.length ? data.dimensions.traffic : [
-                        { name: "Direto / Embed", impressions: data.summary.impressions * 0.5, playRate: 50, completionRate: 33 },
-                        { name: "Página de Checkout", impressions: data.summary.impressions * 0.33, playRate: 33, completionRate: 20 },
-                        { name: "Anúncios (Facebook Ads)", impressions: data.summary.impressions * 0.17, playRate: 17, completionRate: 15 },
-                      ]).map((item) => {
-                        const totalImp = Math.max(data.summary.impressions, 1);
-                        const pct = Math.round((item.impressions / totalImp) * 100);
-                        return (
-                          <div key={item.name} className="space-y-1">
-                            <div className="flex items-center justify-between text-xs font-semibold text-[#191A23] dark:text-zinc-100">
-                              <span>{item.name}</span>
-                              <span className="font-bold">{pct}% <span className="text-slate-400 dark:text-zinc-500 font-normal">({format(item.impressions)} visualizações)</span></span>
-                            </div>
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-card">
-                              <div className="h-full rounded-full bg-[#0066cc]" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {trafficRadarData.length ? (
+                      <>
+                        <div className="grid place-items-center pt-1" aria-hidden="true">
+                          <RadarChart
+                            data={trafficRadarData}
+                            metrics={[{ key: "impressions", label: "Impressões" }]}
+                            size={190}
+                            className="text-[#191A23] dark:text-white"
+                          >
+                            <RadarGrid />
+                            <RadarAxis />
+                            <RadarLabels />
+                            <RadarArea index={0} color={CHART_SERIES_COLORS[0]} fillOpacity={0.22} />
+                          </RadarChart>
+                        </div>
+                        <div className="space-y-2 pt-1">
+                          {data.dimensions.traffic?.slice(0, 6).map((item) => {
+                            const totalImp = Math.max(data.summary.impressions, 1);
+                            const pct = Math.round((item.impressions / totalImp) * 100);
+                            return (
+                              <div key={item.name} className="flex items-center justify-between gap-2 text-xs font-semibold text-[#191A23] dark:text-zinc-100">
+                                <span className="truncate">{item.name}</span>
+                                <span className="shrink-0 font-bold tabular-nums">
+                                  {pct}% <span className="font-normal text-slate-400 dark:text-zinc-500">({format(item.impressions)})</span>
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="grid place-items-center py-10 text-center">
+                        <p className="text-xs font-medium text-slate-400 dark:text-zinc-500">Nenhuma origem detectada neste período.</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Card 3: Audience top countries */}
+                  {/* Card 3: Audience top countries — anéis com hover sincronizado */}
                   <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
                     <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center justify-between">
                       <span>Audiência</span>
                       <Info size={14} className="text-slate-400 dark:text-zinc-500" />
                     </h3>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block">PRINCIPAIS PAÍSES</span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">PRINCIPAIS PAÍSES</span>
 
-                    <div className="space-y-3">
-                      {(data.dimensions.countries?.length ? data.dimensions.countries : [
-                        { name: "BR", impressions: data.summary.impressions * 0.8, playRate: 80, completionRate: 33 },
-                        { name: "US", impressions: data.summary.impressions * 0.15, playRate: 15, completionRate: 20 },
-                        { name: "PT", impressions: data.summary.impressions * 0.05, playRate: 5, completionRate: 10 },
-                      ]).slice(0, 4).map((country) => {
-                        const totalImp = Math.max(data.summary.impressions, 1);
-                        const pct = Math.round((country.impressions / totalImp) * 100);
-                        return (
-                          <div key={country.name} className="space-y-1">
-                            <div className="flex items-center justify-between text-xs font-semibold text-[#191A23] dark:text-zinc-100">
-                              <span className="flex items-center gap-2">
-                                <img
-                                  alt=""
-                                  className="h-3.5 w-5 shrink-0 rounded object-cover border border-slate-200 dark:border-zinc-700"
-                                  src={flagUrl(country.name)}
-                                />
-                                {getCountryName(country.name)}
-                              </span>
-                              <span className="font-bold">{pct}%</span>
-                            </div>
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-card">
-                              <div className="h-full rounded-full bg-[#a855f7]" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {countriesRingData.length ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <div aria-hidden="true">
+                          <RingChart
+                            data={countriesRingData}
+                            size={160}
+                            strokeWidth={10}
+                            baseInnerRadius={44}
+                            hoveredIndex={hoveredCountriesIndex}
+                            onHoverChange={setHoveredCountriesIndex}
+                          >
+                            {countriesRingData.map((item, index) => (
+                              <Ring key={item.label} index={index} />
+                            ))}
+                            <RingCenter defaultLabel="Visitas" />
+                          </RingChart>
+                        </div>
+                        <Legend
+                          items={countriesRingData}
+                          hoveredIndex={hoveredCountriesIndex}
+                          onHoverChange={setHoveredCountriesIndex}
+                          className="w-full text-xs font-semibold"
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid place-items-center py-10 text-center">
+                        <p className="text-xs font-medium text-slate-400 dark:text-zinc-500">Nenhum país detectado neste período.</p>
+                      </div>
+                    )}
                   </div>
                 </section>
               </>
@@ -840,6 +996,29 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     <h3 className="text-sm font-bold text-[#191A23] dark:text-white">Detalhamento de Retenção por Marco</h3>
                     <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Tempo assistido e espectadores em cada ponto percentual do vídeo.</p>
                   </div>
+
+                  {/* ComposedChart: barras = espectadores, linha = taxa (eixo % à direita) */}
+                  {retentionComposedData.length > 0 && (
+                    <div className="w-full" aria-hidden="true">
+                      <ComposedChart
+                        data={retentionComposedData}
+                        xDataKey="point"
+                        aspectRatio="3 / 2"
+                        maxBarSize={30}
+                        rightAxis={{ domain: [0, 100], tickFormatter: (value: number) => `${value}%` }}
+                        valueFormatter={(value, name) =>
+                          name === "Taxa de retenção"
+                            ? formatPercentValue(value)
+                            : value.toLocaleString("pt-BR")
+                        }
+                      >
+                        <ComposedGrid horizontal />
+                        <SeriesBar dataKey="viewers" name="Espectadores" color={CHART_SERIES_COLORS[0]} />
+                        <ComposedArea dataKey="rate" name="Taxa de retenção" color="#0066cc" fillOpacity={0.22} yAxisId="right" />
+                      </ComposedChart>
+                    </div>
+                  )}
+
                   <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-zinc-800">
                     <table className="w-full min-w-[600px] text-left text-xs font-medium text-[#191A23] dark:text-zinc-200">
                       <thead className="bg-slate-50 dark:bg-card uppercase text-slate-500 dark:text-zinc-400 border-b border-slate-100 dark:border-zinc-800 font-semibold">
@@ -868,33 +1047,6 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                         })}
                       </tbody>
                     </table>
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-[#191A23] dark:text-white">Curva de Retenção Detalhada em Tela Cheia</h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Passe o cursor sobre a curva para inspecionar a porcentagem e o número exato de espectadores.</p>
-                  </div>
-
-                  <div className="relative h-[380px] w-full overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-card p-4">
-                    <LineChart
-                      data={retentionLineData}
-                      xDataKey="date"
-                      margin={{ top: 24, right: 28, bottom: 34, left: 46 }}
-                      className="h-full w-full"
-                    >
-                      <LineGrid horizontal />
-                      <Line dataKey="rate" stroke="#0066cc" strokeWidth={3} />
-                      <LineXAxis formatTick={(_date, index) => `${retentionLineData[index]?.point ?? 0}%`} />
-                      <LineChartTooltip
-                        showDatePill={false}
-                        rows={(point) => [
-                          { color: "#0066cc", label: `${point.point as number}% do vídeo`, value: format(point.rate as number, true) },
-                          { color: "#0066cc", label: "Espectadores ativos", value: format(point.viewers as number) },
-                        ]}
-                      />
-                    </LineChart>
                   </div>
                 </section>
               </div>
@@ -948,7 +1100,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
               </section>
             )}
 
-            {/* TAB: FUNNEL (FUNIL DE CONVERSÃO EM LARGURA TOTAL) */}
+            {/* TAB: FUNNEL (FUNIL + DONUT DE CTA) */}
             {tab === "funnel" && (
               <section className="w-full rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-6">
                 <div>
@@ -956,8 +1108,43 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                   <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Perda de público e taxas de conversão relativas a cada etapa da VSL.</p>
                 </div>
 
-                <div className="w-full py-6 flex justify-center">
-                  <FunnelChart data={funnelChartData} layers={3} className="w-full h-[400px]" />
+                <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+                  <div className="w-full min-w-0 py-6 flex justify-center">
+                    <FunnelChart data={funnelChartData} layers={3} className="w-full h-[400px]" />
+                  </div>
+
+                  {/* Donut de CTA: mesmo padrão de anéis da aba de dispositivos */}
+                  <div className="flex flex-col justify-center gap-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-card p-5">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#191A23] dark:text-white">Cliques na CTA</h3>
+                      <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
+                        Participação dos cliques e das compras no total de plays.
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-center gap-4 xl:flex-row xl:items-center xl:justify-center">
+                      <div aria-hidden="true">
+                        <RingChart
+                          data={ctaRingData}
+                          size={170}
+                          strokeWidth={12}
+                          baseInnerRadius={46}
+                          hoveredIndex={hoveredCtaIndex}
+                          onHoverChange={setHoveredCtaIndex}
+                        >
+                          {ctaRingData.map((item, index) => (
+                            <Ring key={item.label} index={index} />
+                          ))}
+                          <RingCenter defaultLabel="Interações" />
+                        </RingChart>
+                      </div>
+                      <Legend
+                        items={ctaRingData}
+                        hoveredIndex={hoveredCtaIndex}
+                        onHoverChange={setHoveredCtaIndex}
+                        className="w-full text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
                 </div>
               </section>
             )}
@@ -966,7 +1153,50 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
             {tab === "audience" && (
               <div className="grid gap-6 md:grid-cols-2">
                 <DimensionTable title="Países de Origem" rows={data.dimensions.countries ?? []} isCountry={true} onRowClick={(row) => setActivePanel({ type: "segment", title: row.name, subtitle: "Países", data: row })} />
-                <DimensionTable title="Fontes de Tráfego" rows={data.dimensions.traffic ?? []} onRowClick={(row) => setActivePanel({ type: "segment", title: row.name, subtitle: "Fontes de Tráfego", data: row })} />
+
+                {/* Fontes de Tráfego: radar das fontes (dimensions.traffic) */}
+                <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-sm font-bold text-[#191A23] dark:text-white">Fontes de Tráfego</h3>
+                    <span className="rounded-full bg-[#B9FF66] border border-black/5 px-2.5 py-0.5 text-xs font-bold text-[#191A23]">
+                      {data.dimensions.traffic?.length ?? 0} segmentos
+                    </span>
+                  </div>
+                  {trafficRadarData.length ? (
+                    <div className="flex flex-col items-center gap-5">
+                      <div className="grid place-items-center" aria-hidden="true">
+                        <RadarChart
+                          data={trafficRadarData}
+                          metrics={[{ key: "impressions", label: "Impressões" }]}
+                          size={260}
+                          className="text-[#191A23] dark:text-white"
+                        >
+                          <RadarGrid />
+                          <RadarAxis />
+                          <RadarLabels />
+                          <RadarArea index={0} color={CHART_SERIES_COLORS[0]} fillOpacity={0.22} />
+                        </RadarChart>
+                      </div>
+                      <div className="w-full space-y-2">
+                        {data.dimensions.traffic?.slice(0, 6).map((item) => {
+                          const totalImp = Math.max(data.summary.impressions, 1);
+                          const pct = Math.round((item.impressions / totalImp) * 100);
+                          return (
+                            <div key={item.name} className="flex items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-xs font-semibold text-[#191A23] dark:text-zinc-100">
+                              <span className="truncate">{item.name}</span>
+                              <span className="shrink-0 tabular-nums text-slate-500 dark:text-zinc-400">
+                                {format(item.impressions)} · {format(item.playRate, true)} play
+                              </span>
+                              <span className="shrink-0 font-bold">{pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-xs font-medium text-slate-400 dark:text-zinc-500">Nenhum segmento detectado neste período.</div>
+                  )}
+                </section>
               </div>
             )}
 
@@ -990,8 +1220,8 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       ))}
                       <RingCenter defaultLabel="Visitas" />
                     </RingChart>
-                    <RingLegend 
-                      data={devicesRingData}
+                    <Legend 
+                      items={devicesRingData}
                       hoveredIndex={hoveredDevicesIndex}
                       onHoverChange={setHoveredDevicesIndex}
                       className="w-full xl:w-auto text-xs font-semibold text-[#191A23] dark:text-zinc-200"
@@ -1016,8 +1246,8 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       ))}
                       <RingCenter defaultLabel="Visitas" />
                     </RingChart>
-                    <RingLegend 
-                      data={browsersRingData}
+                    <Legend 
+                      items={browsersRingData}
                       hoveredIndex={hoveredBrowsersIndex}
                       onHoverChange={setHoveredBrowsersIndex}
                       className="w-full xl:w-auto text-xs font-semibold text-[#191A23] dark:text-zinc-200"
@@ -1042,8 +1272,8 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       ))}
                       <RingCenter defaultLabel="Visitas" />
                     </RingChart>
-                    <RingLegend 
-                      data={osRingData}
+                    <Legend 
+                      items={osRingData}
                       hoveredIndex={hoveredOSIndex}
                       onHoverChange={setHoveredOSIndex}
                       className="w-full xl:w-auto text-xs font-semibold text-[#191A23] dark:text-zinc-200"
