@@ -22,6 +22,7 @@ const PRIVILEGED = [
   "lib/security/self-origins.ts",
   "lib/security/embed-origin.ts",
   "lib/security/auth-events.ts",
+  "lib/security/neon-webhook.ts",
   "lib/storage/r2.ts",
   "lib/storage/faststart.ts",
   "lib/webhooks/delivery.ts",
@@ -49,7 +50,7 @@ const PRIVILEGED = [
 ];
 
 const PRIVILEGED_IMPORT = new RegExp(
-  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|auth-events|self-origins)|storage/|webhooks|email/|cache/|posthog-server|billing|ai/nvidia|api/(guard|request)|player/assets)|services/ads/server-events)`,
+  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|auth-events|self-origins|neon-webhook)|storage/|webhooks|email/|cache/|posthog-server|billing|ai/nvidia|api/(guard|request)|player/assets)|services/ads/server-events)`,
 );
 
 function allFiles(dir: string): string[] {

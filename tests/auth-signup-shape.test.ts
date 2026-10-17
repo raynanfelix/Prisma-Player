@@ -59,4 +59,20 @@ describe("signup não expõe sessão (AUTH-02/A11)", () => {
     expect(response.status).toBe(200);
     expect(JSON.parse(await response.text())).toMatchObject({ user: { id: "user-1" }, hasSession: false });
   });
+
+  it("usuário não verificado expõe emailVerificationRequired=true (UI troca para o form de código)", async () => {
+    signUpResult.data.token = null; // "Verify at Sign-up" ligado: sem sessão imediata
+    const response = await POST(post({ name: "A", email: "a@b.c", password: "segredo123" }));
+    expect(response.status).toBe(200);
+    expect(JSON.parse(await response.text())).toMatchObject({ emailVerificationRequired: true, hasSession: false });
+  });
+
+  it("usuário já verificado expõe emailVerificationRequired=false", async () => {
+    signUpResult.data.user.emailVerified = true;
+    signUpResult.data.token = "SECRET-SESSION-TOKEN";
+    const response = await POST(post({ name: "A", email: "a@b.c", password: "segredo123" }));
+    expect(response.status).toBe(200);
+    expect(JSON.parse(await response.text())).toMatchObject({ emailVerificationRequired: false, hasSession: true });
+    signUpResult.data.user.emailVerified = false;
+  });
 });

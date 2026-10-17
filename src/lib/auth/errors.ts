@@ -29,6 +29,9 @@ export function getAuthErrorMessage(error: AuthMethodError, fallback: string): s
   if (code === "EMAIL_NOT_VERIFIED") {
     return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.";
   }
+  if (code === "INVALID_OTP" || code === "OTP_EXPIRED" || message.includes("invalid otp") || message.includes("otp has expired")) {
+    return "Código inválido ou expirado. Solicite um novo código.";
+  }
   if (code === "INVALID_EMAIL") {
     return "E-mail inválido.";
   }

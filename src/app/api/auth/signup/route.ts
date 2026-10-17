@@ -56,10 +56,13 @@ export async function POST(request: Request) {
   // (contrato { user, hasSession } — teste tests/auth-signup-shape.test.ts).
   // `hasSession` reflete se o Managed emitiu sessão imediata (null quando a
   // verificação de e-mail está habilitada no branch).
+  // `emailVerificationRequired`: "Verify at Sign-up" ligado → usuário criado
+  // com emailVerified=false e sem sessão — a UI troca para o form de código.
   return NextResponse.json({
     user: data?.user
       ? { id: data.user.id, email: data.user.email, name: data.user.name, emailVerified: data.user.emailVerified }
       : null,
     hasSession: Boolean(data?.token),
+    emailVerificationRequired: Boolean(data?.user && !data.user.emailVerified),
   });
 }

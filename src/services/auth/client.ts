@@ -39,17 +39,49 @@ export const authService = {
 
   async signUpWithEmail(input: { name: string; email: string; password: string }) {
     try {
-      const data = await apiRequest<{ data: { user: { id: string; email?: string } | null }; hasSession?: boolean }>("/api/auth/signup", {
+      const data = await apiRequest<{
+        user: { id: string; email?: string } | null;
+        hasSession?: boolean;
+        emailVerificationRequired?: boolean;
+      }>("/api/auth/signup", {
         method: "POST",
         body: { name: input.name, email: input.email, password: input.password },
       });
-      if (data.data?.user) {
-        posthog.identify(data.data.user.id, { email: data.data.user.email });
+      if (data.user) {
+        posthog.identify(data.user.id, { email: data.user.email });
         posthog.capture("user_signed_up", { method: "email" });
       }
-      return { session: data.hasSession ? "present" : null } as { session: string | null };
+      return {
+        session: data.hasSession ? "present" : null,
+        emailVerificationRequired: Boolean(data.emailVerificationRequired),
+      };
     } catch (error) {
       throw new AuthServiceError(error, "Não foi possível criar a conta. Tente novamente.");
+    }
+  },
+
+  /** Troca o código de 6 dígitos do e-mail; com auto-sign-in devolve sessão. */
+  async verifyEmailWithCode(email: string, otp: string) {
+    try {
+      const data = await apiRequest<{ verified?: boolean; hasSession?: boolean }>("/api/auth/verify-email", {
+        method: "POST",
+        body: { email: email.trim().toLowerCase(), otp },
+      });
+      return { verified: Boolean(data.verified), hasSession: Boolean(data.hasSession) };
+    } catch (error) {
+      throw new AuthServiceError(error, "Código inválido ou expirado. Tente novamente.");
+    }
+  },
+
+  /** Reenvia o código de verificação (resposta do servidor é sempre genérica). */
+  async resendVerificationEmail(email: string) {
+    try {
+      await apiRequest("/api/auth/verify-email", {
+        method: "POST",
+        body: { email: email.trim().toLowerCase(), resend: true },
+      });
+    } catch (error) {
+      throw new AuthServiceError(error, "Não foi possível reenviar o código. Aguarde um momento e tente novamente.");
     }
   },
 

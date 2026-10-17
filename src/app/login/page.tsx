@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AuthField } from "@/features/auth/components/AuthField";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthNotice } from "@/features/auth/components/AuthNotice";
+import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import type { AuthNoticeState } from "@/features/auth/model/types";
 import { useCapsLock } from "@/features/auth/hooks/use-caps-lock";
 import { isValidEmail, suggestEmailCorrection } from "@/features/auth/lib/validation";
@@ -118,9 +119,16 @@ export default function LoginPage() {
       router.replace(safeAuthRedirect(new URLSearchParams(window.location.search).get("next")));
       router.refresh();
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível entrar agora.";
       setNotice({
         tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível entrar agora.",
+        message,
+        // Better Auth rejeita sign-in de e-mail não verificado (mensagem pode
+        // variar — trate genericamente por substring 'verif'). Oferece a tela
+        // de verificação por código com o e-mail já preenchido.
+        action: /verif/i.test(message)
+          ? { label: "Verificar e-mail", href: `/signup?verify=1&email=${encodeURIComponent(normalizedEmail)}` }
+          : undefined,
       });
     } finally {
       submittingRef.current = false;
@@ -135,6 +143,12 @@ export default function LoginPage() {
       description="Gerencie suas VSLs, acompanhe a conversão e otimize seus resultados."
       footer={<>Ainda não tem conta? <Link href="/signup" className="font-bold text-[#191A23] hover:underline">Criar conta grátis</Link></>}
     >
+      <GoogleSignInButton onError={(message) => setNotice({ tone: "error", message })} />
+      <div className="my-6 flex items-center gap-3" aria-hidden>
+        <span className="h-px flex-1 bg-slate-200" />
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">ou com e-mail</span>
+        <span className="h-px flex-1 bg-slate-200" />
+      </div>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-1">
           <AuthField

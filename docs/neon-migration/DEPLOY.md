@@ -63,17 +63,89 @@ O `.env.example` já está completo e sem nenhuma `SUPABASE_*`.
    exigem SMTP próprio; os códigos numéricos funcionam no SMTP compartilhado.
    Configure no painel do branch (ver `docs/neon-migration/neon-auth-setup.md`).
 
-## 5. Smoke test pós-deploy
+## 5. Neon Auth — ativação completa (painel)
 
-1. `signup` → `login` → `logout` (fluxo Neon Auth).
-2. Upload de vídeo → `ready` (R2) → `/embed/[id]` e `/embed/[id]/manifest`.
-3. Eventos: `/api/analytics-events` aceita o token do embed (não precisa sessão).
-4. Billing: webhook AbacatePay em sandbox (assinatura HMAC deve validar).
-5. `GET /api/account/security` responde `{ factors: [] }` (2FA desabilitado).
+Com o código já migrado (webhook `user.created` + verificação por código),
+ligue os recursos no painel do branch **de produção**, nesta ordem:
+
+### 5.1 Application name
+
+**Settings → Better Auth → Application name**: `Prisma Player`. É o nome que
+aparece nos e-mails de verificação/reset enviados pelo Auth.
+
+### 5.2 Sign-up com e-mail + verificação obrigatória (método CÓDIGOS)
+
+**Settings → Better Auth**:
+
+- **Sign-up with Email**: ON
+- **Verify at Sign-up**: ON
+- **Método de verificação**: **Códigos** (numéricos de 6 dígitos)
+
+> Por que códigos: o SMTP **compartilhado** (`auth@mail.myneon.app`) entrega
+> códigos normalmente; **links** exigem SMTP próprio. Com códigos, o signup
+> cria o usuário e a UI troca para o form "Verifique seu e-mail"
+> (`/api/auth/verify-email` troca o código por sessão via
+> `emailOtp.verifyEmail`; reenvio com cooldown de 60s via
+> `sendVerificationEmail`).
+
+CLI equivalente:
+
+```bash
+neon neon-auth config email-password update --enabled --require-email-verification
+```
+
+### 5.3 Webhook `user.created` (provisionamento instantâneo)
+
+**Auth → Configuration → Webhooks**:
+
+- **Webhook URL**: `https://prisma-player.vercel.app/api/webhooks/neon-auth`
+- **Events**: `["user.created"]` **SOMENTE**
+- **Timeout**: 5s (default; max 3 tentativas / 15s globais na Neon)
+
+CLI equivalente:
+
+```bash
+neon neon-auth config webhook update --enabled \
+  --url https://prisma-player.vercel.app/api/webhooks/neon-auth \
+  --enabled-events user.created --timeout 5
+```
+
+> Por que **só** `user.created`: a assinatura Ed25519 do evento é verificada
+> contra o JWKS do próprio `NEON_AUTH_BASE_URL` (`/.well-known/jwks.json` —
+> nenhuma variável nova). Sobre os demais eventos:
+>
+> - `send.otp` / `send.magic_link` são **substitutivos** — assiná-los desliga o
+>   e-mail da Neon e o código passa a depender do SEU delivery (ainda não
+>   existe). Não assinar sem delivery próprio.
+> - `user.before_create` é **fail-closed**: se este endpoint cair ou demorar,
+>   **TODOS os signups falham**. Não assinar sem necessidade real de bloqueio.
+> - `phone_number.verified` / `organization.*` estão fora de escopo por
+>   decisão do dono (sem phone/org no produto hoje).
+
+### 5.4 Como fica o provisionamento
+
+O webhook dá **bootstrap instantâneo**: assim que a Neon grava o usuário,
+`ensureAccountBootstrap` cria profiles, access/trial, wallet, inbox e equipe
+(idempotente — upserts), sem esperar o primeiro login. O self-heal do app
+(primeira leitura de perfil/access) **continua** como rede de segurança para
+entregas perdidas ou contas antigas — rodar os dois é seguro.
+
+## 6. Smoke test pós-deploy
+
+1. Signup com "Verify at Sign-up" ligado: cadastro → form "Verifique seu
+   e-mail" → código do e-mail → sessão automática (`/welcome`). Login com
+   e-mail não verificado oferece o link "Verificar e-mail".
+2. `login` → `logout` (conta já verificada).
+3. Upload de vídeo → `ready` (R2) → `/embed/[id]` e `/embed/[id]/manifest`.
+4. Eventos: `/api/analytics-events` aceita o token do embed (não precisa sessão).
+5. Billing: webhook AbacatePay em sandbox (assinatura HMAC deve validar).
+6. `GET /api/account/security` responde `{ factors: [] }` (2FA desabilitado).
+7. Webhook Neon: criar uma conta nova e confirmar nos logs que
+   `ensureAccountBootstrap` rodou via `/api/webhooks/neon-auth` (200 + after).
 
 ---
 
-## 6. Checklist de escala (quando o tráfego de verdade chegar)
+## 7. Checklist de escala (quando o tráfego de verdade chegar)
 
 Arquitetura de entrega da VSL (pós-otimização): config pública do player
 servida da **borda da Vercel** (manifest, `s-maxage=60`) → endpoint
@@ -105,8 +177,10 @@ operadora não trava espectador legítimo).
 2. **`@neondatabase/auth@0.6.0-beta`** — pacote em beta; travar a versão no
    lockfile e acompanhar o changelog até GA.
 3. **SMTP custom obrigatório** em produção para links de verificação de e-mail.
-4. **Verificação de e-mail** — toggle "Verify email at signup" do branch; se
-   ligado, falta UI de verificação + tratamento no signup.
+4. **Verificação de e-mail** — toggle "Verify email at signup" do branch — ✅
+   implementada: form de código no signup + `/api/auth/verify-email` + link
+   "Verificar e-mail" no login. Falta só ligar no painel: seção **5.2**
+   (Verify at Sign-up, método CÓDIGOS).
 5. **OAuth social** — sem social login na UI; quando houver, registrar origens
    (`neon neon-auth domain add`) e usar credenciais de produção.
 6. **Convite de equipe sem e-mail** — `api/account/team` cria o convite
