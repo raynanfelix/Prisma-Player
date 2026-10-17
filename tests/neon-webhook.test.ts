@@ -296,8 +296,49 @@ describe("POST /api/webhooks/neon-auth — rota", () => {
     expect(vi.mocked(ensureAccountBootstrap)).not.toHaveBeenCalled();
   });
 
-  it("(h) sem headers de assinatura → 401, nada processado", async () => {
-    const response = await POST(
+  it("(g2) user.before_create → 200 { allowed: true } (shape OBRIGATORIO do bloqueante) sem bootstrap", async () => {
+    const body = JSON.stringify({
+      event_id: "evt-before-create",
+      event_type: "user.before_create",
+      timestamp: new Date().toISOString(),
+      context: { endpoint_id: "ep-test", project_name: "Prisma Player" },
+      user: { id: "user-webhook-1", email: "novo@exemplo.com", name: "Nova Pessoa", email_verified: false, created_at: new Date().toISOString() },
+      event_data: { auth_provider: "google", ip_address: "203.0.113.9", user_agent: "vitest" },
+    });
+    const signed = signWebhook({ body });
+
+    const response = await POST(webhookRequest(body, webhookHeaders(signed, { eventId: "evt-before-create", eventType: "user.before_create" })));
+
+    // Falhou em producao com WEBHOOK_DELIVERY_FAILED: resposta {ok:true} sem
+    // o campo "allowed" e tratada como INVALIDA pela spec (fail-closed).
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ allowed: true });
+    expect(afterState.tasks).toHaveLength(0);
+    await runAfterTasks();
+    expect(vi.mocked(ensureAccountBootstrap)).not.toHaveBeenCalled();
+  });
+
+  it("(g3) send.otp assinado por engano → 200 no-op sem bootstrap (misconfig: e-mail engolido, log de alerta)", async () => {
+    const body = JSON.stringify({
+      event_id: "evt-send-otp",
+      event_type: "send.otp",
+      timestamp: new Date().toISOString(),
+      context: { endpoint_id: "ep-test", project_name: "Prisma Player" },
+      user: { id: "user-webhook-1", email: "novo@exemplo.com", name: "Nova Pessoa", email_verified: false, created_at: new Date().toISOString() },
+      event_data: { otp_code: "123456", otp_type: "email-verification", expires_at: new Date().toISOString(), ip_address: "203.0.113.9", user_agent: "vitest" },
+    });
+    const signed = signWebhook({ body });
+
+    const response = await POST(webhookRequest(body, webhookHeaders(signed, { eventId: "evt-send-otp", eventType: "send.otp" })));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(afterState.tasks).toHaveLength(0);
+    await runAfterTasks();
+    expect(vi.mocked(ensureAccountBootstrap)).not.toHaveBeenCalled();
+  });
+
+  it("(h) sem headers de assinatura → 401, nada processado", async () => {    const response = await POST(
       new Request("https://prisma-player.vercel.app/api/webhooks/neon-auth", {
         method: "POST",
         headers: { "content-type": "application/json" },

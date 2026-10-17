@@ -45,6 +45,30 @@ export async function POST(request: Request) {
       });
     });
   }
+
+  // user.before_create é BLOQUEANTE e fail-closed: a spec exige JSON com
+  // "allowed" — resposta sem o campo é tratada como FALHA e derruba TODOS os
+  // signups com WEBHOOK_DELIVERY_FAILED (aconteceu em produção: o dono
+  // assinou todos os eventos no painel). Aqui ninguém é bloqueado no hook;
+  // validação de signup fica no fluxo de e-mail/verificação da própria Neon.
+  if (event.eventType === "user.before_create") {
+    return NextResponse.json({ allowed: true }, { headers: { "cache-control": "no-store" } });
+  }
+
+  // send.otp / send.magic_link assinados = a Neon PARA de entregar o
+  // e-mail dela e delega pra cá. Nós NÃO temos delivery próprio — logar
+  // alto e avisar no painel: remova esses eventos e deixe só user.created.
+  if (event.eventType === "send.otp" || event.eventType === "send.magic_link") {
+    console.error("neon_webhook_misconfigured_delivery_event", {
+      eventType: event.eventType,
+      hint: "Remova send.otp/send.magic_link do webhook no painel Neon — deixe apenas user.created; sem delivery próprio, os e-mails da Neon sao engolidos.",
+    });
+    // 2xx mesmo assim: são eventos BLOCO de fluxo — falhar derrubaria o
+    // login/cadastro com WEBHOOK_DELIVERY_FAILED. O e-mail se perde até o
+    // painel ser corrigido; melhor 1 pendência que o fluxo inteiro morto.
+    return NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } });
+  }
+
   // Outros eventTypes e reentregas (duplicate=true): 200 no-op — a resposta
   // dos duplicados é a mesma do primeiro aceito (spec Neon).
   return NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } });
