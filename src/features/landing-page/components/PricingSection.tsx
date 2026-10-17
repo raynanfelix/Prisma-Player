@@ -6,15 +6,16 @@ import { Check, Plus, Minus, ArrowUpRight, Zap, Package } from "lucide-react";
 
 export default function PricingSection() {
   const [openFaq, setOpenFaq] = useState<number | null>(0); // Primeira FAQ aberta por padrão
+  // Anual ativo por padrão: é a oferta que queremos apresentar primeiro.
+  const [isAnnual, setIsAnnual] = useState(true);
 
-  // A home apresenta o plano anual como oferta principal (padrão do /pricing).
   const plans = [
     {
       name: "Plano Iniciante",
       badge: "Iniciante",
-      price: "R$ 44,90",
-      period: "/mês no plano anual",
-      altPrice: "ou R$ 67,90/mês na cobrança mensal",
+      priceMonthly: "67,90",
+      priceAnnual: "44,90",
+      annualTotal: "R$ 538,80",
       description: "Para produtores e afiliados testando e validando suas primeiras VSLs.",
       plays: "10.000 plays inclusos /mês",
       features: [
@@ -36,9 +37,9 @@ export default function PricingSection() {
     {
       name: "Plano Pro",
       badge: "Popular",
-      price: "R$ 97,90",
-      period: "/mês no plano anual",
-      altPrice: "ou R$ 147,90/mês na cobrança mensal",
+      priceMonthly: "147,90",
+      priceAnnual: "97,90",
+      annualTotal: "R$ 1.174,80",
       description: "Para ofertas validadas com tráfego pago constante e trabalho recorrente de retenção.",
       plays: "50.000 plays inclusos /mês",
       features: [
@@ -60,9 +61,9 @@ export default function PricingSection() {
     {
       name: "Plano Escala",
       badge: "Escala",
-      price: "R$ 229,90",
-      period: "/mês no plano anual",
-      altPrice: "ou R$ 347,90/mês na cobrança mensal",
+      priceMonthly: "347,90",
+      priceAnnual: "229,90",
+      annualTotal: "R$ 2.758,80",
       description: "Para agências, coprodutores e lançamentos de alto volume que precisam de suporte próximo.",
       plays: "200.000 plays inclusos /mês",
       features: [
@@ -130,6 +131,43 @@ export default function PricingSection() {
           </p>
         </div>
 
+        {/* Monthly / Annual Toggle — Anual ativo por padrão */}
+        <div className="flex justify-center">
+          <div
+            role="group"
+            aria-label="Ciclo de cobrança"
+            className="inline-flex flex-wrap items-center justify-center gap-1 rounded-2xl border-2 border-[#191A23] bg-white p-1.5 shadow-[2px_2px_0px_#191A23]"
+          >
+            <button
+              type="button"
+              onClick={() => setIsAnnual(false)}
+              aria-pressed={!isAnnual}
+              className={`rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
+                !isAnnual
+                  ? "border-[#191A23] bg-[#191A23] text-white shadow-[1px_1px_0px_#191A23]"
+                  : "hover:bg-[#F3F3F3]"
+              }`}
+            >
+              Cobrança Mensal
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAnnual(true)}
+              aria-pressed={isAnnual}
+              className={`inline-flex items-center gap-2 rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
+                isAnnual
+                  ? "border-[#191A23] bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]"
+                  : "hover:bg-[#F3F3F3]"
+              }`}
+            >
+              Cobrança Anual
+              <span className="rounded-full bg-[#191A23] px-2 py-0.5 text-[10px] font-black text-[#B9FF66]">
+                Economize 34%
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* 3 Pricing Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan, idx) => {
@@ -153,14 +191,16 @@ export default function PricingSection() {
                   <h3 className={`text-2xl font-black ${plan.textColor}`}>{plan.name}</h3>
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className={`text-4xl sm:text-5xl font-black ${plan.textColor} tracking-tight font-mono`}>
-                      {plan.price}
+                      R$ {isAnnual ? plan.priceAnnual : plan.priceMonthly}
                     </span>
                     <span className={`text-sm font-bold ${plan.textColor} opacity-70`}>
-                      {plan.period}
+                      /mês
                     </span>
                   </div>
                   <p className={`mt-1 text-xs font-medium ${plan.textColor} opacity-70`}>
-                    {plan.altPrice}
+                    {isAnnual
+                      ? `no plano anual — cobrado ${plan.annualTotal} à vista`
+                      : "na cobrança mensal, sem fidelidade"}
                   </p>
 
                   <p className={`mt-4 text-xs font-medium ${plan.textColor} opacity-80 min-h-10 leading-relaxed`}>

@@ -105,32 +105,40 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
               Escolha a capacidade de plays ideal para sua operação de VSL e comece a testar agora.
             </p>
 
-            {/* Monthly / Annual Toggle — anual ligado por padrão */}
-            <div className="pt-4 flex items-center justify-center gap-4">
-              <span className={`text-sm font-bold ${!isAnnual ? "text-[#191A23]" : "text-[#191A23]/60"}`}>
-                Cobrança Mensal
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsAnnual(!isAnnual)}
-                aria-pressed={isAnnual}
-                className="relative h-9 w-16 rounded-full border-2 border-[#191A23] bg-white p-1 shadow-[1px_1px_0px_#191A23] cursor-pointer transition-colors"
+            {/* Monthly / Annual Toggle — Anual ativo por padrão */}
+            <div className="pt-4 flex justify-center">
+              <div
+                role="group"
+                aria-label="Ciclo de cobrança"
+                className="inline-flex flex-wrap items-center justify-center gap-1 rounded-2xl border-2 border-[#191A23] bg-white p-1.5 shadow-[2px_2px_0px_#191A23]"
               >
-                <div
-                  className={`h-6 w-6 rounded-full bg-[#191A23] transition-transform ${
-                    isAnnual ? "translate-x-7 bg-[#B9FF66]" : "translate-x-0"
+                <button
+                  type="button"
+                  onClick={() => setIsAnnual(false)}
+                  aria-pressed={!isAnnual}
+                  className={`rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
+                    !isAnnual
+                      ? "border-[#191A23] bg-[#191A23] text-white shadow-[1px_1px_0px_#191A23]"
+                      : "hover:bg-[#F3F3F3]"
                   }`}
-                />
-              </button>
-
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${isAnnual ? "text-[#191A23]" : "text-[#191A23]/60"}`}>
+                >
+                  Cobrança Mensal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAnnual(true)}
+                  aria-pressed={isAnnual}
+                  className={`inline-flex items-center gap-2 rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
+                    isAnnual
+                      ? "border-[#191A23] bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]"
+                      : "hover:bg-[#F3F3F3]"
+                  }`}
+                >
                   Cobrança Anual
-                </span>
-                <span className="rounded-full border border-[#191A23] bg-[#B9FF66] px-2.5 py-0.5 text-xs font-black text-[#191A23] shadow-[1px_1px_0px_#191A23]">
-                  Economize 34%
-                </span>
+                  <span className="rounded-full bg-[#191A23] px-2 py-0.5 text-[10px] font-black text-[#B9FF66]">
+                    Economize 34%
+                  </span>
+                </button>
               </div>
             </div>
           </div>
