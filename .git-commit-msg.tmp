@@ -1,7 +1,0 @@
-﻿fix(inbox): notificacoes ressuscitavam no sino - dois bugs combinados
-
-(1) SINO listava itens LIDOS para sempre (items.slice sem filtrar read_at): o usuario lia/limpava e as 4 continuavam no dropdown a cada entrada. Agora o dropdown mostra apenas NAO LIDAS (ler = consumuiu; historico completo, lidas incluidas, vive em /dashboard/inbox - padrao da industria).
-
-(2) RACE de seed no primeiro acesso: sino e pagina do inbox montam juntos => 2 GETs simultaneos => ambos viam count=0 e ambos inseriam os 4 defaults (so o kind=welcome tem indice unico parcial; trial/tip/alert duplicavam - por isso o usuario via teste-gratis duas vezes). Corrigido com pg_advisory_xact_lock serializando o seed + re-count DENTRO da transacao: o segundo GET espera, re-conta, ve as linhas do primeiro e nao insere. Zero mudanca de schema. O caminho quente (conta ja seedada) nao paga lock (count fora do lock).
-
-Validacao: tsc 0, lint 0, suite 395/395.
