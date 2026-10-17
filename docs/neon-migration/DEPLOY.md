@@ -130,6 +130,35 @@ O webhook dá **bootstrap instantâneo**: assim que a Neon grava o usuário,
 (primeira leitura de perfil/access) **continua** como rede de segurança para
 entregas perdidas ou contas antigas — rodar os dois é seguro.
 
+### 5.5 Login com Google (botão "Continuar com Google")
+
+As telas de `/login` e `/signup` têm o botão "Continuar com Google"
+(`signIn.social` client-side pelo wrapper `@neondatabase/auth/next`,
+callback para `/dashboard/videos`; o fluxo OAuth é do SDK — redirect
+top-level ou popup no embed). Configuração por ambiente:
+
+- **Dev**: funciona sem configurar nada — o Managed Auth usa credenciais
+  Google **compartilhadas** da Neon (a tela de consentimento mostra a
+  marca da Neon; aceitável para testes, não para produção).
+- **Produção**: crie um OAuth client próprio no Google Cloud Console
+  (tipo "Web application") com **Authorized redirect URI**
+  `{NEON_AUTH_BASE_URL}/callback/google` (o diálogo do painel mostra a
+  URL exata do branch) e cole Client ID/Secret em
+  **Settings → Auth → OAuth providers**:
+
+  ```bash
+  neon neon-auth oauth-provider add --provider-id google \
+    --oauth-client-id <client-id> --oauth-client-secret <client-secret>
+  ```
+
+- Complete o **branding do consent screen** no Google (nome "Prisma
+  Player", e-mail de suporte, domínios autorizados) e publique/verifique
+  o app para aceitar usuários fora da lista de testes.
+- O destino pós-OAuth (`callbackURL` = origem + `/dashboard/videos`)
+  precisa estar nos **domínios confiáveis** (seção 4, item 2).
+
+Guia oficial: https://neon.com/docs/auth/guides/setup-oauth.md
+
 ## 6. Smoke test pós-deploy
 
 1. Signup com "Verify at Sign-up" ligado: cadastro → form "Verifique seu
@@ -142,6 +171,10 @@ entregas perdidas ou contas antigas — rodar os dois é seguro.
 6. `GET /api/account/security` responde `{ factors: [] }` (2FA desabilitado).
 7. Webhook Neon: criar uma conta nova e confirmar nos logs que
    `ensureAccountBootstrap` rodou via `/api/webhooks/neon-auth` (200 + after).
+8. Botão "Continuar com Google" nas duas telas: dev usa as credenciais
+   compartilhadas da Neon (consentimento mostra a marca Neon); produção exige
+   OAuth app próprio (seção 5.5). Após consentir, cai em `/dashboard/videos`
+   com sessão.
 
 ---
 
@@ -181,8 +214,10 @@ operadora não trava espectador legítimo).
    implementada: form de código no signup + `/api/auth/verify-email` + link
    "Verificar e-mail" no login. Falta só ligar no painel: seção **5.2**
    (Verify at Sign-up, método CÓDIGOS).
-5. **OAuth social** — sem social login na UI; quando houver, registrar origens
-   (`neon neon-auth domain add`) e usar credenciais de produção.
+5. **OAuth social (Google)** — ✅ botão "Continuar com Google" nas telas de
+   login/signup (`signIn.social` client-side pelo wrapper). Dev usa as
+   credenciais compartilhadas da Neon; produção exige OAuth app próprio
+   (seção 5.5) e origens nos domínios confiáveis (seção 4, item 2).
 6. **Convite de equipe sem e-mail** — `api/account/team` cria o convite
    pendente (visível no GET do convidado), mas o envio de e-mail não tem
    equivalente no Managed (hoje `console.warn`). Resolver com SMTP Neon/Resend.
