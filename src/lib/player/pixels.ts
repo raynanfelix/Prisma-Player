@@ -5,6 +5,8 @@ export interface PixelIntegration {
   provider: PixelProvider;
   id: string;
   conversionDestination?: string;
+  /** Token da API de Conversões da Meta por player (opcional; tem prioridade sobre o env global). */
+  capiToken?: string;
 }
 
 export interface PixelConfigShape {
@@ -13,6 +15,7 @@ export interface PixelConfigShape {
   pixelId?: unknown;
   metaPixelEnabled?: unknown;
   metaPixelId?: unknown;
+  metaCapiToken?: unknown;
   googlePixelEnabled?: unknown;
   googleTagId?: unknown;
   googleConversionDestination?: unknown;
@@ -30,6 +33,7 @@ interface NormalizedPixelFields {
   pixelsEnabled: boolean;
   metaPixelEnabled: boolean;
   metaPixelId: string;
+  metaCapiToken: string;
   googlePixelEnabled: boolean;
   googleTagId: string;
   googleConversionDestination: string;
@@ -80,6 +84,7 @@ export function normalizePixelConfig<T extends Record<string, unknown>>(config: 
     ...config,
     metaPixelEnabled: config.metaPixelEnabled === true || (legacyEnabled && legacyProvider === "meta"),
     metaPixelId,
+    metaCapiToken: clean(config.metaCapiToken, 200),
     googlePixelEnabled: config.googlePixelEnabled === true || (legacyEnabled && legacyProvider === "google"),
     googleTagId,
     googleConversionDestination: clean(config.googleConversionDestination),
@@ -99,7 +104,7 @@ export function normalizePixelConfig<T extends Record<string, unknown>>(config: 
 export function pixelIntegrations(config: PixelConfigShape): PixelIntegration[] {
   const normalized = normalizePixelConfig(config as Record<string, unknown>);
   const result: PixelIntegration[] = [];
-  if (normalized.metaPixelEnabled === true && META_PIXEL_ID.test(String(normalized.metaPixelId))) result.push({ provider: "meta", id: String(normalized.metaPixelId) });
+  if (normalized.metaPixelEnabled === true && META_PIXEL_ID.test(String(normalized.metaPixelId))) result.push({ provider: "meta", id: String(normalized.metaPixelId), capiToken: clean(normalized.metaCapiToken) || undefined });
   if (normalized.googlePixelEnabled === true && GOOGLE_TAG_ID.test(String(normalized.googleTagId))) result.push({ provider: "google", id: String(normalized.googleTagId), conversionDestination: clean(normalized.googleConversionDestination) || undefined });
   if (normalized.tiktokPixelEnabled === true && TIKTOK_PIXEL_ID.test(String(normalized.tiktokPixelId))) result.push({ provider: "tiktok", id: String(normalized.tiktokPixelId) });
   return result;

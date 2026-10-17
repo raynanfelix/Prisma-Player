@@ -31,8 +31,10 @@ function tokenMap(name: "META_CAPI_TOKENS_JSON" | "TIKTOK_EVENTS_TOKENS_JSON") {
   }
 }
 
-export function serverConnectionAvailable(provider: PixelProvider, pixelId: string) {
+export function serverConnectionAvailable(provider: PixelProvider, pixelId: string, capiToken?: string) {
   if (provider === "google") return false;
+  // Token por player (config do studio) tem prioridade sobre o env global.
+  if (provider === "meta" && capiToken && capiToken.trim().length >= 16) return true;
   const tokens = tokenMap(provider === "meta" ? "META_CAPI_TOKENS_JSON" : "TIKTOK_EVENTS_TOKENS_JSON");
   return Boolean(tokens[pixelId]);
 }
@@ -43,7 +45,8 @@ function safeIp(value?: string | null) {
 }
 
 async function sendMeta(integration: PixelIntegration, input: ServerEventInput, fetcher: Fetcher): Promise<ServerDeliveryResult> {
-  const token = tokenMap("META_CAPI_TOKENS_JSON")[integration.id];
+  // Token por player (config do studio) tem prioridade; env global é fallback.
+  const token = (integration.capiToken && integration.capiToken.trim().length >= 16 ? integration.capiToken.trim() : "") || tokenMap("META_CAPI_TOKENS_JSON")[integration.id];
   if (!token) return { provider: "meta", delivered: false, reason: "not_configured" };
   const version = /^v\d{1,2}\.\d$/i.test(process.env.META_GRAPH_API_VERSION || "") ? process.env.META_GRAPH_API_VERSION : "v23.0";
   const userData: Record<string, string> = { client_user_agent: input.clientUserAgent };

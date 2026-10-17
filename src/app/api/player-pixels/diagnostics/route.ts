@@ -46,6 +46,6 @@ export async function GET(request: Request) {
     eventCount: eventRows.length,
     lastEventAt: eventRows[0] ? eventRows[0].createdAt.toISOString() : null,
     events: counts,
-    providers: integrations.map((item) => ({ provider: item.provider, id: item.id, browser: true, server: serverConnectionAvailable(item.provider, item.id) })),
+    providers: integrations.map((item) => ({ provider: item.provider, id: item.id, browser: true, server: serverConnectionAvailable(item.provider, item.id, item.capiToken) })),
   }, { headers: { "cache-control": "no-store" } });
 }
