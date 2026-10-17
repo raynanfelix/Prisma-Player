@@ -21,7 +21,8 @@
 Rotas preservadas (contratos da UI mantidos): `/api/auth/signup`, `/api/auth/login`,
 `/api/auth/logout`, `/api/auth/reset`, `/api/auth/update-password`,
 `/api/auth/revoke-all-sessions`, `/api/account/password`, `/api/account/security`.
-Todo o resto de `/api/auth/*` cai no proxy Managed: `src/app/api/auth/[...all]/route.ts`.
+Todo o resto de `/api/auth/*` cai no proxy Managed: `src/app/api/auth/[...path]/route.ts`
+(o segmento PRECISA ser `[...path]` — o handler do SDK lê `params.path.join("/")`).
 
 ## 2. Variáveis de ambiente
 
