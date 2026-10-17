@@ -5,24 +5,25 @@ import Link from "next/link";
 import { Check, Plus, Minus, ArrowUpRight, Zap, Package } from "lucide-react";
 
 export default function PricingSection() {
-  const [openFaq, setOpenFaq] = useState<number | null>(0); // First FAQ open by default like in Figma image
+  const [openFaq, setOpenFaq] = useState<number | null>(0); // Primeira FAQ aberta por padrão
 
+  // A home apresenta o plano anual como oferta principal (padrão do /pricing).
   const plans = [
     {
       name: "Plano Iniciante",
       badge: "Iniciante",
-      price: "R$ 97",
-      period: "/mês",
-      description: "Ideal para produtores e afiliados testando e validando suas primeiras VSLs.",
+      price: "R$ 44,90",
+      period: "/mês no plano anual",
+      altPrice: "ou R$ 67,90/mês na cobrança mensal",
+      description: "Para produtores e afiliados testando e validando suas primeiras VSLs.",
       plays: "10.000 plays inclusos /mês",
-      storage: "25 GB de armazenamento CDN",
       features: [
-        "Pitch Delay de Ultra Precisão",
-        "Smart Autoplay com Som Simulado",
-        "Analytics Básico de Retenção",
-        "Proteção DRM Anti-Pirataria",
-        "Suporte por E-mail & Ticket",
-        "1 Domínio incluso",
+        "Pitch Delay sincronizado ao segundo",
+        "Autoplay com clique para ouvir",
+        "Analytics de retenção",
+        "Proteção anti-download",
+        "Suporte por e-mail & ticket",
+        "1 domínio incluso",
       ],
       bg: "bg-white",
       textColor: "text-[#191A23]",
@@ -35,18 +36,18 @@ export default function PricingSection() {
     {
       name: "Plano Pro",
       badge: "Popular",
-      price: "R$ 197",
-      period: "/mês",
-      description: "Perfeito para ofertas validadas com tráfego pago constante e busca por máxima retenção.",
+      price: "R$ 97,90",
+      period: "/mês no plano anual",
+      altPrice: "ou R$ 147,90/mês na cobrança mensal",
+      description: "Para ofertas validadas com tráfego pago constante e trabalho recorrente de retenção.",
       plays: "50.000 plays inclusos /mês",
-      storage: "100 GB de armazenamento CDN",
       features: [
         "Tudo do plano Iniciante",
-        "Analytics Segundo a Segundo Avançado",
-        "Teste A/B Integrado de Player e Thumb",
-        "Customização Total de Cores & Botões",
-        "Suporte Prioritário via WhatsApp 24/7",
-        "Multi-domínios Ilimitados",
+        "Analytics segundo a segundo",
+        "Teste A/B de player e thumbnail",
+        "Customização de cores e controles",
+        "Suporte prioritário via WhatsApp 24/7",
+        "Multi-domínios ilimitados",
       ],
       bg: "bg-[#191A23]",
       textColor: "text-white",
@@ -57,20 +58,20 @@ export default function PricingSection() {
       isFeatured: true,
     },
     {
-      name: "Plano Elite",
+      name: "Plano Escala",
       badge: "Escala",
-      price: "R$ 397",
-      period: "/mês",
-      description: "Infraestrutura dedicada com suporte VIP para agências e lançamentos de alto impacto.",
+      price: "R$ 229,90",
+      period: "/mês no plano anual",
+      altPrice: "ou R$ 347,90/mês na cobrança mensal",
+      description: "Para agências, coprodutores e lançamentos de alto volume que precisam de suporte próximo.",
       plays: "200.000 plays inclusos /mês",
-      storage: "500 GB de armazenamento CDN",
       features: [
         "Tudo do plano Pro",
-        "CDN Dedicada com Baixíssima Latência",
-        "Gerente de Conta Dedicado",
-        "SLA de 99.99% de Uptime Garantido",
-        "Exportação de Audiência para Facebook Ads",
-        "Migração de VSLs 100% Assistida",
+        "Gerente de conta dedicado",
+        "SLA documentado por contrato",
+        "Exportação de audiência para Facebook Ads",
+        "Migração de VSLs assistida",
+        "Onboarding acompanhado",
       ],
       bg: "bg-white",
       textColor: "text-[#191A23]",
@@ -84,61 +85,65 @@ export default function PricingSection() {
 
   const faqs = [
     {
+      q: "Como funciona a cobrança anual?",
+      a: "O plano anual é cobrado uma única vez por ano, com 34% de desconto em relação ao mensal. Você pode trocar de plano ou desativar a renovação a qualquer momento pelo painel.",
+    },
+    {
       q: "Existem taxas adicionais ou cobranças surpresa por tráfego?",
-      a: "Não! Todos os nossos planos incluem cota mensal transparente de plays e armazenamento CDN. Se a sua operação ultrapassar o limite, a cobrança adicional é informada antecipadamente sem interromper o funcionamento do seu player.",
+      a: "Não. Todos os planos incluem cota mensal transparente de plays. Se a sua operação ultrapassar o limite, cada play adicional custa R$ 0,02 — informado antecipadamente, sem interromper o funcionamento do seu player.",
     },
     {
       q: "Posso alterar ou cancelar meu plano a qualquer momento?",
-      a: "Sim, absolutamente. Você pode fazer upgrade, downgrade ou cancelamento da sua assinatura direto pelo painel de controle, sem multas ou fidelidade contratual.",
+      a: "Sim. Você pode fazer upgrade, downgrade ou cancelamento da sua assinatura direto pelo painel de controle, sem multas ou fidelidade contratual.",
     },
     {
       q: "Vocês oferecem teste grátis sem cartão de crédito?",
-      a: "Oferecemos 14 dias de teste completo e grátis em todos os planos. Você pode cadastrar sua conta em 30 segundos, subir sua VSL e testar a velocidade sem informar cartão de crédito.",
+      a: "Sim, 14 dias de teste completo e grátis em todos os planos. Crie a sua conta, suba a VSL e teste o player sem informar cartão de crédito.",
     },
     {
       q: "Como funciona a contagem do tempo no Pitch Delay?",
-      a: "O tempo do Pitch Delay é sincronizado estritamente ao segundo de reprodução da VSL. Os botões de checkout só aparecem no momento exato em que o vídeo atinge o tempo configurado, mesmo se o lead pausar ou avançar.",
+      a: "O tempo do Pitch Delay é sincronizado às funções de reprodução da VSL. Os botões de checkout só aparecem no momento configurado, mesmo se o lead pausar ou avançar o vídeo.",
     },
     {
       q: "O player é compatível com WordPress e Elementor?",
-      a: "Sim! O Prisma Player é 100% compatível com Elementor, WordPress, Webflow, GreatPages, Klickpages e qualquer construtor. Basta colar o código de 1 linha.",
+      a: "Sim. O Prisma Player funciona em Elementor, WordPress, Webflow, GreatPages, Klickpages e outros construtores. Basta colar o código de 1 linha.",
     },
     {
       q: "Vocês oferecem suporte para migrar de outros players?",
-      a: "Oferecemos migração 100% assistida e gratuita. Nosso time técnico importa todas as suas VSLs e configurações para você não perder nenhum dia de vendas.",
+      a: "Nos planos Pro e Escala, a migração das suas VSLs e configurações é assistida pelo nosso time. Fale com a gente pelo formulário abaixo e agende.",
     },
   ];
 
   return (
     <section id="precos" className="bg-[#F3F3F3] py-20 border-t-2 border-[#191A23]/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
-        
+
         {/* Section Header */}
         <div>
           <div className="flex flex-col md:flex-row md:items-center gap-6 mb-6">
-            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
               Preços & Planos
             </div>
           </div>
           <p className="max-w-2xl text-lg text-[#191A23]/80 font-medium">
-            Preços transparentes e competitivos para impulsionar a retenção e as vendas da sua VSL.
+            Preços transparentes para impulsionar a retenção e as vendas da sua VSL. A cobrança anual economiza 34% — é a opção que mais clientes escolhem.
           </p>
         </div>
 
-        {/* 3 Pricing Cards Grid (Exact Figma Layout) */}
+        {/* 3 Pricing Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan, idx) => {
             const isDark = plan.bg === "bg-[#191A23]";
             return (
               <div
                 key={idx}
-                className={`relative rounded-[45px] border-2 border-[#191A23] ${plan.bg} p-8 sm:p-10 shadow-[8px_8px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-all ${
+                className={`relative rounded-[35px] border-2 border-[#191A23] ${plan.bg} p-8 sm:p-10 shadow-[4px_4px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-all ${
                   plan.isFeatured ? "ring-4 ring-[#191A23]" : ""
                 }`}
               >
-                {/* Popular Badge for Pro Plan */}
+                {/* Featured Badge */}
                 {plan.isFeatured && (
-                  <span className="absolute top-6 right-6 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1 text-xs font-black text-[#191A23] uppercase tracking-wider shadow-[2px_2px_0px_#191A23]">
+                  <span className="absolute top-6 right-6 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1 text-xs font-black text-[#191A23] uppercase tracking-wider shadow-[1px_1px_0px_#191A23]">
                     {plan.badge}
                   </span>
                 )}
@@ -154,8 +159,11 @@ export default function PricingSection() {
                       {plan.period}
                     </span>
                   </div>
+                  <p className={`mt-1 text-xs font-medium ${plan.textColor} opacity-70`}>
+                    {plan.altPrice}
+                  </p>
 
-                  <p className={`mt-3 text-xs font-medium ${plan.textColor} opacity-80 min-h-10 leading-relaxed`}>
+                  <p className={`mt-4 text-xs font-medium ${plan.textColor} opacity-80 min-h-10 leading-relaxed`}>
                     {plan.description}
                   </p>
 
@@ -163,14 +171,14 @@ export default function PricingSection() {
                   <div className="mt-6 space-y-3">
                     <Link
                       href="/signup"
-                      className={`w-full inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] ${plan.btnPrimaryBg} ${plan.btnPrimaryText} px-6 py-3.5 text-sm font-extrabold shadow-[3px_3px_0px_#191A23] hover:opacity-90 transition-all text-center`}
+                      className={`w-full inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] ${plan.btnPrimaryBg} ${plan.btnPrimaryText} px-6 py-3.5 text-sm font-extrabold shadow-[2px_2px_0px_#191A23] hover:opacity-90 transition-all text-center`}
                     >
-                      Testar Grátis
+                      Testar 14 Dias Grátis
                     </Link>
 
                     <a
                       href="#contato"
-                      className={`w-full inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] ${plan.btnSecondaryBg} ${plan.btnSecondaryText} px-6 py-3.5 text-sm font-bold shadow-[2px_2px_0px_#191A23] hover:bg-[#B9FF66]/20 transition-all text-center`}
+                      className={`w-full inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] ${plan.btnSecondaryBg} ${plan.btnSecondaryText} px-6 py-3.5 text-sm font-bold hover:bg-[#B9FF66]/20 transition-all text-center`}
                     >
                       Falar com Vendas
                     </a>
@@ -184,7 +192,7 @@ export default function PricingSection() {
                     </div>
                     <div className={`rounded-xl border border-[#191A23]/20 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-2.5 text-xs font-bold ${plan.textColor} flex items-center gap-2`}>
                       <Package className="h-4 w-4 shrink-0 text-[#B9FF66]" />
-                      <span>{plan.storage}</span>
+                      <span>R$ 0,02 por play adicional</span>
                     </div>
                   </div>
 
@@ -218,10 +226,10 @@ export default function PricingSection() {
           })}
         </div>
 
-        {/* FAQ Section (Frequently Asked Questions - Matching Figma Image) */}
+        {/* FAQ Section */}
         <div className="pt-12 space-y-10">
           <div className="flex items-center gap-4">
-            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
               Perguntas Frequentes (FAQ)
             </div>
           </div>
@@ -234,8 +242,8 @@ export default function PricingSection() {
                   key={idx}
                   className={`rounded-[30px] border-2 border-[#191A23] transition-all duration-300 ${
                     isOpen
-                      ? "bg-[#B9FF66] shadow-[6px_6px_0px_#191A23]"
-                      : "bg-[#F3F3F3] shadow-[4px_4px_0px_#191A23] hover:bg-white"
+                      ? "bg-white shadow-[3px_3px_0px_#B9FF66]"
+                      : "bg-[#F3F3F3] shadow-[2px_2px_0px_#191A23] hover:bg-white"
                   } p-6 sm:p-8 cursor-pointer`}
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
                 >
@@ -243,7 +251,7 @@ export default function PricingSection() {
                     <h3 className="text-lg sm:text-xl font-black text-[#191A23]">
                       {faq.q}
                     </h3>
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[#191A23] bg-white shadow-[2px_2px_0px_#191A23]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[#191A23] bg-white shadow-[1px_1px_0px_#191A23]">
                       {isOpen ? (
                         <Minus className="h-5 w-5 text-[#191A23]" />
                       ) : (

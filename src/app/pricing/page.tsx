@@ -7,8 +7,8 @@ import { db, schema } from "@/lib/db";
 const { profiles } = schema;
 
 export const metadata: Metadata = {
-  title: "Planos e Preços | Prisma Player - O Player de VSL Mais Rápido",
-  description: "Compare os planos Prisma Player e escolha a capacidade de plays, armazenamento e equipe ideal para sua operação de VSL.",
+  title: "Planos e Preços | Prisma Player",
+  description: "Compare os planos Prisma Player e escolha o plano ideal para sua operação de VSL. Cobrança mensal ou anual com economia para quem antecipa. Plays adicionais: R$ 0,02.",
   alternates: { canonical: "/pricing" },
 };
 

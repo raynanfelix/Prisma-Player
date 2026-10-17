@@ -5,9 +5,9 @@ import { ArrowUpRight } from "lucide-react";
 export default function CaseStudies() {
   const cases = [
     {
-      title: "Produtor de Suplementos (VDSL de R$ 397)",
+      title: "Produtor de Suplementos (VSL de R$ 397)",
       metric: "+38% de conversão no Pitch",
-      text: "Após migrar do player concorrente para o Prisma Player, a taxa de permanência até o minuto 14:20 subiu de 22% para 36.4%, dobrando o ROI do tráfego no Facebook Ads.",
+      text: "Após migrar do player concorrente para o Prisma Player, a taxa de permanência até o minuto 14:20 subiu de 22% para 36.4%, melhorando o ROI do tráfego no Facebook Ads.",
     },
     {
       title: "Infoproduto de Finanças (Oferta de R$ 997)",
@@ -36,7 +36,7 @@ export default function CaseStudies() {
         </div>
 
         {/* Case Studies Dark Container */}
-        <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-12 shadow-[8px_8px_0px_#191A23]">
+        <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-12 shadow-[4px_4px_0px_#191A23]">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-white/20">
             {cases.map((item, idx) => (
               <div

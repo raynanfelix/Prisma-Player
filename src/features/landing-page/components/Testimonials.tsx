@@ -56,7 +56,7 @@ export default function Testimonials() {
         </div>
 
         {/* Testimonials Dark Container */}
-        <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-14 shadow-[8px_8px_0px_#191A23] text-white">
+        <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-14 shadow-[4px_4px_0px_#191A23] text-white">
           
           <div className="mx-auto max-w-3xl">
             {/* Speech Bubble Box */}

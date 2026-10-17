@@ -11,23 +11,25 @@ interface PositivusPricingProps {
 }
 
 export default function PositivusPricing({ account }: PositivusPricingProps) {
-  const [isAnnual, setIsAnnual] = useState(false);
+  // Anual vem ativado por padrão: é a oferta que queremos apresentar primeiro.
+  const [isAnnual, setIsAnnual] = useState(true);
 
   const plans = [
     {
       name: "Iniciante",
-      badge: "Para Validação de Oferta",
-      priceMonthly: 97,
-      priceAnnual: 77,
-      description: "Ideal para produtores e afiliados testando e validando suas primeiras VSLs no mercado.",
-      plays: "10.000 plays / mês",
-      storage: "25 GB na biblioteca",
+      badge: "Para Validar a Oferta",
+      priceMonthly: "67,90",
+      priceAnnual: "44,90",
+      annualTotal: "R$ 538,80",
+      description: "Para produtores e afiliados testando e validando suas primeiras VSLs.",
+      plays: "10.000 plays inclusos /mês",
       features: [
-        "Pitch Delay de Ultra Precisão",
-        "Smart Autoplay com Som Simulado",
-        "Analytics Básico de Retenção",
-        "Proteção DRM Anti-Pirataria",
-        "Suporte por E-mail & Ticket",
+        "Pitch Delay sincronizado ao segundo",
+        "Autoplay com clique para ouvir",
+        "Analytics de retenção",
+        "Proteção anti-download",
+        "Suporte por e-mail & ticket",
+        "1 domínio incluso",
       ],
       bg: "bg-white",
       textColor: "text-[#191A23]",
@@ -36,47 +38,47 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
       isFeatured: false,
     },
     {
-      name: "Pro Scale",
+      name: "Pro",
       badge: "Mais Escolhido",
-      priceMonthly: 197,
-      priceAnnual: 157,
-      description: "Perfeito para ofertas validadas com tráfego pago constante e busca por máxima retenção.",
-      plays: "50.000 plays / mês",
-      storage: "100 GB na biblioteca",
+      priceMonthly: "147,90",
+      priceAnnual: "97,90",
+      annualTotal: "R$ 1.174,80",
+      description: "Para ofertas validadas com tráfego pago constante e trabalho recorrente de retenção.",
+      plays: "50.000 plays inclusos /mês",
       features: [
         "Tudo do plano Iniciante",
-        "Analytics Segundo a Segundo Avançado",
-        "Teste A/B Integrado de Player e Thumb",
-        "Customização Total de Cores & Botões",
-        "Suporte Prioritário via WhatsApp 24/7",
-        "Multi-domínios Ilimitados",
-      ],
-      bg: "bg-[#B9FF66]",
-      textColor: "text-[#191A23]",
-      btnBg: "bg-[#191A23]",
-      btnText: "text-[#B9FF66]",
-      isFeatured: true,
-    },
-    {
-      name: "Enterprise Scale",
-      badge: "Operações de 7-8 Dígitos",
-      priceMonthly: 397,
-      priceAnnual: 317,
-      description: "Infraestrutura dedicada com suporte VIP para agências, coprodutores e lançamentos de alto impacto.",
-      plays: "200.000 plays / mês",
-      storage: "500 GB na biblioteca",
-      features: [
-        "Tudo do plano Pro Scale",
-        "CDN Dedicada com Baixíssima Latência",
-        "Gerente de Conta Dedicado",
-        "SLA de 99.99% de Uptime Garantido",
-        "Exportação de Audiência para Facebook Ads",
-        "Migração de VSLs 100% Assistida",
+        "Analytics segundo a segundo",
+        "Teste A/B de player e thumbnail",
+        "Customização de cores e controles",
+        "Suporte prioritário via WhatsApp 24/7",
+        "Multi-domínios ilimitados",
       ],
       bg: "bg-[#191A23]",
       textColor: "text-white",
       btnBg: "bg-[#B9FF66]",
       btnText: "text-[#191A23]",
+      isFeatured: true,
+    },
+    {
+      name: "Escala",
+      badge: "Lançamentos & Agências",
+      priceMonthly: "347,90",
+      priceAnnual: "229,90",
+      annualTotal: "R$ 2.758,80",
+      description: "Para agências, coprodutores e lançamentos de alto volume que precisam de suporte próximo.",
+      plays: "200.000 plays inclusos /mês",
+      features: [
+        "Tudo do plano Pro",
+        "Gerente de conta dedicado",
+        "SLA documentado por contrato",
+        "Exportação de audiência para Facebook Ads",
+        "Migração de VSLs assistida",
+        "Onboarding acompanhado",
+      ],
+      bg: "bg-white",
+      textColor: "text-[#191A23]",
+      btnBg: "bg-[#191A23]",
+      btnText: "text-white",
       isFeatured: false,
     },
   ];
@@ -87,10 +89,10 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
 
       <main className="py-12 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
-          
+
           {/* Header */}
           <div className="text-center space-y-6 max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+            <div className="inline-flex items-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
               <Sparkles className="h-4 w-4" />
               14 Dias Grátis • Sem Cartão de Crédito
             </div>
@@ -100,19 +102,20 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
             </h1>
 
             <p className="text-lg text-[#191A23]/80 font-medium">
-              Escolha a capacidade ideal de plays e armazenamento para sua operação de VSL. Crie sua conta e comece a testar agora.
+              Escolha a capacidade de plays ideal para sua operação de VSL e comece a testar agora.
             </p>
 
-            {/* Monthly / Annual Toggle */}
+            {/* Monthly / Annual Toggle — anual ligado por padrão */}
             <div className="pt-4 flex items-center justify-center gap-4">
-              <span className={`text-sm font-black ${!isAnnual ? "text-[#191A23]" : "text-[#191A23]/60"}`}>
+              <span className={`text-sm font-bold ${!isAnnual ? "text-[#191A23]" : "text-[#191A23]/60"}`}>
                 Cobrança Mensal
               </span>
-              
+
               <button
+                type="button"
                 onClick={() => setIsAnnual(!isAnnual)}
-                className="relative h-9 w-16 rounded-full border-2 border-[#191A23] bg-white p-1 shadow-[2px_2px_0px_#191A23] cursor-pointer transition-colors"
-                aria-label="Alternar plano"
+                aria-pressed={isAnnual}
+                className="relative h-9 w-16 rounded-full border-2 border-[#191A23] bg-white p-1 shadow-[1px_1px_0px_#191A23] cursor-pointer transition-colors"
               >
                 <div
                   className={`h-6 w-6 rounded-full bg-[#191A23] transition-transform ${
@@ -122,17 +125,17 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
               </button>
 
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-black ${isAnnual ? "text-[#191A23]" : "text-[#191A23]/60"}`}>
+                <span className={`text-sm font-bold ${isAnnual ? "text-[#191A23]" : "text-[#191A23]/60"}`}>
                   Cobrança Anual
                 </span>
                 <span className="rounded-full border border-[#191A23] bg-[#B9FF66] px-2.5 py-0.5 text-xs font-black text-[#191A23] shadow-[1px_1px_0px_#191A23]">
-                  20% OFF
+                  Economize 34%
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 3 Pricing Cards Positivus */}
+          {/* 3 Pricing Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
             {plans.map((p, idx) => {
               const currentPrice = isAnnual ? p.priceAnnual : p.priceMonthly;
@@ -140,7 +143,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
               return (
                 <div
                   key={idx}
-                  className={`relative rounded-[45px] border-2 border-[#191A23] ${p.bg} p-8 sm:p-10 shadow-[8px_8px_0px_#191A23] flex flex-col justify-between transition-transform hover:-translate-y-1 ${
+                  className={`relative rounded-[35px] border-2 border-[#191A23] ${p.bg} p-8 sm:p-10 shadow-[4px_4px_0px_#191A23] flex flex-col justify-between transition-transform hover:-translate-y-1 ${
                     p.isFeatured ? "ring-4 ring-[#191A23]" : ""
                   }`}
                 >
@@ -164,24 +167,31 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                     </div>
 
                     {/* Price */}
-                    <div className="my-6 py-4 border-y border-[#191A23]/20 flex items-baseline gap-2">
-                      <span className={`text-5xl font-black ${p.textColor} tracking-tight font-mono`}>
-                        R$ {currentPrice}
-                      </span>
-                      <span className={`text-sm font-bold ${p.textColor} opacity-70`}>
-                        /mês
-                      </span>
+                    <div className="my-6 py-4 border-y border-[#191A23]/20">
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-5xl font-black ${p.textColor} tracking-tight font-mono`}>
+                          R$ {currentPrice}
+                        </span>
+                        <span className={`text-sm font-bold ${p.textColor} opacity-70`}>
+                          /mês
+                        </span>
+                      </div>
+                      <p className={`mt-1 text-xs font-medium ${p.textColor} opacity-70`}>
+                        {isAnnual
+                          ? `no plano anual — cobrado ${p.annualTotal} à vista`
+                          : "na cobrança mensal, sem fidelidade"}
+                      </p>
                     </div>
 
-                    {/* Capacity Highlights */}
+                    {/* Capacity */}
                     <div className="space-y-2 mb-6">
-                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-white"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
+                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
                         <Zap className="h-4 w-4 shrink-0 text-[#B9FF66]" />
                         <span>{p.plays}</span>
                       </div>
-                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-white"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
+                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
                         <Package className="h-4 w-4 shrink-0 text-[#B9FF66]" />
-                        <span>{p.storage}</span>
+                        <span>R$ 0,02 por play adicional</span>
                       </div>
                     </div>
 
@@ -203,7 +213,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                   <div className="mt-8 pt-6 border-t border-[#191A23]/15">
                     <Link
                       href={account ? "/dashboard/billing" : "/signup"}
-                      className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[#191A23] ${p.btnBg} ${p.btnText} px-6 py-4 text-base font-black shadow-[3px_3px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all`}
+                      className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[#191A23] ${p.btnBg} ${p.btnText} px-6 py-4 text-base font-black shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all`}
                     >
                       <span>{account ? "Escolher no Painel" : "Testar 14 Dias Grátis"}</span>
                       <ArrowUpRight className="h-5 w-5" />
@@ -216,9 +226,9 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
           </div>
 
           {/* Guarantee Banner */}
-          <div className="rounded-[35px] border-2 border-[#191A23] bg-white p-8 shadow-[6px_6px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="rounded-[35px] border-2 border-[#191A23] bg-white p-8 shadow-[3px_3px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]">
                 <Shield className="h-7 w-7 text-[#191A23]" />
               </div>
               <div>
@@ -230,7 +240,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
             </div>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-6 py-3.5 text-sm font-bold text-white shadow-[3px_3px_0px_#B9FF66] whitespace-nowrap"
+              className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-6 py-3.5 text-sm font-bold text-white shadow-[2px_2px_0px_#191A23] whitespace-nowrap"
             >
               Criar Conta Grátis
             </Link>

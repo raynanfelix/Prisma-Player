@@ -39,7 +39,7 @@ export default function ContactForm() {
                   <CheckCircle className="mx-auto h-12 w-12 text-[#191A23]" />
                   <h3 className="text-2xl font-black text-[#191A23]">Mensagem Enviada com Sucesso!</h3>
                   <p className="text-sm font-bold text-[#191A23]/80">
-                    Nosso time técnico entrará em contato com você via e-mail ou WhatsApp em até 15 minutos.
+                    Nosso time técnico entrará em contato com você via e-mail ou WhatsApp.
                   </p>
                 </div>
               ) : (
@@ -127,7 +127,7 @@ export default function ContactForm() {
               <div className="w-full max-w-sm rounded-[35px] border-2 border-[#191A23] bg-[#191A23] p-8 text-white shadow-[6px_6px_0px_#B9FF66] space-y-6">
                 <div className="rounded-2xl border-2 border-[#B9FF66] bg-[#B9FF66] p-4 text-[#191A23]">
                   <p className="text-xs font-black uppercase tracking-wider">Atendimento Prioritário</p>
-                  <p className="text-lg font-black mt-1">Resposta em até 15 min</p>
+                  <p className="text-lg font-black mt-1">Resposta rápida por e-mail ou WhatsApp</p>
                 </div>
 
                 <div className="space-y-3 text-sm font-medium text-white/80">

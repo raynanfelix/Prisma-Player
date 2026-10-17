@@ -6,20 +6,20 @@ export default function TeamSupport() {
   const team = [
     {
       name: "Engenharia de CDN",
-      role: "Infraestrutura & Ultra-Velocidade",
+      role: "Infraestrutura & Velocidade",
       experience: "Servidores distribuídos globalmente com cache em borda para garantir streaming sem travamentos no Brasil.",
       icon: Code,
     },
     {
       name: "Especialistas em VSL",
       role: "Otimização de Retenção & Copy",
-      experience: "Equipe focada em ajudar você a ajustar o pitch delay, autoplay e gatilhos visuais para maximizar conversões.",
+      experience: "Equipe focada em ajudar você a ajustar o pitch delay, autoplay e gatilhos visuais para melhorar conversões.",
       icon: LineChart,
     },
     {
-      name: "Proteção DRM & Anti-Pirataria",
+      name: "Proteção & Controle de Domínio",
       role: "Segurança de Conteúdo",
-      experience: "Criptografia militar de arquivos de vídeo contra softwares de download e extração indevida de dados.",
+      experience: "Domínios permitidos, watermark dinâmico e recursos anti-download para o seu conteúdo.",
       icon: ShieldCheck,
     },
     {
@@ -51,7 +51,7 @@ export default function TeamSupport() {
             return (
               <div
                 key={idx}
-                className="relative rounded-[35px] border-2 border-[#191A23] bg-white p-6 shadow-[5px_5px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform"
+                className="relative rounded-[35px] border-2 border-[#191A23] bg-white p-6 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform"
               >
                 <div>
                   <div className="flex items-center justify-between pb-4 border-b-2 border-[#191A23]">

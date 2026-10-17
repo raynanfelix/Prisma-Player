@@ -10,12 +10,12 @@ export default function WorkingProcess() {
     {
       id: "01",
       title: "Criar Conta & Upload do Vídeo",
-      description: "Crie sua conta em 30 segundos. Faça upload direto do arquivo MP4 da sua VSL ou importe instantaneamente de links externos. A codificação Turbo e otimização para CDN acontecem de forma 100% automática.",
+      description: "Crie sua conta em 30 segundos. Faça upload direto do arquivo MP4 da sua VSL ou importe de links externos. O vídeo é otimizado para o player automaticamente.",
     },
     {
       id: "02",
       title: "Configurar o Pitch Delay Inteligente",
-      description: "Defina o tempo exato (minutos e segundos) em que sua oferta e botões de checkout devem ser liberados na página. Nosso algoritmo garante a sincronia perfeita, mesmo se o lead pausar ou alternar abas.",
+      description: "Defina o tempo exato (minutos e segundos) em que sua oferta e botões de checkout devem ser liberados na página. A sincronia acompanha o vídeo, mesmo se o lead pausar ou alternar abas.",
     },
     {
       id: "03",
@@ -25,7 +25,7 @@ export default function WorkingProcess() {
     {
       id: "04",
       title: "Inserir o Código Embed no seu Funil",
-      description: "Copie um código simples de 1 linha e cole no Elementor, WordPress, Webflow ou qualquer construtor. O player carrega de forma ultra-rápida e responsiva em celulares e computadores.",
+      description: "Copie um código simples de 1 linha e cole no Elementor, WordPress, Webflow ou qualquer construtor. O player carrega de forma rápida e responsiva em celulares e computadores.",
     },
     {
       id: "05",
@@ -66,8 +66,8 @@ export default function WorkingProcess() {
                 key={step.id}
                 className={`rounded-[45px] border-2 border-[#191A23] transition-all duration-300 ${
                   isOpen
-                    ? "bg-[#B9FF66] shadow-[6px_6px_0px_#191A23]"
-                    : "bg-[#F3F3F3] shadow-[4px_4px_0px_#191A23] hover:bg-white"
+                    ? "bg-white shadow-[3px_3px_0px_#B9FF66]"
+                    : "bg-[#F3F3F3] shadow-[2px_2px_0px_#191A23] hover:bg-white"
                 } p-6 sm:p-10 cursor-pointer`}
                 onClick={() => toggleStep(idx)}
               >
