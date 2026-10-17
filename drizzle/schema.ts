@@ -1259,3 +1259,32 @@ export const videoDailyStats = pgTable(
     index("video_daily_stats_user_day_idx").on(t.userId, t.day.desc()),
   ],
 );
+
+/**
+ * Integrações por CONTA (App Store de integrações, /dashboard/integracoes).
+ * 1 integração por (conta, provider); o vínculo com VSLs é o array `vslIds`
+ * (1 pixel em N VSLs, N pixels em 1 VSL — combinações livres). Os tokens
+ * (Access Token de CAPI, chaves de API) vivem em `config` e NUNCA saem para
+ * o client: o embed resolve as integrações server-side.
+ */
+export const accountIntegrations = pgTable(
+  "account_integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountOwnerId: text("account_owner_id").notNull(),
+    provider: text("provider").notNull(),
+    config: jsonb("config").notNull().default({}),
+    vslIds: jsonb("vsl_ids").notNull().default([]),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("account_integrations_provider_owner_uidx").on(t.accountOwnerId, t.provider),
+    index("account_integrations_owner_idx").on(t.accountOwnerId),
+    check(
+      "account_integrations_provider_check",
+      sql`${t.provider} in ('meta_pixel', 'google_ads', 'tiktok', 'utmify', 'discord', 'telegram')`,
+    ),
+  ],
+);
