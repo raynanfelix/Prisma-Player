@@ -91,14 +91,25 @@ export async function GET() {
   // Seed uma única vez na vida da conta: se só olhássemos as não-dispensadas,
   // dispensar as 4 padrões ressuscitava todas no próximo GET.
   if (data.length === 0) {
+    // Caminho quente: conta já tem QUALQUER linha (inclusive dispensada) =>
+    // nunca re-semeia. O count fora do lock evita pagar lock por GET.
     const [everRow] = await db.select({ total: sql<number>`count(*)::int` }).from(userInbox).where(eq(userInbox.userId, userId));
     if ((everRow?.total ?? 0) > 0) return NextResponse.json({ items: [] }, { headers: { "cache-control": "no-store" } });
+    // Race real do mount: o sino e a página do inbox disparam GET juntos no
+    // primeiro acesso => ambos viam count=0 e ambos inseriam os 4 defaults
+    // (só 'welcome' tem índice único parcial; trial/tip/alert duplicavam).
+    // O pg_advisory_xact_lock serializa os seeds: o segundo GET espera, o
+    // re-count dentro da transação vê as linhas do primeiro e não insere.
     try {
-      await db.insert(userInbox).values(defaultMessages.map((item) => ({ userId, ...item })));
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"inbox-seed:" + userId}))`);
+        const [locked] = await tx.select({ total: sql<number>`count(*)::int` }).from(userInbox).where(eq(userInbox.userId, userId));
+        if ((locked?.total ?? 0) > 0) return;
+        await tx.insert(userInbox).values(defaultMessages.map((item) => ({ userId, ...item })));
+      });
     } catch {
-      // Duas requisições simultâneas podem tentar o seed juntas; o índice único
-      // do welcome aborta o segundo insert. O re-select abaixo devolve o estado
-      // real da inbox de qualquer forma.
+      // Seed é melhor-esforço: falhou (ex.: lock indisponível), o próximo GET
+      // tenta de novo — sem duplicar, pois o re-count acima é a guarda.
     }
     const fresh = await fetchInbox(userId);
     return NextResponse.json({ items: fresh.map(toInboxItem) }, { headers: { "cache-control": "no-store" } });

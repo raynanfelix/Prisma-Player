@@ -44,6 +44,11 @@ export default function InboxButton() {
   }
 
   const unread = items.filter((item) => !item.read_at).length;
+  // O sino lista apenas NÃO LIDAS: ler a mensagem a consome (o histórico
+  // completo, lidas incluídas, vive em /dashboard/inbox). Antes itens lidos
+  // continuavam listados no dropdown para sempre — "limpar" parecia não
+  // funcionar.
+  const unreadItems = items.filter((item) => !item.read_at);
 
   return (
     <div className="relative">
@@ -75,13 +80,13 @@ export default function InboxButton() {
 
           {loading ? (
             <LoaderCircle className="mx-auto my-8 animate-spin text-[#191A23] dark:text-[#B9FF66]" />
-          ) : items.length === 0 ? (
+          ) : unreadItems.length === 0 ? (
             <p className="p-6 text-center text-xs font-medium text-slate-400 dark:text-zinc-500">
               Nenhuma notificação nova.
             </p>
           ) : (
             <div className="mt-2 space-y-2">
-              {items.slice(0, 5).map((item) => (
+              {unreadItems.slice(0, 5).map((item) => (
                 <article
                   key={item.id}
                   className={`rounded-xl p-3.5 border transition-all ${
