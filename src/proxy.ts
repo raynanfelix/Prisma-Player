@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { updateSession } from "@/lib/auth/session";
+import { getAuth } from "@/lib/auth/server";
 import { SECURITY } from "@/lib/constants";
 
 const SCRIPT_SRC_EXTRA = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
@@ -24,6 +25,21 @@ function contentSecurityPolicy(frameAncestors: string, nonce: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  // Login social em 1 clique: o fluxo OAuth da Neon devolve o app com
+  // ?neon_auth_session_verifier=... e a TROCA por cookies de sessão acontece
+  // no middleware do SDK (exchangeOAuthToken -> redirect com Set-Cookie).
+  // Sem isso o 1º clique caía na raiz anônimo (o challenge cookie só
+  // resolvia na 2ª tentativa). Invocamos o middleware da Neon SÓ quando o
+  // verifier está na URL — o resto do proxy (CSP/nonce/embed) segue igual,
+  // e o redirect_login dela nunca dispara fora desse caso.
+  if (new URL(request.url).searchParams.has("neon_auth_session_verifier")) {
+    try {
+      return await getAuth().middleware({ loginUrl: "/login" })(request);
+    } catch {
+      // Neon Auth não configurado (build/dev sem env): segue o fluxo normal.
+    }
+  }
+
   const nonce = crypto.randomUUID().replaceAll("-", "");
   const frameAncestors = request.nextUrl.pathname.startsWith("/embed") ? "*" : "'self'";
   const csp = contentSecurityPolicy(frameAncestors, nonce);
