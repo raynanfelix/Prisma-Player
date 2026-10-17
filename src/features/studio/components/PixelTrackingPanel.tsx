@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import metaLogo from "@/assets/facebook.png";
-import googleLogo from "@/assets/google ads.png";
+import googleLogo from "@/assets/google-ads.png";
 import tiktokLogo from "@/assets/tiktok.png";
 import utmifyLogo from "@/assets/utmify.png";
 
