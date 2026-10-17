@@ -26,6 +26,13 @@ export default function PrivacyPage() {
             <article key={section.title} className="rounded-[28px] border themeable-border-hairline themeable-bg-canvas p-6 shadow-[0_18px_50px_rgba(0,0,0,0.04)]">
               <h2 className="text-title-md themeable-text-ink">{section.title}</h2>
               <p className="mt-3 text-body themeable-text-ink-muted-64">{section.body}</p>
+              {section.items ? (
+                <ul className="mt-3 list-disc space-y-1.5 pl-5 text-body themeable-text-ink-muted-64">
+                  {section.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
             </article>
           ))}
         </div>
