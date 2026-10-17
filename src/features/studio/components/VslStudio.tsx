@@ -384,27 +384,35 @@ export default function VslStudio() {
   }, [video?.id]);
 
   useEffect(() => {
-    void loadConfig();
+    // loadConfig seta estado no corpo: deferido (padrão 98f6b87) evita a
+    // cascata síncrona de renders no mount/troca de VSL.
+    const load = setTimeout(() => void loadConfig(), 0);
+    return () => clearTimeout(load);
   }, [loadConfig]);
 
   // Trocar de VSL zera a reprodução e oferece retomada se houver ponto salvo.
+  // setState síncrono no effect dispara cascata de renders (lint
+  // react-compiler): deferido para a próxima macrotask (padrão 98f6b87).
   useEffect(() => {
-    setStartTime(0);
-    setCurrentTime(0);
-    setResumePoint(null);
-    setAutoplayActivated(false);
-    setThumbnailOverlay(null);
-    setSlowFileWarn(false);
-    probedSrcRef.current = null;
-    if (video?.id) {
-      try {
-        const raw = localStorage.getItem(`prisma-resume:${video.id}`);
-        const point = raw ? Math.floor(Number(raw)) : NaN;
-        if (Number.isFinite(point) && point > 5) setResumePoint(point);
-      } catch {
-        // Sem retomada salva.
+    const reset = setTimeout(() => {
+      setStartTime(0);
+      setCurrentTime(0);
+      setResumePoint(null);
+      setAutoplayActivated(false);
+      setThumbnailOverlay(null);
+      setSlowFileWarn(false);
+      probedSrcRef.current = null;
+      if (video?.id) {
+        try {
+          const raw = localStorage.getItem(`prisma-resume:${video.id}`);
+          const point = raw ? Math.floor(Number(raw)) : NaN;
+          if (Number.isFinite(point) && point > 5) setResumePoint(point);
+        } catch {
+          // Sem retomada salva.
+        }
       }
-    }
+    }, 0);
+    return () => clearTimeout(reset);
   }, [video?.id]);
 
   // Diagnóstico de startup lento: avisa quando o MP4 não tem faststart.

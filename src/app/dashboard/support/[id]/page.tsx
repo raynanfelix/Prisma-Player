@@ -10,6 +10,29 @@ const { supportCases, supportNotes } = schema;
 export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+type SupportNoteRow = { id: string | number; authorAdminId: string | null; body: string; createdAt: Date };
+type NoteEntry = { divider: string } | { note: SupportNoteRow };
+
+/**
+ * Agrupamento por dia extraído do JSX: reatribuir `lastDay` durante o render
+ * disparava o lint react-compiler ("Cannot reassign variable after render
+ * completes"). Função pura no escopo do módulo — mesmo output do flatMap
+ * original (divisor na virada de dia, na ordem das notas).
+ */
+function groupNotesByDay(notes: SupportNoteRow[], dayLabel: (date: Date) => string): NoteEntry[] {
+  const out: NoteEntry[] = [];
+  let lastDay = "";
+  for (const note of notes) {
+    const day = dayLabel(note.createdAt);
+    if (day !== lastDay) {
+      lastDay = day;
+      out.push({ divider: day });
+    }
+    out.push({ note });
+  }
+  return out;
+}
+
 /** Chat do ticket: mensagens do cliente + respostas da equipe. Notas internas ocultas. */
 export default async function SupportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -50,16 +73,12 @@ export default async function SupportDetailPage({ params }: { params: Promise<{ 
     if (date.toDateString() === yesterday.toDateString()) return "Ontem";
     return date.toLocaleDateString("pt-BR");
   };
-  let lastDay = "";
+  const entries = groupNotesByDay(notes, dayLabel);
 
   return <main className="mx-auto w-full max-w-3xl space-y-5 pb-16">
     <header><p className="text-[11px] font-semibold uppercase tracking-[.14em] text-prisma-blue dark:text-white">Ticket</p><h1 className="mt-1 text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">{item.subject}</h1><p className="mt-1 text-[12px] themeable-text-ink-muted-48">{statusLabel[item.status] ?? item.status} · {item.category} · prioridade {item.priority}{lastReply ? ` · equipe respondeu em ${lastReply.toLocaleString("pt-BR")}` : ""}</p></header>
     <section aria-label="Conversa" className="space-y-3">
-      {notes.flatMap((note) => {
-        const day = dayLabel(note.createdAt);
-        const divider = day !== lastDay ? [{ divider: (lastDay = day) }] : [];
-        return [...divider, { note }];
-      }).map((entry, index) => {
+      {entries.map((entry, index) => {
         if ("divider" in entry) return <p key={`day-${index}`} className="pt-1 text-center text-[11px] font-semibold themeable-text-ink-muted-48">{entry.divider}</p>;
         const note = entry.note;
         const mine = !note.authorAdminId;

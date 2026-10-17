@@ -2,6 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
+/** Corpo da rota parseado no teste: campos aninhados que os asserts navegam
+ *  (keys/índices/métodos) precisam de tipo estrutural — lint proíbe any. */
+type AnalyticsBody = {
+  [key: string]: unknown;
+  summary: Record<string, unknown>;
+  comparison: { previous: Record<string, unknown>; delta: Record<string, unknown> };
+  timeline: Array<Record<string, unknown>>;
+  dimensions: Record<string, unknown>;
+};
+
+
 const { gateState, dbState } = vi.hoisted(() => ({
   gateState: {
     ok: true as boolean,
@@ -166,7 +177,7 @@ describe("GET /api/analytics/[videoId] — contrato", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
 
-    const body = (await response.json()) as Record<string, any>;
+    const body = (await response.json()) as AnalyticsBody;
 
     // Mesmas chaves, na mesma ordem, do contrato anterior à migração para SQL.
     expect(Object.keys(body)).toEqual([
@@ -263,7 +274,7 @@ describe("GET /api/analytics/[videoId] — contrato", () => {
     ];
     const response = await getAnalytics(analyticsRequest(), ctx(VIDEO_ID));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as Record<string, any>;
+    const body = (await response.json()) as AnalyticsBody;
     expect(body.live).toBe(2);
     expect(body.liveCountries).toEqual([{ name: "BR", impressions: 2, plays: 2, playRate: 100, completes: 0, completionRate: 0 }]);
   });
@@ -360,7 +371,7 @@ describe("GET /api/analytics/[videoId] — períodos sem eventos", () => {
     dbState.executeResults = [{ rows: [] }, { rows: [] }, { rows: [] }];
     const response = await getAnalytics(analyticsRequest({ days: "7" }), ctx(VIDEO_ID));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as Record<string, any>;
+    const body = (await response.json()) as AnalyticsBody;
 
     expect(body.range).toBe(7);
     expect(body.truncated).toBe(false);
@@ -374,7 +385,7 @@ describe("GET /api/analytics/[videoId] — períodos sem eventos", () => {
     expect(body.timeline).toHaveLength(7);
     const sinceMs = FIXED_NOW.getTime() - 7 * DAY_MS;
     expect(body.timeline[0].date).toBe(new Date(sinceMs).toISOString());
-    expect(body.timeline.every((point: any) => point.impressions === 0 && point.plays === 0 && point.completes === 0 && point.conversions === 0)).toBe(true);
+    expect(body.timeline.every((point: Record<string, unknown>) => Number(point.impressions) === 0 && Number(point.plays) === 0 && Number(point.completes) === 0 && Number(point.conversions) === 0)).toBe(true);
 
     expect(body.retention).toEqual([
       { point: 0, rate: 0, viewers: 0 },
@@ -426,7 +437,7 @@ describe("GET /api/analytics/[videoId] — períodos sem eventos", () => {
     ];
     const response = await getAnalytics(analyticsRequest(), ctx(VIDEO_ID));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as Record<string, any>;
+    const body = (await response.json()) as AnalyticsBody;
     expect(body.summary.impressions).toBe(0);
     expect(body.summary.playRate).toBe(0);
     expect(body.comparison.previous.impressions).toBe(10);

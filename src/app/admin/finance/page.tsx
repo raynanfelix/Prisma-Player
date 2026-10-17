@@ -7,6 +7,7 @@ import { isSubscriptionEffective } from "@/lib/access/service";
 import { CircleDollarSign, TrendingDown, TrendingUp, Undo2, Users, Wallet } from "lucide-react";
 import { db, schema } from "@/lib/db";
 import { formatBrlFromCents as money } from "@/lib/format/money";
+import { nowMs } from "@/lib/datetime";
 
 const {
   accountAccess,
@@ -25,7 +26,9 @@ export const dynamic = "force-dynamic";
  * mensais de cadastro. Conciliação: todo pago tem evento de webhook.
  */
 export default async function AdminFinancePage() {
-  const monthAgo = new Date(Date.now() - 30 * 86400000);
+  // nowMs() (lib/datetime): Date.now() direto no corpo do componente dispara
+  // o lint react-compiler; a page segue force-dynamic.
+  const monthAgo = new Date(nowMs() - 30 * 86_400_000);
   const monthAgoIso = monthAgo.toISOString();
   const [subRows, trialRows, checkoutRows, profileRows, hookRows, planRows, recentCheckoutRows] = await Promise.all([
     db.select({

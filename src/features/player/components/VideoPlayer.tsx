@@ -40,7 +40,7 @@ export default function VideoPlayer({
     // Warn in development: protection defaults to className convention.
     // Ensure the player container has the `prisma-player--embed` class for
     // content protection to work as intended.
-    if (typeof window !== "undefined" && (window as any).__PRISMA_DEV__) {
+    if (typeof window !== "undefined" && (window as unknown as { __PRISMA_DEV__?: boolean }).__PRISMA_DEV__) {
       console.warn(
         "[Prisma Player] Content protection is defaulting to className convention. " +
         "Add `protectContent={true}` prop or ensure the container has `className=\"prisma-player--embed\"`."

@@ -41,9 +41,12 @@ export function ToastSave({
 
   React.useEffect(() => {
     if (state === "success") {
-      setShowSuccess(true);
+      // setState síncrono no effect dispara cascata de renders (lint
+      // react-compiler): defere para a próxima macrotask, mesmo padrão do
+      // commit 98f6b87 (marca d'água).
+      const arm = setTimeout(() => setShowSuccess(true), 0);
       const timer = setTimeout(() => setShowSuccess(false), 3000);
-      return () => clearTimeout(timer);
+      return () => { clearTimeout(arm); clearTimeout(timer); };
     }
   }, [state]);
 

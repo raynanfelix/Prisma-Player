@@ -5,6 +5,7 @@ import { AdminHeader, AdminMetric, AdminPanel, StatusPill } from "@/components/a
 import { AdminCheckoutRing, AdminRevenueChart } from "@/components/admin/admin-charts";
 import { db, schema } from "@/lib/db";
 import { formatBrlFromCents as money } from "@/lib/format/money";
+import { nowMs } from "@/lib/datetime";
 
 const {
   adminAuditLog,
@@ -33,9 +34,11 @@ function delta(current: number, previous: number): string | null {
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const params = await searchParams;
   const days = PERIODS.includes(Number(params.period) as (typeof PERIODS)[number]) ? Number(params.period) : 30;
-  const now = Date.now();
-  const start = new Date(now - days * 86400000);
-  const prevStart = new Date(now - days * 2 * 86400000);
+  // nowMs() (lib/datetime): Date.now() direto no corpo dispara o lint
+  // react-compiler; a page segue dinâmica por searchParams.
+  const now = nowMs();
+  const start = new Date(now - days * 86_400_000);
+  const prevStart = new Date(now - days * 2 * 86_400_000);
 
   const [users, active, videosCount, paidRows, prevPaidRows, signups, prevSignups, wallets, webhooks, checkoutStatuses, stuck, pastDue, noPeriod, expiring, audit] = await Promise.all([
     db.select(countExpr).from(profiles),
