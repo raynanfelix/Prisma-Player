@@ -73,7 +73,7 @@ function SettingsContent() {
       {activeTab === "profile" &&
         (profile ? <ProfilePanel profile={profile} onUpdated={setProfile} notify={notify} /> : <SettingsSkeleton />)}
 
-      {activeTab === "password" && <PasswordPanel notify={notify} />}
+      {activeTab === "password" && <PasswordPanel notify={notify} email={profile?.email} />}
 
       {activeTab === "team" && <TeamPanel notify={notify} />}
 

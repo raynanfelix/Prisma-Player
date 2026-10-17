@@ -7,6 +7,8 @@ import { ArrowBigUpDash, Check, CircleCheck, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthField } from "@/features/auth/components/AuthField";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
+import { AuthBrandHeader } from "@/features/auth/components/AuthBrandHeader";
+import { EmailVerificationCard } from "@/features/auth/components/EmailVerificationCard";
 import { AuthNotice } from "@/features/auth/components/AuthNotice";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { PasswordChecklist } from "@/features/auth/components/PasswordChecklist";
@@ -44,13 +46,14 @@ export default function SignupPage() {
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  // Deep-link /signup?verify=1 (login com e-mail não verificado) muda o título.
+  const [fromLogin, setFromLogin] = useState(false);
   const submittingRef = useRef(false);
   const verifyingRef = useRef(false);
   const resendingRef = useRef(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const codeRef = useRef<HTMLInputElement>(null);
   const { capsLockOn, detectCapsLock } = useCapsLock();
 
   // Cooldown de reenvio (1s por tick).
@@ -69,6 +72,7 @@ export default function SignupPage() {
     if (params.get("verify") !== "1") return;
     const emailParam = params.get("email") ?? "";
     if (isValidEmail(emailParam)) setEmail(emailParam.trim().toLowerCase());
+    setFromLogin(true);
     setStep("verify");
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
@@ -172,8 +176,12 @@ export default function SignupPage() {
     }
   }
 
-  async function handleVerifySubmit(event: React.FormEvent) {
-    event.preventDefault();
+  /**
+   * Verifica o código com o serviço existente (verifyEmailWithCode). Chamado
+   * pelo auto-submit (6 dígitos completos, com `override`) e pelo botão
+   * "Verificar". Em erro, limpa o InputOTP e mostra a mensagem no FieldError.
+   */
+  async function verifyCode(override?: string) {
     if (verifyingRef.current) return;
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -181,9 +189,9 @@ export default function SignupPage() {
       backToSignupForm();
       return;
     }
-    if (!OTP_PATTERN.test(code)) {
+    const currentCode = override ?? code;
+    if (!OTP_PATTERN.test(currentCode)) {
       setCodeError("Digite os 6 dígitos do código recebido por e-mail.");
-      codeRef.current?.focus();
       return;
     }
 
@@ -191,7 +199,7 @@ export default function SignupPage() {
     setVerifying(true);
     setNotice(null);
     try {
-      const result = await authService.verifyEmailWithCode(normalizedEmail, code);
+      const result = await authService.verifyEmailWithCode(normalizedEmail, currentCode);
       if (result.verified && result.hasSession) {
         // Auto-sign-in do Better Auth: sessão já está nos cookies — segue o
         // mesmo fluxo pós-login do signup com sessão imediata.
@@ -205,17 +213,31 @@ export default function SignupPage() {
           action: { label: "Fazer login", href: "/login" },
         });
       } else {
+        setCode("");
         setCodeError("Código inválido ou expirado. Solicite um novo código.");
       }
     } catch (error) {
-      setNotice({
-        tone: "error",
-        message: error instanceof Error ? error.message : "Código inválido ou expirado. Tente novamente.",
-      });
+      setCode("");
+      setCodeError(
+        error instanceof Error ? error.message : "Código inválido ou expirado. Tente novamente.",
+      );
     } finally {
       verifyingRef.current = false;
       setVerifying(false);
     }
+  }
+
+  function handleVerifySubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void verifyCode();
+  }
+
+  /** Auto-submit: ao completar os 6 dígitos, verifica sem apertar botão. */
+  function handleCodeChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 6);
+    setCode(digits);
+    if (codeError) setCodeError(null);
+    if (OTP_PATTERN.test(digits)) void verifyCode(digits);
   }
 
   async function handleResend() {
@@ -247,69 +269,26 @@ export default function SignupPage() {
 
   if (step === "verify") {
     return (
-      <AuthLayout
-        eyebrow="Quase lá"
-        title="Verifique seu e-mail"
-        description={`Enviamos um código para ${email}. Ele expira em 15 minutos.`}
-        footer={<>Já verificou em outra aba? <Link href="/login" className="font-bold text-[#191A23] hover:underline">Fazer login</Link></>}
-      >
-        <form onSubmit={handleVerifySubmit} className="space-y-4" noValidate>
-          <AuthField
-            ref={codeRef}
-            id="otp"
-            name="otp"
-            label="Código de verificação"
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value.replace(/\D/g, "").slice(0, 6));
-              if (codeError) setCodeError(null);
-            }}
-            placeholder="000000"
-            autoComplete="one-time-code"
-            inputMode="numeric"
-            pattern="[0-9]{6}"
-            maxLength={6}
-            autoFocus
-            spellCheck={false}
-            required
-            hint="Digite os 6 dígitos recebidos por e-mail."
-            error={codeError ?? undefined}
+      <main className="min-h-screen bg-background text-foreground font-sans antialiased flex items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-md space-y-6">
+          <AuthBrandHeader />
+          <EmailVerificationCard
+            email={email}
+            title={fromLogin ? "Confirme seu login" : "Verifique seu e-mail"}
+            code={code}
+            onCodeChange={handleCodeChange}
+            error={codeError}
+            notice={notice}
+            verifying={verifying}
+            resending={resending}
+            resendCooldown={resendCooldown}
+            onVerify={handleVerifySubmit}
+            onResend={handleResend}
+            onBack={fromLogin ? () => router.replace("/login") : backToSignupForm}
+            backLabel={fromLogin ? "voltar para o login" : "voltar"}
           />
-          <AuthNotice notice={notice} />
-          <Button
-            type="submit"
-            disabled={verifying || resending}
-            className="h-11 w-full rounded-xl bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] text-[#191A23] font-bold text-sm shadow-xs border border-black/5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {verifying ? (
-              <><LoaderCircle className="animate-spin h-4 w-4 mr-2 text-[#191A23]" /> Verificando...</>
-            ) : (
-              "Verificar"
-            )}
-          </Button>
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resendCooldown > 0 || resending}
-              className="cursor-pointer text-xs font-semibold text-slate-500 transition-colors hover:text-[#191A23] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {resending
-                ? "Reenviando..."
-                : resendCooldown > 0
-                  ? `Reenviar código em ${resendCooldown}s`
-                  : "Reenviar código"}
-            </button>
-            <button
-              type="button"
-              onClick={backToSignupForm}
-              className="cursor-pointer text-xs font-semibold text-slate-500 underline underline-offset-2 transition-colors hover:text-[#191A23]"
-            >
-              voltar
-            </button>
-          </div>
-        </form>
-      </AuthLayout>
+        </div>
+      </main>
     );
   }
 

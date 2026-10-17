@@ -1,8 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { Play } from "lucide-react";
+import { AuthBrandHeader } from "./AuthBrandHeader";
 
 interface AuthLayoutProps {
   eyebrow: string;
@@ -16,18 +15,9 @@ export function AuthLayout({ eyebrow, title, description, children, footer }: Au
   return (
     <main className="min-h-screen bg-[#F8F9FA] text-[#191A23] font-sans antialiased flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md space-y-6">
-        
-        {/* Logo Header */}
-        <div className="text-center">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#191A23] text-[#B9FF66] shadow-xs group-hover:scale-105 transition-transform">
-              <Play className="h-4 w-4 fill-[#B9FF66] ml-0.5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-[#191A23]">
-              Prisma<span className="font-medium text-slate-500">Player</span>
-            </span>
-          </Link>
-        </div>
+
+        {/* Logo Header — mesmo componente de marca da sidebar do app */}
+        <AuthBrandHeader />
 
         {/* Clean Auth Card */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-7 sm:p-8 shadow-xs space-y-6">

@@ -51,10 +51,24 @@ export const accountSettingsService = {
       body: payload,
     });
   },
-  updatePassword(currentPassword: string, password: string) {
+  /**
+   * Estágio 1 da troca de senha: pede o código OTP (enviado para o e-mail da
+   * sessão pelo Managed Neon Auth).
+   */
+  requestPasswordChangeOtp() {
+    return apiRequest<{ ok?: boolean }>("/api/account/password", {
+      method: "POST",
+      body: { stage: "request" },
+    });
+  },
+  /**
+   * Estágio 2 da troca de senha: exige [senha atual + OTP] — a rota valida o
+   * código (signIn.emailOtp) antes de trocar a senha (changePassword).
+   */
+  updatePassword(currentPassword: string, password: string, otp: string) {
     return apiRequest<Record<string, never>>("/api/account/password", {
       method: "PATCH",
-      body: { currentPassword, password },
+      body: { currentPassword, password, otp },
     });
   },
 };
