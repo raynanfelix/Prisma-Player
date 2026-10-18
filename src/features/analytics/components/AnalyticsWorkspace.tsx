@@ -670,12 +670,11 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                 <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   {/* KPI principal: donut de plays (fatia = play rate) */}
                   <KpiPieCard
-                    highlight
                     icon={Eye}
                     label="Visualizações"
                     badge="KPI Principal"
                     slices={[
-                      { label: "Plays", value: data.summary.plays, color: CHART_SERIES_COLORS[0] },
+                      { label: "Plays", value: data.summary.plays, color: "#0066cc" },
                       { label: "Impressões sem play", value: Math.max(0, data.summary.impressions - data.summary.plays), color: "transparent" },
                     ]}
                     centerLabel="Total"
@@ -688,7 +687,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     icon={Clock}
                     label="Tempo total reproduzido"
                     slices={[
-                      { label: "Reproduzido", value: totalPlayTimeSeconds, color: CHART_SERIES_COLORS[0] },
+                      { label: "Reproduzido", value: totalPlayTimeSeconds, color: "#a855f7" },
                       { label: "Potencial restante", value: Math.max(0, Math.round(data.summary.plays * (data.video.duration_seconds || 120) - totalPlayTimeSeconds)), color: "transparent" },
                     ]}
                     centerLabel="Reproduzido"
@@ -701,7 +700,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     icon={Clock3}
                     label="Tempo médio assistido"
                     slices={[
-                      { label: "Média assistida", value: avgWatchTimeSeconds, color: CHART_SERIES_COLORS[0] },
+                      { label: "Média assistida", value: avgWatchTimeSeconds, color: "#10b981" },
                       { label: "Restante do vídeo", value: Math.max(0, (data.video.duration_seconds || 120) - avgWatchTimeSeconds), color: "transparent" },
                     ]}
                     centerLabel="Média"
@@ -714,7 +713,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     icon={UserCheck}
                     label="Conclusão do vídeo"
                     slices={[
-                      { label: "Concluíram", value: data.summary.completionRate, color: CHART_SERIES_COLORS[0] },
+                      { label: "Concluíram", value: data.summary.completionRate, color: "#f59e0b" },
                       { label: "Restante", value: Math.max(0, 100 - data.summary.completionRate), color: "transparent" },
                     ]}
                     centerLabel="Conclusão"
@@ -727,7 +726,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     icon={MousePointerClick}
                     label="Conversões"
                     slices={[
-                      { label: "Conversões", value: data.summary.conversions, color: CHART_SERIES_COLORS[0] },
+                      { label: "Conversões", value: data.summary.conversions, color: "#ec4899" },
                       { label: "Sem conversão", value: Math.max(0, data.summary.plays - data.summary.conversions), color: "transparent" },
                     ]}
                     centerLabel="Conversões"
@@ -813,7 +812,10 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
 
                     <div className="h-28 w-full pt-2 overflow-hidden rounded-xl">
                       <AreaChart data={retentionChartData} xDataKey="date">
-                        <Area dataKey="visitors" fill="#a855f7" fillOpacity={0.3} />
+                        <Grid horizontal />
+                        <Area dataKey="visitors" fill="#0066cc" fillOpacity={0.3} strokeWidth={2} />
+                        <AreaXAxis tickMode="data" />
+                        <AreaChartTooltip />
                       </AreaChart>
                     </div>
                   </div>
