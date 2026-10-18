@@ -32,9 +32,9 @@ export default function Reveal({
       viewport={{ once: true, margin: "-32px" }}
       transition={{
         type: "spring",
-        stiffness: 160,
-        damping: 28,
-        mass: 0.9,
+        stiffness: 120,
+        damping: 24,
+        mass: 1.2,
         delay,
       }}
     >
