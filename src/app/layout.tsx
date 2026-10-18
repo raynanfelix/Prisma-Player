@@ -56,6 +56,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    "strix-verification": "strix-verify-b20fa474d2f888ccaf535109a506fe83",
+  },
   icons: {
     icon: "/favicon.ico",
     apple: "/favicon.ico",
