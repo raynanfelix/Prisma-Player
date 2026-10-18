@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Cookie } from "lucide-react";
 import LegalPageLayout from "@/features/landing-page/components/LegalPageLayout";
 import { cookieSections, legalContactEmail, legalUpdatedAt } from "@/content/legal/prisma-legal";
 
@@ -15,7 +14,7 @@ export default function CookiesPage() {
       tag="Privacidade"
       title="Política de Cookies"
       intro="Transparência total sobre os cookies do site e dos players: o que usamos, por que usamos e como você controla tudo."
-      icon={Cookie}
+      icon="cookie"
       sections={cookieSections}
       updatedAt={legalUpdatedAt}
       contactEmail={legalContactEmail}

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Scale } from "lucide-react";
 import LegalPageLayout from "@/features/landing-page/components/LegalPageLayout";
 import { legalContactEmail, legalUpdatedAt, termsSections } from "@/content/legal/prisma-legal";
 
@@ -15,7 +14,7 @@ export default function TermsPage() {
       tag="Legal"
       title="Termos de Uso"
       intro="Estes termos explicam as regras para usar a Prisma Player de forma segura, profissional e transparente — inclusive quando o produto é vendido globalmente."
-      icon={Scale}
+      icon="scale"
       sections={termsSections}
       updatedAt={legalUpdatedAt}
       contactEmail={legalContactEmail}

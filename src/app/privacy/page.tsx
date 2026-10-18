@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ShieldCheck } from "lucide-react";
 import LegalPageLayout from "@/features/landing-page/components/LegalPageLayout";
 import { legalContactEmail, legalUpdatedAt, privacySections } from "@/content/legal/prisma-legal";
 
@@ -15,7 +14,7 @@ export default function PrivacyPage() {
       tag="LGPD · GDPR · CCPA"
       title="Política de Privacidade"
       intro="Esta política descreve como a Prisma Player trata dados pessoais de usuários, equipes e visitantes das VSLs publicadas — no Brasil, na Europa e no mundo."
-      icon={ShieldCheck}
+      icon="shield"
       sections={privacySections}
       updatedAt={legalUpdatedAt}
       contactEmail={legalContactEmail}

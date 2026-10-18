@@ -1,9 +1,21 @@
 "use client";
 
-import { CheckCircle2, Mail, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Cookie, Mail, Scale, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { LegalSection } from "@/content/legal/prisma-legal";
 import Nav from "./Nav";
 import Footer from "./Footer";
+
+/**
+ * O ícone vem como string ("scale" | "shield" | "cookie") e é resolvido DENTRO
+ * deste Client Component: componentes não podem atravessar a fronteira
+ * Server→Client como props (Functions cannot be passed to Client Components).
+ */
+
+const SECTION_ICONS: Record<LegalPageLayoutProps["icon"], LucideIcon> = {
+  scale: Scale,
+  shield: ShieldCheck,
+  cookie: Cookie,
+};
 
 /**
  * Layout das páginas jurídicas (/terms, /privacy, /cookies) no mesmo design
@@ -23,7 +35,7 @@ interface LegalPageLayoutProps {
   tag: string;
   title: string;
   intro: string;
-  icon: LucideIcon;
+  icon: "scale" | "shield" | "cookie";
   sections: LegalSection[];
   updatedAt: string;
   contactEmail: string;
@@ -35,13 +47,14 @@ export default function LegalPageLayout({
   tag,
   title,
   intro,
-  icon: Icon,
+  icon: iconKey,
   sections,
   updatedAt,
   contactEmail,
   contactTitle,
   contactIntro,
 }: LegalPageLayoutProps) {
+  const Icon = SECTION_ICONS[iconKey];
   return (
     <div className="min-h-dvh bg-[#EFEFEF]">
       <Nav />
