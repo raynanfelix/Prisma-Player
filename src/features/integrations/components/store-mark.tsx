@@ -3,18 +3,16 @@ import Image from "next/image";
 import type { StoreApp } from "./store-data";
 
 /**
- * Marca visual do card/detalhe no Marketplace: logos oficiais de src/assets
- * via import estático. A imagem preenche praticamente todo o box (padding
- * mínimo) — logos pequenas ficam visíveis.
+ * Marca visual do card/detalhe no Marketplace: logo oficial pura, sem fundo
+ * e sem borda (o quadrado branco "bugava" logos pretas como a do TikTok).
+ * A imagem ocupa o box inteiro, sem vazamento.
  */
 
 export function AppMark({ app, large = false }: { app: StoreApp; large?: boolean }) {
-  const box = large ? "size-20 rounded-2xl p-1" : "size-12 rounded-xl p-0.5";
+  const size = large ? "size-24" : "size-14";
   return (
-    <span className={`grid ${box} shrink-0 place-items-center border bg-white text-[#191A23] dark:bg-white/95 dark:text-white`}>
-      {app.logo ? (
-        <Image src={app.logo} alt="" className="size-full object-contain" />
-      ) : null}
+    <span className={`${size} grid shrink-0 place-items-center`}>
+      {app.logo ? <Image src={app.logo} alt="" className="size-full object-contain" /> : null}
     </span>
   );
 }
