@@ -1,10 +1,12 @@
-import type { LucideIcon } from "lucide-react";
-import { BarChart3, BellRing, Users } from "lucide-react";
 import type { ImageProps } from "next/image";
 
+import alertasDeQuedaLogo from "@/assets/Alertasdequeda.png";
+import benchmarksLogo from "@/assets/Benchmarks.png";
 import discordLogo from "@/assets/discord.svg";
+import dominiosAutorizadosLogo from "@/assets/Domíniosautorizados.png";
 import facebookLogo from "@/assets/facebook.png";
 import googleAdsLogo from "@/assets/google-ads.png";
+import perfilDePublicoLogo from "@/assets/Perfildepúblico.png";
 import reportsLogo from "@/assets/Relatórios automáticos.png";
 import telegramLogo from "@/assets/telegram.png";
 import tiktokLogo from "@/assets/tiktok.png";
@@ -84,7 +86,6 @@ export interface ProviderApp {
   description: string;
   /** Logo de src/assets como import estático (aceito por <Image src>). */
   logo?: ImageProps["src"];
-  icon?: LucideIcon;
   comingSoon?: boolean;
   /** Badge verde "Disponível" quando não instalado (cards novos). */
   showAvailableBadge?: boolean;
@@ -107,11 +108,8 @@ export interface FeatureApp {
   description: string;
   /** `domains` abre a gestão da allowlist por VSL; `info` é informativo + CTA. */
   detail: "domains" | "info";
-  icon?: LucideIcon;
   /** Logo de src/assets como import estático (aceito por <Image src>). */
   logo?: ImageProps["src"];
-  /** Marca inline de globo/escudo (SVG no componente, sem arquivo novo). */
-  globeShield?: boolean;
   actionLabel: string;
   cta?: { label: string; href: string };
   howItWorks: HowItWorks;
@@ -293,7 +291,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     category: "security",
     description: "Permita somente os domínios que podem embutir suas VSLs.",
     detail: "domains",
-    globeShield: true,
+    logo: dominiosAutorizadosLogo,
     actionLabel: "Configurar",
     howItWorks: {
       intro: "Cada VSL tem a sua própria allowlist. Enquanto a lista estiver vazia, o player pode ser reproduzido em qualquer site; com domínios cadastrados, apenas eles conseguem carregar a VSL.",
@@ -333,7 +331,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     category: "intelligence",
     description: "Transforme os sinais de audiência de cada VSL em um perfil pronto para orientar campanhas.",
     detail: "info",
-    icon: Users,
+    logo: perfilDePublicoLogo,
     actionLabel: "Abrir",
     cta: { label: "Gerar perfil na Inteligência", href: "intelligence" },
     howItWorks: {
@@ -352,7 +350,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     category: "intelligence",
     description: "Compare sua operação com uma média global agregada e anônima.",
     detail: "info",
-    icon: BarChart3,
+    logo: benchmarksLogo,
     actionLabel: "Abrir",
     cta: { label: "Ver benchmark na Inteligência", href: "intelligence" },
     howItWorks: {
@@ -372,7 +370,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     category: "intelligence",
     description: "Compara as últimas 24h com as 24h anteriores e avisa somente quando há queda real.",
     detail: "info",
-    icon: BellRing,
+    logo: alertasDeQuedaLogo,
     actionLabel: "Abrir",
     cta: { label: "Configurar alertas na Inteligência", href: "intelligence" },
     howItWorks: {
