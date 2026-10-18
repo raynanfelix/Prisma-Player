@@ -813,7 +813,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     <div className="h-28 w-full pt-2 overflow-hidden rounded-xl">
                       <AreaChart data={retentionChartData} xDataKey="date">
                         <Grid horizontal />
-                        <Area dataKey="visitors" fill="#0066cc" fillOpacity={0.3} strokeWidth={2} />
+                        <Area dataKey="visitors" fill="#0066cc" fillOpacity={0.3} />
                         <AreaXAxis tickMode="data" />
                         <AreaChartTooltip />
                       </AreaChart>
@@ -1011,22 +1011,33 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                   </div>
                 </div>
 
-                <div className="w-full pt-2 min-h-[400px]">
+                <div className="w-full pt-2">
                   <HeatmapInteractionProvider>
                     <HeatmapInteractionBoundary>
-                      <div className="flex w-full flex-col items-stretch gap-3 h-full">
-                        <div className="flex-1 min-h-[350px]">
-                          <HeatmapChart className="w-full h-full" data={heatmapColumns} layout="fluid">
-                            <HeatmapCells inactiveOpacity={1} inactiveScale={1} />
+                      <div className="flex w-full flex-col items-stretch gap-3">
+                        <div className="w-full min-h-0">
+                          <HeatmapChart
+                            className="w-full"
+                            data={heatmapColumns}
+                            layout="fluid"
+                            gap={3}
+                            levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}
+                          >
+                            <HeatmapCells />
                             <HeatmapXAxis />
-                            <HeatmapYAxis />
-                            <HeatmapTooltip instant />
+                            <HeatmapYAxis tickFilter="odd" labelFormat="initial" />
+                            <HeatmapTooltip />
                           </HeatmapChart>
                         </div>
                         <HeatmapLegend
-                          inactiveOpacity={1}
-                          inactiveScale={1}
+                          align="center"
+                          variant="gradient"
+                          lessLabel="Menos"
+                          moreLabel="Mais"
+                          fontSize={12}
+                          labelClassName="text-slate-500 dark:text-zinc-400"
                           levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}
+                          gap={3}
                         />
                       </div>
                     </HeatmapInteractionBoundary>
