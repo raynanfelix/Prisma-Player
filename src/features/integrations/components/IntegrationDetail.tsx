@@ -32,10 +32,43 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
   const [draftInstance, setDraftInstance] = useState("default");
   const [draftVsls, setDraftVsls] = useState<string[]>([]);
   const [draftEnabled, setDraftEnabled] = useState(true);
+  const [draftEvents, setDraftEvents] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const installed = instances.length > 0;
+
+  /** Telegram: valida o token no servidor (getMe) e preenche nome/username/chatId. */
+  async function verifyToken() {
+    if (app.verify !== "telegram") return;
+    const token = draft.botToken?.trim();
+    if (!token) return;
+    setVerifying(true);
+    setError("");
+    try {
+      const response = await fetch("/api/integrations/telegram-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const result = (await response.json().catch(() => null)) as { error?: string; botName?: string; botUsername?: string; chatId?: string } | null;
+      if (!response.ok || !result) {
+        setError(result?.error === "invalid_token" ? "Token inválido — copie exatamente o que o @BotFather enviou." : "Não foi possível verificar o token agora.");
+        return;
+      }
+      setDraft((current) => ({
+        ...current,
+        botName: result.botName ?? current.botName,
+        botUsername: result.botUsername ?? current.botUsername,
+        chatId: result.chatId || current.chatId,
+      }));
+    } catch {
+      setError("Não foi possível verificar o token agora.");
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   function openNew() {
     setDraft(Object.fromEntries(app.fields.map((field) => [field.key, ""])));
@@ -43,16 +76,21 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
     setDraftInstance(`i-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`);
     setDraftVsls([]);
     setDraftEnabled(true);
+    setDraftEvents(Object.fromEntries((app.selectableEvents ?? []).map((event) => [event.key, true])));
     setError("");
     setEditing("new");
   }
 
   function openEdit(item: IntegrationItem) {
-    setDraft(Object.fromEntries(app.fields.map((field) => [field.key, item.config?.[field.key] ?? ""])));
+    const draftFields: Record<string, string> = {};
+    for (const field of app.fields) draftFields[field.key] = String(item.config?.[field.key] ?? "");
+    setDraft(draftFields);
     setDraftName(item.name ?? "Principal");
     setDraftInstance(item.instanceId ?? "default");
     setDraftVsls(item.vslIds ?? []);
     setDraftEnabled(item.enabled !== false);
+    const savedEvents = typeof item.config?.events === "object" && item.config.events !== null ? (item.config.events as Record<string, boolean>) : undefined;
+    setDraftEvents(savedEvents ?? Object.fromEntries((app.selectableEvents ?? []).map((event) => [event.key, true])));
     setError("");
     setEditing(item);
   }
@@ -64,7 +102,14 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
       const response = await fetch("/api/integrations", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider: app.provider, instanceId: draftInstance, name: draftName, config: draft, vslIds: draftVsls, enabled: draftEnabled }),
+        body: JSON.stringify({
+          provider: app.provider,
+          instanceId: draftInstance,
+          name: draftName,
+          config: { ...draft, ...(app.selectableEvents?.length ? { events: draftEvents } : {}) },
+          vslIds: draftVsls,
+          enabled: draftEnabled,
+        }),
       });
       const result = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) throw new Error(result?.error ?? "save_failed");
@@ -163,16 +208,42 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
               <label key={field.key} className="block text-[12px] font-medium">
                 {field.label}
                 {field.optional ? <span className="font-normal text-muted-foreground"> (opcional)</span> : null}
+                {field.key === "botToken" && verifying ? <span className="ml-2 text-[10px] font-semibold text-[#0066cc]">verificando…</span> : null}
                 <Input
                   value={draft[field.key] ?? ""}
                   onChange={(event) => setDraft((current) => ({ ...current, [field.key]: event.target.value }))}
+                  onBlur={field.key === "botToken" ? () => void verifyToken() : undefined}
                   placeholder={field.placeholder}
+                  readOnly={field.readOnly}
                   autoComplete="off"
                   spellCheck={false}
-                  className="mt-1.5 h-10 font-mono text-xs"
+                  className={`mt-1.5 h-10 text-xs ${field.readOnly ? "bg-muted/60 text-muted-foreground" : "font-mono"}`}
                 />
               </label>
             ))}
+            {(app.selectableEvents?.length ?? 0) > 0 && (
+              <div>
+                <p className="mb-1 text-[12px] font-semibold">Eventos enviados</p>
+                <p className="mb-2 text-[11px] text-muted-foreground">Desmarque o que você NÃO quer que esta instância envie.</p>
+                <div className="space-y-1.5 rounded-xl border border-slate-200/80 p-3 dark:border-zinc-800">
+                  {app.selectableEvents?.map((event) => {
+                    const checked = draftEvents[event.key] !== false;
+                    return (
+                      <label key={event.key} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[12px] transition-colors hover:bg-muted/50">
+                        <span className="font-medium">{event.label}</span>
+                        <input
+                          type="checkbox"
+                          className="size-4 shrink-0 accent-[#B9FF66]"
+                          checked={checked}
+                          onChange={(changeEvent) => setDraftEvents((current) => ({ ...current, [event.key]: changeEvent.target.checked }))}
+                          aria-label={event.label}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div>
               <p className="mb-2 text-[12px] font-semibold">Vincular VSLs</p>
               <p className="mb-2 text-[11px] text-muted-foreground">Esta instância dispara apenas para as VSLs selecionadas.</p>

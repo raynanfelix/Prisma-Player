@@ -1,5 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import { BarChart3, BellRing, Users } from "lucide-react";
+import type { ImageProps } from "next/image";
+
+import discordLogo from "@/assets/discord.svg";
+import facebookLogo from "@/assets/facebook.png";
+import googleAdsLogo from "@/assets/google-ads.png";
+import reportsLogo from "@/assets/Relatórios automáticos.png";
+import telegramLogo from "@/assets/telegram.png";
+import tiktokLogo from "@/assets/tiktok.png";
+import utmifyLogo from "@/assets/utmify.png";
 
 /**
  * Dados do Marketplace de apps (/dashboard/integracoes).
@@ -16,7 +25,7 @@ export interface IntegrationItem {
   provider: string;
   instanceId: string;
   name: string;
-  config: Record<string, string>;
+  config: Record<string, unknown>;
   vslIds: string[];
   enabled: boolean;
   updatedAt: string;
@@ -51,6 +60,8 @@ export interface ProviderField {
   placeholder: string;
   secret?: boolean;
   optional?: boolean;
+  /** Preenchido automaticamente (ex.: getMe do Telegram) — não editável. */
+  readOnly?: boolean;
 }
 
 /** Eventos exibidos na tela de detalhe (o que a integração dispara hoje). */
@@ -71,7 +82,8 @@ export interface ProviderApp {
   name: string;
   category: StoreCategory;
   description: string;
-  logo?: string;
+  /** Logo de src/assets como import estático (aceito por <Image src>). */
+  logo?: ImageProps["src"];
   icon?: LucideIcon;
   comingSoon?: boolean;
   /** Badge verde "Disponível" quando não instalado (cards novos). */
@@ -79,6 +91,10 @@ export interface ProviderApp {
   fields: ProviderField[];
   events: ProviderEvents;
   howItWorks: HowItWorks;
+  /** "telegram" = valida o token via getMe e preenche nome/username/chatId. */
+  verify?: "telegram";
+  /** Eventos que o dono pode ligar/desligar por instância (config.events). */
+  selectableEvents?: { key: string; label: string }[];
 }
 
 export type FeatureAppId = "authorized_domains" | "automatic_reports" | "audience_profile" | "benchmarks" | "drop_alerts";
@@ -92,8 +108,8 @@ export interface FeatureApp {
   /** `domains` abre a gestão da allowlist por VSL; `info` é informativo + CTA. */
   detail: "domains" | "info";
   icon?: LucideIcon;
-  /** Logo de src/assets quando disponível. */
-  logo?: string;
+  /** Logo de src/assets como import estático (aceito por <Image src>). */
+  logo?: ImageProps["src"];
   /** Marca inline de globo/escudo (SVG no componente, sem arquivo novo). */
   globeShield?: boolean;
   actionLabel: string;
@@ -111,7 +127,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     name: "Meta Pixel Ads",
     category: "ads",
     description: "Pixel de rastreamento para campanhas do Facebook e Instagram Ads.",
-    logo: "/assets/facebook.png",
+    logo: facebookLogo,
     fields: [
       { key: "pixelId", label: "Chave da API (ID do Pixel)", placeholder: "123456789012345" },
       { key: "accessToken", label: "Access Token (API de Conversões)", placeholder: "EAAx… (Events Manager → API de Conversões)", secret: true },
@@ -140,7 +156,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     name: "Google Ads",
     category: "ads",
     description: "Rastreamento para Google Ads e Google Analytics 4.",
-    logo: "/assets/google-ads.png",
+    logo: googleAdsLogo,
     fields: [
       { key: "tagId", label: "ID da tag", placeholder: "AW-123456789 ou G-ABC123DEF" },
       { key: "conversionDestination", label: "Destino da conversão (opcional)", placeholder: "AW-123456789/AbCdEfGhIj", optional: true },
@@ -162,7 +178,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     name: "TikTok",
     category: "ads",
     description: "Pixel de rastreamento para o TikTok Ads Manager.",
-    logo: "/assets/tiktok.png",
+    logo: tiktokLogo,
     fields: [{ key: "pixelId", label: "ID do pixel", placeholder: "CXXXXXXXXXXXXXXXXX" }],
     events: {
       title: "Pagamento Confirmado",
@@ -181,7 +197,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     name: "UTMify",
     category: "attribution",
     description: "Atribuição de vendas por UTM com a origem exata da campanha.",
-    logo: "/assets/utmify.png",
+    logo: utmifyLogo,
     comingSoon: true,
     fields: [],
     events: {
@@ -202,7 +218,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     name: "Discord",
     category: "webhooks",
     description: "Receba eventos das suas VSLs em um canal do seu servidor Discord.",
-    logo: "/assets/discord.svg",
+    logo: discordLogo,
     showAvailableBadge: true,
     fields: [{ key: "webhookUrl", label: "Webhook do Discord", placeholder: "https://discord.com/api/webhooks/…" }],
     events: {
@@ -220,6 +236,13 @@ export const PROVIDER_APPS: ProviderApp[] = [
       ],
       note: "A escolha das atividades enviadas e o teste de entrega ficam na Inteligência.",
     },
+    selectableEvents: [
+      { key: "play", label: "Play — espectador iniciou a VSL" },
+      { key: "progress", label: "Progresso — marcos de 10% a 90%" },
+      { key: "cta_click", label: "Clique no CTA" },
+      { key: "conversion", label: "Conversão — compra confirmada" },
+      { key: "complete", label: "Conclusão do vídeo" },
+    ],
   },
   {
     kind: "provider",
@@ -228,24 +251,37 @@ export const PROVIDER_APPS: ProviderApp[] = [
     name: "Telegram",
     category: "webhooks",
     description: "Receba eventos das suas VSLs no seu bot do Telegram.",
-    logo: "/assets/telegram.png",
+    logo: telegramLogo,
     showAvailableBadge: true,
-    fields: [{ key: "webhookUrl", label: "Webhook do Telegram", placeholder: "https://api.telegram.org/bot…/sendMessage" }],
+    verify: "telegram",
+    fields: [
+      { key: "botToken", label: "Token do Bot", placeholder: "123456789:AAEx… (cole o token do @BotFather)", secret: true },
+      { key: "botName", label: "Nome do Bot", placeholder: "Preenchido automaticamente ao colar o token", readOnly: true },
+      { key: "botUsername", label: "Username do Bot", placeholder: "Preenchido automaticamente ao colar o token", readOnly: true },
+      { key: "chatId", label: "Chat ID (preenchido após /start)", placeholder: "Mande /start para o seu bot no Telegram", readOnly: true },
+    ],
     events: {
       title: "Eventos em tempo real",
       tag: "play · progress · cta_click · conversion · complete",
       detail: "Disparados conforme a VSL é assistida — uma mensagem por evento no bot.",
     },
     howItWorks: {
-      intro: "Os eventos das suas VSLs são entregues em tempo real no chat do seu bot do Telegram via API.",
+      intro: "Os eventos das suas VSLs são entregues em tempo real no chat do seu bot do Telegram via API oficial.",
       bullets: [
-        "Play, progresso, clique no CTA, conversão e conclusão da VSL",
-        "Mensagem direto no chat do bot do Telegram",
+        "Crie o bot com o @BotFather e cole o token aqui — nome e username são verificados automaticamente",
+        "Mande /start para o seu bot no Telegram para a Prisma descobrir o chat de entrega",
+        "Play, progresso, clique no CTA, conversão e conclusão da VSL — você escolhe quais envia",
         "A URL fica salva no servidor — nunca vai para a embed",
-        "Múltiplos bots: cadastre um webhook para cada chat",
       ],
-      note: "Crie um bot com o @BotFather e cole a URL de sendMessage aqui.",
+      note: "Precisa de um bot criado no Telegram com o @BotFather.",
     },
+    selectableEvents: [
+      { key: "play", label: "Play — espectador iniciou a VSL" },
+      { key: "progress", label: "Progresso — marcos de 10% a 90%" },
+      { key: "cta_click", label: "Clique no CTA" },
+      { key: "conversion", label: "Conversão — compra confirmada" },
+      { key: "complete", label: "Conclusão do vídeo" },
+    ],
   },
 ];
 
@@ -277,7 +313,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     category: "intelligence",
     description: "Receba um resumo periódico com plays, conversões e desempenho da operação.",
     detail: "info",
-    logo: "/assets/Relatórios automáticos.png",
+    logo: reportsLogo,
     actionLabel: "Abrir",
     cta: { label: "Ativar na Inteligência", href: "intelligence" },
     howItWorks: {

@@ -68,11 +68,35 @@ export function sanitizeIntegrationConfig(provider: IntegrationProvider, raw: un
     return { pixelId };
   }
   if (provider === "discord" || provider === "telegram") {
+    if (provider === "telegram") {
+      const botToken = str("botToken", 100);
+      const botName = str("botName", 120);
+      const botUsername = str("botUsername", 100);
+      const chatId = str("chatId", 30);
+      const webhookUrl = str("webhookUrl", 500);
+      if (botToken && !/^\d{6,12}:[A-Za-z0-9_-]{30,60}$/.test(botToken)) return null;
+      if (webhookUrl && !HTTPS_URL.test(webhookUrl)) return null;
+      const events = sanitizeEvents(input["events"]);
+      return { botToken, botName, botUsername, chatId, ...(webhookUrl ? { webhookUrl } : {}), ...(events ? { events } : {}) };
+    }
     const webhookUrl = str("webhookUrl", 500);
     if (webhookUrl && !HTTPS_URL.test(webhookUrl)) return null;
-    return { webhookUrl };
+    const events = sanitizeEvents(input["events"]);
+    return { webhookUrl, ...(events ? { events } : {}) };
   }
   return {};
+}
+
+/** Eventos selecionáveis: { play: true, progress: false, … } — só chaves conhecidas. */
+function sanitizeEvents(raw: unknown): Record<string, boolean> | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) return null;
+  const allowed = ["play", "progress", "cta_click", "conversion", "complete"];
+  const output: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (allowed.includes(key) && typeof value === "boolean") output[key] = value;
+  }
+  return Object.keys(output).length > 0 ? output : null;
 }
 
 /** Nome de instância válido: 1–80 caracteres visíveis. */

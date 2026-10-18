@@ -32,7 +32,7 @@ export default async function IntegracoesPage() {
     provider: item.provider,
     instanceId: item.instanceId,
     name: item.name,
-    config: Object.fromEntries(Object.entries(item.config).map(([key, value]) => [key, typeof value === "string" ? value : ""])),
+    config: item.config,
     vslIds: item.vslIds,
     enabled: item.enabled,
     updatedAt: item.updatedAt.toISOString(),
