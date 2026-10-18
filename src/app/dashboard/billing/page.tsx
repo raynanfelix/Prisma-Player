@@ -2,6 +2,7 @@ import { Check, CreditCard, Info, QrCode } from "lucide-react";
 import Image from "next/image";
 import { asc, eq } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
+import Reveal from "@/components/motion/reveal";
 import CancelSubscriptionButton from "@/features/billing/components/CancelSubscriptionButton";
 import CheckoutActions from "@/features/billing/components/CheckoutActions";
 import AiCreditCheckoutButton from "@/features/billing/components/AiCreditCheckoutButton";
@@ -69,8 +70,9 @@ export default async function BillingPage() {
         title="Plano, Faturamento & Créditos"
       />
 
-      <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 sm:p-7 shadow-xs">
-        {subActive ? (
+      <Reveal>
+        <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 sm:p-7 shadow-xs">
+          {subActive ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="rounded-full bg-[#B9FF66] px-3 py-0.5 text-xs font-bold text-[#191A23]">
@@ -117,8 +119,10 @@ export default async function BillingPage() {
             </p>
           </div>
         )}
-      </section>
+        </section>
+      </Reveal>
 
+      <Reveal delay={0.08}>
       <div>
         <h2 className="text-xl font-bold text-[#191A23] dark:text-white">Planos Prisma Player</h2>
         <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
@@ -187,8 +191,10 @@ export default async function BillingPage() {
           })}
         </div>
       </div>
+      </Reveal>
 
-      <div className="pt-4">
+      <Reveal delay={0.16}>
+        <div className="pt-4">
         <div>
           <h2 className="flex items-center gap-2.5 text-xl font-bold text-[#191A23] dark:text-white">
             <Image src="/prisma-credits.png" width={36} height={36} alt="Créditos Prisma" className="h-8 w-8 object-contain" />
@@ -221,6 +227,7 @@ export default async function BillingPage() {
           ))}
         </div>
       </div>
+      </Reveal>
     </main>
   );
 }

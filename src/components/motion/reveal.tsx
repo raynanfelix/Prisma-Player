@@ -4,14 +4,15 @@ import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
 /**
- * Revelação de conteúdo (fade + slide-up) ao entrar na viewport.
- * useInView "once" — anima na primeira aparição só. Passe `delay` para
- * efeito cascata em listas/cards. Respeita prefers-reduced-motion.
+ * Revelação suave de conteúdo (fade + micro slide de 8px). Spring macio
+ * (stiffness baixo + damping alto = desacelera sem tranco). `delay` para
+ * cascata. whileInView "once" — anima só na primeira aparição.
+ * Respeita prefers-reduced-motion.
  */
 export default function Reveal({
   children,
   delay = 0,
-  y = 14,
+  y = 8,
   className,
 }: {
   children: ReactNode;
@@ -28,8 +29,14 @@ export default function Reveal({
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ type: "spring", stiffness: 260, damping: 26, delay }}
+      viewport={{ once: true, margin: "-32px" }}
+      transition={{
+        type: "spring",
+        stiffness: 160,
+        damping: 28,
+        mass: 0.9,
+        delay,
+      }}
     >
       {children}
     </motion.div>
