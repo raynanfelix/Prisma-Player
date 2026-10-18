@@ -354,9 +354,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
   const [activePanel, setActivePanel] = useState<{ type: "metric" | "segment" | "insight" | "retention-pitch" | "live-session"; title: string; subtitle?: string; data: Dimension & { detail?: string } } | null>(null);
 
   // Ring chart active hover states
-  const [hoveredDevicesIndex, setHoveredDevicesIndex] = useState<number | null>(null);
-  const [hoveredBrowsersIndex, setHoveredBrowsersIndex] = useState<number | null>(null);
-  const [hoveredOSIndex, setHoveredOSIndex] = useState<number | null>(null);
+  const [hoveredTechIndex, setHoveredTechIndex] = useState<number | null>(null);
 
   // Load all user videos for IntelligenceControls
   useEffect(() => {
@@ -476,34 +474,12 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
     });
   }, [data]);
 
-  const devicesRingData = useMemo(() => {
-    if (!data?.dimensions?.devices) return [];
-    const total = data.dimensions.devices.reduce((sum, d) => sum + d.impressions, 0);
-    return data.dimensions.devices.slice(0, 3).map((d) => ({
-      label: d.name,
-      value: d.impressions,
-      maxValue: total || 1,
-    }));
-  }, [data]);
-
-  const browsersRingData = useMemo(() => {
-    if (!data?.dimensions?.browsers) return [];
-    const total = data.dimensions.browsers.reduce((sum, b) => sum + b.impressions, 0);
-    return data.dimensions.browsers.slice(0, 3).map((b) => ({
-      label: b.name,
-      value: b.impressions,
-      maxValue: total || 1,
-    }));
-  }, [data]);
-
-  const osRingData = useMemo(() => {
-    if (!data?.dimensions?.operatingSystems) return [];
-    const total = data.dimensions.operatingSystems.reduce((sum, o) => sum + o.impressions, 0);
-    return data.dimensions.operatingSystems.slice(0, 3).map((o) => ({
-      label: o.name,
-      value: o.impressions,
-      maxValue: total || 1,
-    }));
+  const techRingData = useMemo(() => {
+    if (!data?.dimensions) return [];
+    const devices = data.dimensions.devices?.slice(0, 3).map((d) => ({ label: d.name, value: d.impressions, maxValue: data.dimensions.devices!.reduce((s, x) => s + x.impressions, 0) || 1 })) ?? [];
+    const browsers = data.dimensions.browsers?.slice(0, 3).map((b) => ({ label: b.name, value: b.impressions, maxValue: data.dimensions.browsers!.reduce((s, x) => s + x.impressions, 0) || 1 })) ?? [];
+    const os = data.dimensions.operatingSystems?.slice(0, 3).map((o) => ({ label: o.name, value: o.impressions, maxValue: data.dimensions.operatingSystems!.reduce((s, x) => s + x.impressions, 0) || 1 })) ?? [];
+    return [...devices, ...browsers, ...os];
   }, [data]);
 
   // Anéis dos países (performance tab): participação de impressões por país.
@@ -1122,87 +1098,48 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
               </div>
             )}
 
-            {/* TAB: TRAFFIC */}
+            {/* TAB: TRAFFIC (DISPOSITIVOS + NAVEGADORES + OS NUM SO RINGCHART) */}
             {tab === "traffic" && (
-              <div className="grid gap-6 md:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs flex flex-col justify-between min-h-[360px]">
-                  <div className="mb-4">
-                    <h3 className="text-xs font-bold uppercase text-[#191A23] dark:text-white">Dispositivos</h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Visitas por hardware</p>
-                  </div>
-                  <div className="flex flex-col items-center gap-6 xl:flex-row xl:justify-center">
-                    <RingChart 
-                      data={devicesRingData} 
-                      size={180}
-                      hoveredIndex={hoveredDevicesIndex}
-                      onHoverChange={setHoveredDevicesIndex}
-                    >
-                      {devicesRingData.map((item, index) => (
-                        <Ring key={item.label} index={index} />
-                      ))}
-                      <RingCenter defaultLabel="Visitas" />
-                    </RingChart>
-                    <Legend 
-                      items={devicesRingData}
-                      hoveredIndex={hoveredDevicesIndex}
-                      onHoverChange={setHoveredDevicesIndex}
-                      className="w-full xl:w-auto text-xs font-semibold text-[#191A23] dark:text-zinc-200"
-                    />
-                  </div>
+              <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-6">
+                <div>
+                  <h2 className="text-base font-bold text-[#191A23] dark:text-white">Dispositivos e Tecnologia</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+                    Visitas por hardware, navegador e sistema operacional — um anel por segmento.
+                  </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs flex flex-col justify-between min-h-[360px]">
-                  <div className="mb-4">
-                    <h3 className="text-xs font-bold uppercase text-[#191A23] dark:text-white">Navegadores</h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Uso relativo de browsers</p>
+                {techRingData.length > 0 ? (
+                  <div className="flex flex-col items-center gap-8 xl:flex-row xl:justify-center xl:gap-12">
+                    <div aria-hidden="true">
+                      <RingChart
+                        data={techRingData}
+                        size={280}
+                        strokeWidth={10}
+                        baseInnerRadius={56}
+                        hoveredIndex={hoveredTechIndex}
+                        onHoverChange={setHoveredTechIndex}
+                      >
+                        {techRingData.map((item, index) => (
+                          <Ring key={item.label} index={index} />
+                        ))}
+                        <RingCenter defaultLabel="Visitas" />
+                      </RingChart>
+                    </div>
+                    <div className="w-full max-w-sm">
+                      <Legend
+                        items={techRingData}
+                        hoveredIndex={hoveredTechIndex}
+                        onHoverChange={setHoveredTechIndex}
+                        className="text-xs font-semibold text-[#191A23] dark:text-zinc-200"
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-col items-center gap-6 xl:flex-row xl:justify-center">
-                    <RingChart 
-                      data={browsersRingData} 
-                      size={180}
-                      hoveredIndex={hoveredBrowsersIndex}
-                      onHoverChange={setHoveredBrowsersIndex}
-                    >
-                      {browsersRingData.map((item, index) => (
-                        <Ring key={item.label} index={index} />
-                      ))}
-                      <RingCenter defaultLabel="Visitas" />
-                    </RingChart>
-                    <Legend 
-                      items={browsersRingData}
-                      hoveredIndex={hoveredBrowsersIndex}
-                      onHoverChange={setHoveredBrowsersIndex}
-                      className="w-full xl:w-auto text-xs font-semibold text-[#191A23] dark:text-zinc-200"
-                    />
+                ) : (
+                  <div className="py-12 text-center text-xs font-medium text-slate-400 dark:text-zinc-500">
+                    Nenhum dado de dispositivos ou tecnologia detectado neste período.
                   </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs flex flex-col justify-between min-h-[360px]">
-                  <div className="mb-4">
-                    <h3 className="text-xs font-bold uppercase text-[#191A23] dark:text-white">Sistemas Operacionais</h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Sistemas dos visitantes</p>
-                  </div>
-                  <div className="flex flex-col items-center gap-6 xl:flex-row xl:justify-center">
-                    <RingChart 
-                      data={osRingData} 
-                      size={180}
-                      hoveredIndex={hoveredOSIndex}
-                      onHoverChange={setHoveredOSIndex}
-                    >
-                      {osRingData.map((item, index) => (
-                        <Ring key={item.label} index={index} />
-                      ))}
-                      <RingCenter defaultLabel="Visitas" />
-                    </RingChart>
-                    <Legend 
-                      items={osRingData}
-                      hoveredIndex={hoveredOSIndex}
-                      onHoverChange={setHoveredOSIndex}
-                      className="w-full xl:w-auto text-xs font-semibold text-[#191A23] dark:text-zinc-200"
-                    />
-                  </div>
-                </div>
-              </div>
+                )}
+              </section>
             )}
 
             {/* TAB: AO VIVO */}
