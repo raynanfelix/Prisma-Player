@@ -52,11 +52,13 @@ type ControlsRow = {
   automatic_reports_enabled: boolean;
   report_frequency: string;
   report_email: string | null;
+  report_video_ids: string[] | null;
   last_report_sent_at: string | null;
   conversion_alerts_enabled: boolean;
   conversion_drop_threshold: number;
   alert_webhook_enabled: boolean;
   alert_webhook_url: string | null;
+  alert_video_ids: string[] | null;
 };
 
 /** Autentica a chamada do cron pelo Bearer CRON_SECRET (comparação em tempo constante). */
@@ -306,11 +308,13 @@ async function loadReportControls(): Promise<ControlsRow[] | null> {
         automaticReportsEnabled: intelligenceControls.automaticReportsEnabled,
         reportFrequency: intelligenceControls.reportFrequency,
         reportEmail: intelligenceControls.reportEmail,
+        reportVideoIds: intelligenceControls.reportVideoIds,
         lastReportSentAt: intelligenceControls.lastReportSentAt,
         conversionAlertsEnabled: intelligenceControls.conversionAlertsEnabled,
         conversionDropThreshold: intelligenceControls.conversionDropThreshold,
         alertWebhookEnabled: intelligenceControls.alertWebhookEnabled,
         alertWebhookUrl: intelligenceControls.alertWebhookUrl,
+        alertVideoIds: intelligenceControls.alertVideoIds,
       })
       .from(intelligenceControls)
       .where(or(eq(intelligenceControls.automaticReportsEnabled, true), eq(intelligenceControls.conversionAlertsEnabled, true)));
@@ -325,23 +329,34 @@ function toControlsRow(row: {
   automaticReportsEnabled: boolean;
   reportFrequency: string;
   reportEmail: string | null;
+  reportVideoIds: string[] | null;
   lastReportSentAt: Date | null;
   conversionAlertsEnabled: boolean;
   conversionDropThreshold: number;
   alertWebhookEnabled: boolean;
   alertWebhookUrl: string | null;
+  alertVideoIds: string[] | null;
 }): ControlsRow {
   return {
     user_id: row.userId,
     automatic_reports_enabled: row.automaticReportsEnabled,
     report_frequency: row.reportFrequency,
     report_email: row.reportEmail,
+    report_video_ids: row.reportVideoIds,
     last_report_sent_at: isoOrNull(row.lastReportSentAt),
     conversion_alerts_enabled: row.conversionAlertsEnabled,
     conversion_drop_threshold: row.conversionDropThreshold,
     alert_webhook_enabled: row.alertWebhookEnabled,
     alert_webhook_url: row.alertWebhookUrl,
+    alert_video_ids: row.alertVideoIds,
   };
+}
+
+/** Escopo por VSL escolhido no Marketplace: lista vazia/nula = toda a conta. */
+function scopeVideos<T extends { id: string }>(accountVideos: T[], scope: string[] | null): T[] {
+  if (!scope?.length) return accountVideos;
+  const selected = new Set(scope);
+  return accountVideos.filter((video) => selected.has(video.id));
 }
 
 async function processAllAccounts(ctx: MaintenanceContext, configs: ControlsRow[]): Promise<void> {
@@ -372,12 +387,14 @@ async function processAccountReports(ctx: MaintenanceContext, config: ControlsRo
   if (!plan.access.hasAccess) { ctx.result.skipped += 1; return; }
   const accountVideos = await db.select({ id: videos.id, title: videos.title }).from(videos).where(and(eq(videos.userId, config.user_id), eq(videos.status, "ready"))).limit(500);
   if (!accountVideos.length) return;
-  const ids = accountVideos.map((video) => video.id);
-  if (config.automatic_reports_enabled && plan.capabilities.automatic_reports && config.report_email && due(config.last_report_sent_at, config.report_frequency)) {
-    await sendPeriodicReport(ctx, config, ids, config.report_email);
+  // Relatório e alertas respeitam o escopo de VSLs salvo nos controls; sem
+  // seleção, o comportamento continua sendo toda a conta.
+  const reportVideos = scopeVideos(accountVideos, config.report_video_ids);
+  if (config.automatic_reports_enabled && plan.capabilities.automatic_reports && config.report_email && reportVideos.length && due(config.last_report_sent_at, config.report_frequency)) {
+    await sendPeriodicReport(ctx, config, reportVideos.map((video) => video.id), config.report_email);
   }
   if (config.conversion_alerts_enabled && plan.capabilities.conversion_drop_alerts) {
-    await scanConversionDrops(ctx, config, accountVideos);
+    await scanConversionDrops(ctx, config, scopeVideos(accountVideos, config.alert_video_ids));
   }
 }
 

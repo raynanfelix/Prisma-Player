@@ -643,6 +643,11 @@ export const intelligenceControls = pgTable(
     automaticReportsEnabled: boolean("automatic_reports_enabled").notNull().default(false),
     reportFrequency: text("report_frequency").notNull().default("weekly"),
     reportEmail: text("report_email"),
+    // VSLs no resumo periódico — vazio = todas as VSLs prontas da conta.
+    reportVideoIds: text("report_video_ids")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
     audienceSyncEnabled: boolean("audience_sync_enabled").notNull().default(false),
     audienceProvider: text("audience_provider").notNull().default("meta"),
     audienceRetentionThreshold: smallint("audience_retention_threshold").notNull().default(75),
@@ -656,6 +661,11 @@ export const intelligenceControls = pgTable(
     conversionDropThreshold: smallint("conversion_drop_threshold").notNull().default(20),
     alertWebhookEnabled: boolean("alert_webhook_enabled").notNull().default(false),
     alertWebhookUrl: text("alert_webhook_url"),
+    // VSLs monitoradas pelo alerta de queda — vazio = todas as prontas da conta.
+    alertVideoIds: text("alert_video_ids")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
     lastReportSentAt: timestamp("last_report_sent_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

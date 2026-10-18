@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
@@ -8,11 +8,14 @@ import { rateLimit } from "@/lib/security/rate-limit";
 import { deliverWebhook, validateWebhookUrl } from "@/lib/webhooks/delivery";
 import type { PlanCapabilities } from "@/lib/access/service";
 
-const { intelligenceControls } = schema;
+const { intelligenceControls, videos } = schema;
 
 const frequencies = new Set(["daily", "weekly", "monthly"]);
 const thresholds = new Set([25, 50, 75, 90, 100]);
 const webhookEvents = new Set(["impression", "play", "progress", "cta_click", "conversion", "complete"]);
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+/** Teto da lista de VSLs por recurso (a página do Marketplace carrega até 200). */
+const MAX_VIDEO_IDS = 200;
 
 function capabilityDenied(capability: keyof PlanCapabilities) {
   return NextResponse.json({
@@ -20,6 +23,31 @@ function capabilityDenied(capability: keyof PlanCapabilities) {
     capability,
     message: "Este recurso faz parte de um plano superior. Faça upgrade para ativá-lo.",
   }, { status: 402 });
+}
+
+/**
+ * Lista de VSLs de um corpo PATCH: array de UUIDs, sem duplicatas, no teto de
+ * MAX_VIDEO_IDS. Formato inválido devolve erro explícito (o dono precisa saber
+ * que salvou errado); IDs de outra conta são descartados no filtro de ownership.
+ */
+function parseVideoIdList(value: unknown): { ok: true; ids: string[] } | { ok: false } {
+  if (!Array.isArray(value)) return { ok: false };
+  const ids: string[] = [];
+  for (const entry of value) {
+    const id = String(entry ?? "");
+    if (!uuid.test(id)) return { ok: false };
+    if (!ids.includes(id)) ids.push(id);
+  }
+  return { ok: true, ids: ids.slice(0, MAX_VIDEO_IDS) };
+}
+
+async function ownedVideoIds(ownerId: string, ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const rows = await db
+    .select({ id: videos.id })
+    .from(videos)
+    .where(and(eq(videos.userId, ownerId), inArray(videos.id, ids)));
+  return new Set(rows.map((row) => row.id));
 }
 
 export async function GET(request: Request) {
@@ -36,6 +64,7 @@ export async function GET(request: Request) {
         automaticReportsEnabled: intelligenceControls.automaticReportsEnabled,
         reportFrequency: intelligenceControls.reportFrequency,
         reportEmail: intelligenceControls.reportEmail,
+        reportVideoIds: intelligenceControls.reportVideoIds,
         audienceSyncEnabled: intelligenceControls.audienceSyncEnabled,
         audienceRetentionThreshold: intelligenceControls.audienceRetentionThreshold,
         outgoingWebhooksEnabled: intelligenceControls.outgoingWebhooksEnabled,
@@ -45,6 +74,7 @@ export async function GET(request: Request) {
         conversionDropThreshold: intelligenceControls.conversionDropThreshold,
         alertWebhookEnabled: intelligenceControls.alertWebhookEnabled,
         alertWebhookUrl: intelligenceControls.alertWebhookUrl,
+        alertVideoIds: intelligenceControls.alertVideoIds,
         updatedAt: intelligenceControls.updatedAt,
       })
       .from(intelligenceControls)
@@ -56,6 +86,7 @@ export async function GET(request: Request) {
       automatic_reports_enabled: row.automaticReportsEnabled,
       report_frequency: row.reportFrequency,
       report_email: row.reportEmail,
+      report_video_ids: row.reportVideoIds,
       audience_sync_enabled: row.audienceSyncEnabled,
       audience_retention_threshold: row.audienceRetentionThreshold,
       outgoing_webhooks_enabled: row.outgoingWebhooksEnabled,
@@ -65,6 +96,7 @@ export async function GET(request: Request) {
       conversion_drop_threshold: row.conversionDropThreshold,
       alert_webhook_enabled: row.alertWebhookEnabled,
       alert_webhook_url: row.alertWebhookUrl,
+      alert_video_ids: row.alertVideoIds,
       updated_at: row.updatedAt.toISOString(),
     };
     // As capacidades vêm do plano ativo. Antes, a ausência de assinatura devolvia
@@ -100,6 +132,12 @@ export async function PATCH(request: Request) {
     const email = String(body.reportEmail ?? "").trim().toLowerCase();
     if (email && !/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "invalid_email" }, { status: 400 });
     update.reportEmail = email || null;
+  }
+  if ("reportVideoIds" in body) {
+    const parsedIds = parseVideoIdList(body.reportVideoIds);
+    if (!parsedIds.ok) return NextResponse.json({ error: "invalid_video_ids" }, { status: 400 });
+    const owned = await ownedVideoIds(ownerId, parsedIds.ids);
+    update.reportVideoIds = parsedIds.ids.filter((id) => owned.has(id));
   }
   if ("audienceSyncEnabled" in body) {
     if (body.audienceSyncEnabled && !plan.capabilities.audience_sync) return capabilityDenied("audience_sync");
@@ -144,6 +182,12 @@ export async function PATCH(request: Request) {
       try { await validateWebhookUrl(value); } catch { return NextResponse.json({ error: "invalid_alert_webhook_url" }, { status: 400 }); }
     }
     update.alertWebhookUrl = value || null;
+  }
+  if ("alertVideoIds" in body) {
+    const parsedIds = parseVideoIdList(body.alertVideoIds);
+    if (!parsedIds.ok) return NextResponse.json({ error: "invalid_video_ids" }, { status: 400 });
+    const owned = await ownedVideoIds(ownerId, parsedIds.ids);
+    update.alertVideoIds = parsedIds.ids.filter((id) => owned.has(id));
   }
 
   try {

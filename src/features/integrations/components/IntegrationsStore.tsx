@@ -4,13 +4,19 @@ import { useMemo, useState } from "react";
 
 import { Check, Search } from "lucide-react";
 
+import type { BenchmarkData } from "@/lib/intelligence/benchmark";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+import AlertsConfigScreen from "./AlertsConfigScreen";
+import AudienceConfigScreen from "./AudienceConfigScreen";
+import BenchmarksScreen from "./BenchmarksScreen";
 import IntegrationDetail from "./IntegrationDetail";
-import { DomainsManager, FeatureInfo } from "./FeatureAppDetails";
+import { DomainsManager } from "./FeatureAppDetails";
+import ReportsConfigScreen from "./ReportsConfigScreen";
 import { AppMark } from "./store-mark";
 import {
   CATEGORY_LABEL,
@@ -26,6 +32,10 @@ export type { IntegrationItem, VslOption } from "./store-data";
 interface Props {
   integrations: IntegrationItem[];
   vsls: VslOption[];
+  /** Capacidades reais do plano ativo (PlanCapabilities do servidor). */
+  capabilities: Record<string, boolean>;
+  /** Benchmark privado da conta, computado no servidor (tela Benchmarks). */
+  benchmarkData: BenchmarkData;
 }
 
 /** Badge verde de destaque (tokens da Prisma: verde-lima sobre tinta). */
@@ -43,7 +53,7 @@ function CardBadge({ app, count }: { app: StoreApp; count: number }) {
   return <GreenBadge>Disponível</GreenBadge>;
 }
 
-export default function IntegrationsStore({ integrations, vsls }: Props) {
+export default function IntegrationsStore({ integrations, vsls, capabilities, benchmarkData }: Props) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<StoreApp | null>(null);
 
@@ -70,8 +80,20 @@ export default function IntegrationsStore({ integrations, vsls }: Props) {
   }
 
   if (selected?.kind === "feature") {
-    const featureProps = { app: selected, vsls, onBack: () => setSelected(null) };
-    return selected.detail === "domains" ? <DomainsManager {...featureProps} /> : <FeatureInfo {...featureProps} />;
+    const onBack = () => setSelected(null);
+    const screenProps = { app: selected, vsls, capabilities, onBack };
+    switch (selected.detail) {
+      case "domains":
+        return <DomainsManager app={selected} vsls={vsls} onBack={onBack} />;
+      case "reports":
+        return <ReportsConfigScreen {...screenProps} />;
+      case "audience":
+        return <AudienceConfigScreen {...screenProps} />;
+      case "benchmarks":
+        return <BenchmarksScreen {...screenProps} benchmarkData={benchmarkData} />;
+      case "alerts":
+        return <AlertsConfigScreen {...screenProps} />;
+    }
   }
 
   const term = search.trim().toLowerCase();

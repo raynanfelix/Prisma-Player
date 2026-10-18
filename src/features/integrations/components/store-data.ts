@@ -19,8 +19,8 @@ import utmifyLogo from "@/assets/utmify.png";
  * - `provider`: instala/atualiza via PUT/DELETE /api/integrations (backend em
  *   src/lib/integrations/server.ts);
  * - `feature`: recurso de produto já existente na Prisma — o detalhe mostra
- *   um "Como funciona" honesto (o que existe HOJE) e, quando faz sentido,
- *   abre a configuração real na Inteligência.
+ *   um "Como funciona" honesto (o que existe HOJE) e a configuração real
+ *   acontece na própria tela do Marketplace.
  */
 
 export interface IntegrationItem {
@@ -92,13 +92,22 @@ export interface ProviderApp {
   fields: ProviderField[];
   events: ProviderEvents;
   howItWorks: HowItWorks;
-  /** "telegram" = valida o token via getMe e preenche nome/username/chatId. */
-  verify?: "telegram";
+  /** "telegram" = valida o token via getMe e preenche nome/username/chatId; "pixel" = botão "Testar conexão" (/api/integrations/verify). */
+  verify?: "telegram" | "pixel";
   /** Eventos que o dono pode ligar/desligar por instância (config.events). */
   selectableEvents?: { key: string; label: string }[];
 }
 
 export type FeatureAppId = "authorized_domains" | "automatic_reports" | "audience_profile" | "benchmarks" | "drop_alerts";
+
+/** Props comuns das telas de detalhe dos feature apps no Marketplace. */
+export interface FeatureScreenProps {
+  app: FeatureApp;
+  vsls: VslOption[];
+  /** Capacidades reais do plano ativo (chaves de PlanCapabilities). */
+  capabilities: Record<string, boolean>;
+  onBack: () => void;
+}
 
 export interface FeatureApp {
   kind: "feature";
@@ -106,12 +115,14 @@ export interface FeatureApp {
   name: string;
   category: StoreCategory;
   description: string;
-  /** `domains` abre a gestão da allowlist por VSL; `info` é informativo + CTA. */
-  detail: "domains" | "info";
+  /**
+   * Tela de detalhe no Marketplace: `domains` gerencia a allowlist por VSL;
+   * os demais são apps de inteligência com configuração na própria tela.
+   */
+  detail: "domains" | "reports" | "audience" | "benchmarks" | "alerts";
   /** Logo de src/assets como import estático (aceito por <Image src>). */
   logo?: ImageProps["src"];
   actionLabel: string;
-  cta?: { label: string; href: string };
   howItWorks: HowItWorks;
 }
 
@@ -126,10 +137,11 @@ export const PROVIDER_APPS: ProviderApp[] = [
     category: "ads",
     description: "Pixel de rastreamento para campanhas do Facebook e Instagram Ads.",
     logo: facebookLogo,
+    verify: "pixel",
     fields: [
       { key: "pixelId", label: "Chave da API (ID do Pixel)", placeholder: "123456789012345" },
       { key: "accessToken", label: "Access Token (API de Conversões)", placeholder: "EAAx… (Events Manager → API de Conversões)", secret: true },
-      { key: "testEventCode", label: "Test Event Code (opcional)", placeholder: "Ex.: TEST12345", optional: true },
+      { key: "testEventCode", label: "Test Event Code (opcional)", placeholder: "Events Manager → Test Events (ex.: TEST12345)", optional: true },
     ],
     events: {
       title: "Pagamento Confirmado",
@@ -155,8 +167,10 @@ export const PROVIDER_APPS: ProviderApp[] = [
     category: "ads",
     description: "Rastreamento para Google Ads e Google Analytics 4.",
     logo: googleAdsLogo,
+    verify: "pixel",
     fields: [
       { key: "tagId", label: "ID da tag", placeholder: "AW-123456789 ou G-ABC123DEF" },
+      { key: "apiSecret", label: "API Secret do GA4", placeholder: "GA4 → Admin → Data Streams → Measurement Protocol API secret", secret: true, optional: true },
       { key: "conversionDestination", label: "Destino da conversão (opcional)", placeholder: "AW-123456789/AbCdEfGhIj", optional: true },
     ],
     events: {
@@ -177,7 +191,12 @@ export const PROVIDER_APPS: ProviderApp[] = [
     category: "ads",
     description: "Pixel de rastreamento para o TikTok Ads Manager.",
     logo: tiktokLogo,
-    fields: [{ key: "pixelId", label: "ID do pixel", placeholder: "CXXXXXXXXXXXXXXXXX" }],
+    verify: "pixel",
+    fields: [
+      { key: "pixelId", label: "ID do pixel", placeholder: "CXXXXXXXXXXXXXXXXX" },
+      { key: "accessToken", label: "Access Token (Events API)", placeholder: "TikTok Events Manager → Manage API access — cole o token", secret: true },
+      { key: "testEventCode", label: "Test Event Code (opcional)", placeholder: "Events Manager → Test Events (ex.: TEST12345)", optional: true },
+    ],
     events: {
       title: "Pagamento Confirmado",
       tag: "payment.received",
@@ -232,7 +251,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
         "A URL fica salva no servidor — nunca vai para a embed",
         "Múltiplos webhooks: cadastre um para cada canal ou servidor",
       ],
-      note: "A escolha das atividades enviadas e o teste de entrega ficam na Inteligência.",
+      note: "As atividades enviadas são escolhidas no cadastro de cada instância aqui mesmo.",
     },
     selectableEvents: [
       { key: "play", label: "Play — espectador iniciou a VSL" },
@@ -310,18 +329,18 @@ export const FEATURE_APPS: FeatureApp[] = [
     name: "Relatórios automáticos",
     category: "intelligence",
     description: "Receba um resumo periódico com plays, conversões e desempenho da operação.",
-    detail: "info",
+    detail: "reports",
     logo: reportsLogo,
-    actionLabel: "Abrir",
-    cta: { label: "Ativar na Inteligência", href: "intelligence" },
+    actionLabel: "Configurar",
     howItWorks: {
       intro: "O resumo periódico da sua operação chega pronto no seu Inbox da Prisma — plays, conversões e taxa de conversão do período, sem precisar montar relatório.",
       bullets: [
-        "Frequência diária, semanal ou mensal — você escolhe na Inteligência",
+        "Frequência diária, semanal ou mensal — você escolhe aqui mesmo",
+        "Escolha as VSLs do resumo: todas ou apenas as que interessam",
         "Entrega no Inbox, com atalho para abrir o relatório",
         "Cópia por e-mail quando o envio está configurado no servidor (REPORT_EMAIL_FROM)",
       ],
-      note: "Ative a frequência e cadastre o e-mail na Inteligência.",
+      note: "Ative aqui, escolha as VSLs e cadastre o e-mail de entrega.",
     },
   },
   {
@@ -330,12 +349,11 @@ export const FEATURE_APPS: FeatureApp[] = [
     name: "Perfil de público",
     category: "intelligence",
     description: "Transforme os sinais de audiência de cada VSL em um perfil pronto para orientar campanhas.",
-    detail: "info",
+    detail: "audience",
     logo: perfilDePublicoLogo,
-    actionLabel: "Abrir",
-    cta: { label: "Gerar perfil na Inteligência", href: "intelligence" },
+    actionLabel: "Configurar",
     howItWorks: {
-      intro: "A Prisma transforma os sinais reais de audiência de cada VSL em um perfil pronto para orientar campanhas — você escolhe a VSL e o segmento.",
+      intro: "A Prisma transforma os sinais reais de audiência de cada VSL em um perfil pronto para orientar campanhas — você escolhe a VSL e o segmento aqui mesmo.",
       bullets: [
         "Segmentos prontos: assistiram 75%+, concluíram, clicaram no CTA, compraram ou toda a audiência",
         "O perfil reúne localização, dispositivo, sistema, navegador, origem e campanhas",
@@ -349,10 +367,9 @@ export const FEATURE_APPS: FeatureApp[] = [
     name: "Benchmarks",
     category: "intelligence",
     description: "Compare sua operação com uma média global agregada e anônima.",
-    detail: "info",
+    detail: "benchmarks",
     logo: benchmarksLogo,
     actionLabel: "Abrir",
-    cta: { label: "Ver benchmark na Inteligência", href: "intelligence" },
     howItWorks: {
       intro: "Compare o desempenho da sua operação com referências agregadas, preservando a privacidade de todas as contas.",
       bullets: [
@@ -369,18 +386,18 @@ export const FEATURE_APPS: FeatureApp[] = [
     name: "Alertas de queda",
     category: "intelligence",
     description: "Compara as últimas 24h com as 24h anteriores e avisa somente quando há queda real.",
-    detail: "info",
+    detail: "alerts",
     logo: alertasDeQuedaLogo,
-    actionLabel: "Abrir",
-    cta: { label: "Configurar alertas na Inteligência", href: "intelligence" },
+    actionLabel: "Configurar",
     howItWorks: {
       intro: "O monitor compara as últimas 24 horas com as 24 horas anteriores de cada VSL e avisa somente quando há queda real na conversão.",
       bullets: [
         "Somente queda real: acima do limite que você definir (padrão 20%) e no mínimo 10 plays em cada período",
+        "Escolha as VSLs monitoradas: todas ou apenas as que interessam",
         "O aviso chega no seu Inbox com o tamanho da queda e atalho para analisar a VSL",
         "No máximo um alerta por VSL por dia — sem spam",
       ],
-      note: "Ative os alertas e ajuste a sensibilidade na Inteligência.",
+      note: "Ative aqui e ajuste a sensibilidade.",
     },
   },
 ];

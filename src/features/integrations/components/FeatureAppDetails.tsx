@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ArrowLeft, Check, LoaderCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,12 +36,7 @@ function parseDomainLines(text: string): { domains: string[]; invalid: string[] 
   return { domains, invalid };
 }
 
-function intelligenceHref(vsls: VslOption[]): string | null {
-  const first = vsls[0];
-  return first ? `/dashboard/analytics/${first.id}?tab=intelligence` : null;
-}
-
-function BackButton({ onBack }: { onBack: () => void }) {
+export function BackButton({ onBack }: { onBack: () => void }) {
   return (
     <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground cursor-pointer">
       <ArrowLeft className="size-4" /> Voltar ao marketplace
@@ -50,7 +44,7 @@ function BackButton({ onBack }: { onBack: () => void }) {
   );
 }
 
-function HeaderCard({ app }: { app: FeatureApp }) {
+export function HeaderCard({ app }: { app: FeatureApp }) {
   return (
     <Card className="w-full">
       <CardHeader>
@@ -69,16 +63,16 @@ function HeaderCard({ app }: { app: FeatureApp }) {
   );
 }
 
-function HowItWorksCard({ app }: { app: FeatureApp }) {
+export function HowItWorksCard({ app }: { app: FeatureApp }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Como funciona</CardTitle>
         <CardDescription>O que existe hoje, sem promessa futura.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2.5 text-[13px] leading-6 text-muted-foreground">
+      <CardContent className="flex flex-col gap-2.5 text-[13px] leading-6 text-muted-foreground">
         <p>{app.howItWorks.intro}</p>
-        <ul className="space-y-1">
+        <ul className="flex flex-col gap-1">
           {app.howItWorks.bullets.map((bullet) => (
             <li key={bullet} className="flex items-start gap-2">
               <Check className="mt-1 size-3.5 shrink-0 text-[#B9FF66]" aria-hidden />
@@ -92,30 +86,57 @@ function HowItWorksCard({ app }: { app: FeatureApp }) {
   );
 }
 
-/** Detalhe dos apps informativos (Inteligência): Como funciona + CTA para a tela real. */
-export function FeatureInfo({ app, vsls, onBack }: { app: FeatureApp; vsls: VslOption[]; onBack: () => void }) {
-  const href = intelligenceHref(vsls);
+/** Switch acessível (mesmo visual do editor de instâncias do Marketplace). */
+export function ConfigToggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean }) {
   return (
-    <div className="space-y-5">
-      <BackButton onBack={onBack} />
-      <HeaderCard app={app} />
-      <HowItWorksCard app={app} />
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{app.cta?.label ?? "Abrir na Prisma"}</CardTitle>
-          <CardDescription>A configuração completa deste app vive na Inteligência, dentro do Analytics da VSL.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {href ? (
-            <Button type="button" className="bg-[#B9FF66] font-semibold text-[#191A23] hover:bg-[#a8f052]" render={<Link href={href} />}>
-              {app.cta?.label ?? "Abrir na Inteligência"}
-            </Button>
-          ) : (
-            <p className="text-xs text-muted-foreground">Crie uma VSL primeiro em Meus vídeos para usar este app.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <label className={`flex items-center justify-between gap-4 rounded-xl border p-3 themeable-border-hairline ${disabled ? "opacity-50" : "cursor-pointer"}`}>
+      <span className="text-sm font-medium themeable-text-ink">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed cursor-pointer ${checked ? "bg-[#B9FF66]" : "bg-black/15 dark:bg-white/20"}`}
+      >
+        <span className={`block size-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+      </button>
+    </label>
+  );
+}
+
+/** Botão de salvar padrão das telas de configuração (verde de marca). */
+export function SaveButton({ busy, onClick, label = "Salvar", disabled }: { busy: boolean; onClick: () => void; label?: string; disabled?: boolean }) {
+  return (
+    <Button
+      type="button"
+      className="bg-[#B9FF66] font-semibold text-[#191A23] hover:bg-[#a8f052]"
+      disabled={busy || disabled}
+      onClick={onClick}
+    >
+      {busy ? (
+        <>
+          <LoaderCircle className="animate-spin" aria-hidden /> Salvando…
+        </>
+      ) : (
+        label
+      )}
+    </Button>
+  );
+}
+
+/** Mensagem de resultado (sucesso/falha) das telas de configuração. */
+export function ConfigNotice({ text }: { text: string }) {
+  return <p role="status" className="rounded-xl bg-muted/60 px-4 py-3 text-xs font-medium themeable-text-ink">{text}</p>;
+}
+
+/** Recurso bloqueado pelo plano — mensagem clara em vez de silêncio. */
+export function PlanRequiredNotice() {
+  return (
+    <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400">
+      Este app faz parte de um plano superior. Faça upgrade para liberar a configuração.
+    </p>
   );
 }
 
@@ -225,7 +246,7 @@ export function DomainsManager({ app, vsls, onBack }: { app: FeatureApp; vsls: V
           <CardTitle className="text-base">VSLs com allowlist</CardTitle>
           <CardDescription>Selecione as VSLs para gerenciar os domínios que podem embutir cada uma.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="flex flex-col gap-2">
           {vsls.length === 0 && <p className="text-xs text-muted-foreground">Crie uma VSL primeiro em Meus vídeos.</p>}
           {vsls.map((vsl) => {
             const checked = selectedIds.includes(vsl.id);
@@ -259,12 +280,12 @@ export function DomainsManager({ app, vsls, onBack }: { app: FeatureApp; vsls: V
             <CardTitle className="text-base">Domínios autorizados</CardTitle>
             <CardDescription>Um domínio por linha — https://dominio.com, dominio.com ou *.dominio.com para todos os subdomínios. Lista vazia libera qualquer site.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-col gap-4">
             {selectedIds.map((id) => {
               const draft = drafts[id];
               const { domains } = draft?.loaded ? parseDomainLines(draft.text) : { domains: [] };
               return (
-                <div key={id} className="space-y-1.5">
+                <div key={id} className="flex flex-col gap-1.5">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="truncate text-[13px] font-semibold">{titleById.get(id) ?? "VSL"}</span>
                     <span className="shrink-0 text-[11px] text-muted-foreground">{domains.length} domínio{domains.length === 1 ? "" : "s"}</span>
