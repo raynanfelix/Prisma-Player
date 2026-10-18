@@ -19,6 +19,7 @@ const PRIVILEGED = [
   "lib/auth/session.ts",
   "lib/db/index.ts",
   "lib/integrations/server.ts",
+  "lib/realtime/server.ts",
   "lib/security/rate-limit.ts",
   "lib/security/self-origins.ts",
   "lib/security/embed-origin.ts",
