@@ -518,12 +518,14 @@ CREATE TABLE IF NOT EXISTS "account_integrations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"account_owner_id" text NOT NULL,
 	"provider" text NOT NULL,
+	"instance_id" text NOT NULL DEFAULT 'default',
+	"name" text NOT NULL DEFAULT 'Principal',
 	"config" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"vsl_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"enabled" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "account_integrations_provider_check" CHECK ("account_integrations"."provider" in ('meta_pixel', 'google_ads', 'tiktok', 'utmify', 'discord', 'telegram'))
+	CONSTRAINT "account_integrations_provider_check" CHECK ("account_integrations"."provider" in ('meta_pixel', 'google_ads', 'tiktok', 'utmify', 'discord', 'telegram', 'outgoing_webhooks'))
 );
 
 CREATE TABLE IF NOT EXISTS "video_daily_stats" (
@@ -823,7 +825,7 @@ CREATE INDEX IF NOT EXISTS "support_cases_user_idx" ON "support_cases" USING btr
 CREATE INDEX IF NOT EXISTS "support_notes_case_idx" ON "support_notes" USING btree ("case_id","created_at");
 CREATE INDEX IF NOT EXISTS "user_inbox_unread_idx" ON "user_inbox" USING btree ("user_id","created_at" DESC NULLS LAST) WHERE "user_inbox"."read_at" is null and "user_inbox"."dismissed_at" is null;
 CREATE UNIQUE INDEX IF NOT EXISTS "user_inbox_welcome_uidx" ON "user_inbox" USING btree ("user_id","kind") WHERE "user_inbox"."kind" = 'welcome';
-CREATE UNIQUE INDEX IF NOT EXISTS "account_integrations_provider_owner_uidx" ON "account_integrations" USING btree ("account_owner_id","provider");
+CREATE UNIQUE INDEX IF NOT EXISTS "account_integrations_provider_owner_instance_uidx" ON "account_integrations" USING btree ("account_owner_id","provider","instance_id");
 CREATE INDEX IF NOT EXISTS "account_integrations_owner_idx" ON "account_integrations" USING btree ("account_owner_id");
 CREATE INDEX IF NOT EXISTS "video_daily_stats_user_day_idx" ON "video_daily_stats" USING btree ("user_id","day" DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS "video_events_owner_video_created_idx" ON "video_events" USING btree ("user_id","video_id","created_at" DESC NULLS LAST);

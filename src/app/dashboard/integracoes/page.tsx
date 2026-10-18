@@ -30,6 +30,8 @@ export default async function IntegracoesPage() {
 
   const integrations: IntegrationItem[] = rows.map((item) => ({
     provider: item.provider,
+    instanceId: item.instanceId,
+    name: item.name,
     config: Object.fromEntries(Object.entries(item.config).map(([key, value]) => [key, typeof value === "string" ? value : ""])),
     vslIds: item.vslIds,
     enabled: item.enabled,

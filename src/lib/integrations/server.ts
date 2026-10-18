@@ -9,8 +9,10 @@ const { accountIntegrations } = schema;
 /**
  * Integrações por CONTA (App Store de integrações). Fonte única de verdade:
  * tokens/chaves ficam aqui (server-side) — o client só vê status e eventos.
- * Vínculo pixel ↔ VSLs: `vslIds` (array de IDs de VSL) — 1 pixel em N VSLs,
- * N pixels em 1 VSL, combinações livres.
+ * MÚLTIPLAS INSTÂNCIAS por provider: o dono pode cadastrar 5 domínios, 5
+ * webhooks de Discord, N pixels — cada instância tem `instanceId` + `name`.
+ * Vínculo pixel ↔ VSLs: `vslIds` (array de IDs de VSL) por instância —
+ * 1 pixel em N VSLs, N pixels em 1 VSL, combinações livres.
  */
 
 export const INTEGRATION_PROVIDERS = ["meta_pixel", "google_ads", "tiktok", "utmify", "discord", "telegram"] as const;
@@ -20,6 +22,8 @@ export type IntegrationRow = {
   id: string;
   accountOwnerId: string;
   provider: IntegrationProvider;
+  instanceId: string;
+  name: string;
   config: Record<string, unknown>;
   vslIds: string[];
   enabled: boolean;
@@ -71,6 +75,20 @@ export function sanitizeIntegrationConfig(provider: IntegrationProvider, raw: un
   return {};
 }
 
+/** Nome de instância válido: 1–80 caracteres visíveis. */
+export function sanitizeInstanceName(raw: unknown): string {
+  if (typeof raw !== "string") return "Principal";
+  const clean = raw.trim().slice(0, 80);
+  return clean || "Principal";
+}
+
+/** instanceId válido: slug curto gerado pelo client ou "default". */
+export function sanitizeInstanceId(raw: unknown): string {
+  if (typeof raw !== "string") return "default";
+  const clean = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
+  return clean || "default";
+}
+
 /** vslIds válidos: array de strings sem duplicatas (o dono só vincula VSLs dele — a rota confere posse). */
 export function sanitizeVslIds(raw: unknown): string[] | null {
   if (!Array.isArray(raw)) return null;
@@ -78,34 +96,13 @@ export function sanitizeVslIds(raw: unknown): string[] | null {
   return ids.length === raw.length ? Array.from(new Set(ids)) : null;
 }
 
-export async function listIntegrations(ownerId: string): Promise<IntegrationRow[]> {
-  const rows = await db
-    .select()
-    .from(accountIntegrations)
-    .where(eq(accountIntegrations.accountOwnerId, ownerId))
-    .limit(100);
-  return rows.map((row) => ({
-    id: row.id,
-    accountOwnerId: row.accountOwnerId,
-    provider: row.provider as IntegrationProvider,
-    config: (row.config && typeof row.config === "object" ? row.config : {}) as Record<string, unknown>,
-    vslIds: Array.isArray(row.vslIds) ? (row.vslIds as string[]) : [],
-    enabled: row.enabled,
-    updatedAt: row.updatedAt,
-  }));
-}
-
-export async function getIntegration(ownerId: string, provider: IntegrationProvider): Promise<IntegrationRow | null> {
-  const [row] = await db
-    .select()
-    .from(accountIntegrations)
-    .where(and(eq(accountIntegrations.accountOwnerId, ownerId), eq(accountIntegrations.provider, provider)))
-    .limit(1);
-  if (!row) return null;
+function toRow(row: typeof accountIntegrations.$inferSelect): IntegrationRow {
   return {
     id: row.id,
     accountOwnerId: row.accountOwnerId,
     provider: row.provider as IntegrationProvider,
+    instanceId: row.instanceId ?? "default",
+    name: row.name ?? "Principal",
     config: (row.config && typeof row.config === "object" ? row.config : {}) as Record<string, unknown>,
     vslIds: Array.isArray(row.vslIds) ? (row.vslIds as string[]) : [],
     enabled: row.enabled,
@@ -113,23 +110,61 @@ export async function getIntegration(ownerId: string, provider: IntegrationProvi
   };
 }
 
+/** Lista TODAS as instâncias de todas as integrações da conta. */
+export async function listIntegrations(ownerId: string): Promise<IntegrationRow[]> {
+  const rows = await db
+    .select()
+    .from(accountIntegrations)
+    .where(eq(accountIntegrations.accountOwnerId, ownerId))
+    .limit(200);
+  return rows.map(toRow);
+}
+
+/** Instâncias de UM provider (ex.: todos os webhooks de Discord do dono). */
+export async function listProviderInstances(ownerId: string, provider: IntegrationProvider): Promise<IntegrationRow[]> {
+  const rows = await db
+    .select()
+    .from(accountIntegrations)
+    .where(and(eq(accountIntegrations.accountOwnerId, ownerId), eq(accountIntegrations.provider, provider)));
+  return rows.map(toRow);
+}
+
+/** Primeira instância de um provider (compat com telas antigas). */
+export async function getIntegration(ownerId: string, provider: IntegrationProvider): Promise<IntegrationRow | null> {
+  const [row] = await db
+    .select()
+    .from(accountIntegrations)
+    .where(and(eq(accountIntegrations.accountOwnerId, ownerId), eq(accountIntegrations.provider, provider)))
+    .limit(1);
+  return row ? toRow(row) : null;
+}
+
+/**
+ * Cria/atualiza UMA instância. `instanceId` distingue múltiplas integrações do
+ * mesmo provider (5 domínios, 5 Discords…). Conflito só na tríade
+ * (owner, provider, instanceId).
+ */
 export async function upsertIntegration(
   ownerId: string,
   provider: IntegrationProvider,
-  input: { config: Record<string, unknown>; vslIds: string[]; enabled: boolean },
+  input: { config: Record<string, unknown>; vslIds: string[]; enabled: boolean; instanceId?: string; name?: string },
 ): Promise<void> {
+  const instanceId = input.instanceId ?? "default";
   await db
     .insert(accountIntegrations)
     .values({
       accountOwnerId: ownerId,
       provider,
+      instanceId,
+      name: input.name ?? "Principal",
       config: input.config,
       vslIds: input.vslIds,
       enabled: input.enabled,
     })
     .onConflictDoUpdate({
-      target: [accountIntegrations.accountOwnerId, accountIntegrations.provider],
+      target: [accountIntegrations.accountOwnerId, accountIntegrations.provider, accountIntegrations.instanceId],
       set: {
+        name: input.name ?? "Principal",
         config: input.config,
         vslIds: input.vslIds,
         enabled: input.enabled,
@@ -138,14 +173,21 @@ export async function upsertIntegration(
     });
 }
 
-export async function deleteIntegration(ownerId: string, provider: IntegrationProvider): Promise<void> {
+/** Remove uma instância específica (ou todas do provider quando sem instanceId). */
+export async function deleteIntegration(ownerId: string, provider: IntegrationProvider, instanceId?: string): Promise<void> {
+  if (instanceId) {
+    await db
+      .delete(accountIntegrations)
+      .where(and(eq(accountIntegrations.accountOwnerId, ownerId), eq(accountIntegrations.provider, provider), eq(accountIntegrations.instanceId, instanceId)));
+    return;
+  }
   await db.delete(accountIntegrations).where(and(eq(accountIntegrations.accountOwnerId, ownerId), eq(accountIntegrations.provider, provider)));
 }
 
 /**
  * Resolução para o EMBED: as integrações ATIVAS de uma VSL (vsl_ids contém o
- * id da VSL). Substitui a leitura dos campos de pixel do config por-VSL — com
- * fallback legado no chamador enquanto a migração do dono não acontece.
+ * id da VSL), de QUALQUER instância — todas as fatias de pixel/webhook ativas
+ * para o vídeo.
  */
 export async function resolveIntegrationsForVideo(ownerId: string, videoId: string): Promise<IntegrationRow[]> {
   const rows = await db
@@ -154,13 +196,5 @@ export async function resolveIntegrationsForVideo(ownerId: string, videoId: stri
     .where(and(eq(accountIntegrations.accountOwnerId, ownerId), eq(accountIntegrations.enabled, true)));
   return rows
     .filter((row) => Array.isArray(row.vslIds) && (row.vslIds as string[]).includes(videoId))
-    .map((row) => ({
-      id: row.id,
-      accountOwnerId: row.accountOwnerId,
-      provider: row.provider as IntegrationProvider,
-      config: (row.config && typeof row.config === "object" ? row.config : {}) as Record<string, unknown>,
-      vslIds: Array.isArray(row.vslIds) ? (row.vslIds as string[]) : [],
-      enabled: row.enabled,
-      updatedAt: row.updatedAt,
-    }));
+    .map(toRow);
 }

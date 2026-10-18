@@ -9,7 +9,9 @@ import {
   deleteIntegration,
   isIntegrationProvider,
   listIntegrations,
+  sanitizeInstanceId,
   sanitizeIntegrationConfig,
+  sanitizeInstanceName,
   sanitizeVslIds,
   upsertIntegration,
 } from "@/lib/integrations/server";
@@ -38,6 +40,8 @@ export async function GET(request: Request) {
   return noStore({
     integrations: items.map((item) => ({
       provider: item.provider,
+      instanceId: item.instanceId,
+      name: item.name,
       config: item.config,
       vslIds: item.vslIds,
       enabled: item.enabled,
@@ -55,7 +59,7 @@ export async function PUT(request: Request) {
   const limited = await rateLimit(request, `integrations:${ownerId}`, { max: 30, windowMs: 60_000, failClosed: true });
   if (limited) return limited;
 
-  const parsed = await readJsonBody<{ provider?: unknown; config?: unknown; vslIds?: unknown; enabled?: unknown }>(request);
+  const parsed = await readJsonBody<{ provider?: unknown; config?: unknown; vslIds?: unknown; enabled?: unknown; instanceId?: unknown; name?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
   if (!isIntegrationProvider(body?.provider)) return noStore({ error: "invalid_provider" }, 400);
@@ -72,7 +76,13 @@ export async function PUT(request: Request) {
       .where(and(eq(videos.userId, ownerId), inArray(videos.id, vslIds)));
     if (owned.length !== vslIds.length) return noStore({ error: "vsl_not_owned" }, 403);
   }
-  await upsertIntegration(ownerId, provider, { config, vslIds, enabled });
+  await upsertIntegration(ownerId, provider, {
+    config,
+    vslIds,
+    enabled,
+    instanceId: sanitizeInstanceId(body?.instanceId),
+    name: sanitizeInstanceName(body?.name),
+  });
   return noStore({ ok: true, provider, vslIds, enabled });
 }
 
@@ -84,9 +94,9 @@ export async function DELETE(request: Request) {
   const ownerId = gate.account.accountOwnerId;
   const limited = await rateLimit(request, `integrations:${ownerId}`, { max: 30, windowMs: 60_000 });
   if (limited) return limited;
-  const parsed = await readJsonBody<{ provider?: unknown }>(request);
+  const parsed = await readJsonBody<{ provider?: unknown; instanceId?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   if (!isIntegrationProvider(parsed.body?.provider)) return noStore({ error: "invalid_provider" }, 400);
-  await deleteIntegration(ownerId, parsed.body.provider);
+  await deleteIntegration(ownerId, parsed.body.provider, sanitizeInstanceId(parsed.body?.instanceId));
   return noStore({ ok: true });
 }

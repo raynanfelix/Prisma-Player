@@ -1262,10 +1262,11 @@ export const videoDailyStats = pgTable(
 
 /**
  * Integrações por CONTA (App Store de integrações, /dashboard/integracoes).
- * 1 integração por (conta, provider); o vínculo com VSLs é o array `vslIds`
- * (1 pixel em N VSLs, N pixels em 1 VSL — combinações livres). Os tokens
- * (Access Token de CAPI, chaves de API) vivem em `config` e NUNCA saem para
- * o client: o embed resolve as integrações server-side.
+ * Múltiplas instâncias por (conta, provider): cada instância tem um `instanceId`
+ * e `name` (ex.: "Pixel Principal", "Pixel Secundário", "Domínio Principal").
+ * O vínculo com VSLs é o array `vslIds` por instância.
+ * Tokens (Access Token de CAPI, chaves de API) vivem em `config` e NUNCA saem
+ * para o client: o embed resolve as integrações server-side.
  */
 export const accountIntegrations = pgTable(
   "account_integrations",
@@ -1273,6 +1274,8 @@ export const accountIntegrations = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     accountOwnerId: text("account_owner_id").notNull(),
     provider: text("provider").notNull(),
+    instanceId: text("instance_id").notNull().default("default"),
+    name: text("name").notNull().default("Principal"),
     config: jsonb("config").notNull().default({}),
     vslIds: jsonb("vsl_ids").notNull().default([]),
     enabled: boolean("enabled").notNull().default(true),
@@ -1280,11 +1283,11 @@ export const accountIntegrations = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("account_integrations_provider_owner_uidx").on(t.accountOwnerId, t.provider),
+    uniqueIndex("account_integrations_provider_owner_instance_uidx").on(t.accountOwnerId, t.provider, t.instanceId),
     index("account_integrations_owner_idx").on(t.accountOwnerId),
     check(
       "account_integrations_provider_check",
-      sql`${t.provider} in ('meta_pixel', 'google_ads', 'tiktok', 'utmify', 'discord', 'telegram')`,
+      sql`${t.provider} in ('meta_pixel', 'google_ads', 'tiktok', 'utmify', 'discord', 'telegram', 'outgoing_webhooks')`,
     ),
   ],
 );

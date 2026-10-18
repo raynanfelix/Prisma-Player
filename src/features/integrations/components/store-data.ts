@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, BellRing, FileClock, Users, Webhook } from "lucide-react";
+import { BarChart3, BellRing, Users } from "lucide-react";
 
 /**
  * Dados do Marketplace de apps (/dashboard/integracoes).
@@ -14,6 +14,8 @@ import { BarChart3, BellRing, FileClock, Users, Webhook } from "lucide-react";
 
 export interface IntegrationItem {
   provider: string;
+  instanceId: string;
+  name: string;
   config: Record<string, string>;
   vslIds: string[];
   enabled: boolean;
@@ -58,7 +60,7 @@ export interface ProviderEvents {
   detail: string;
 }
 
-export type StoreProviderId = "meta_pixel" | "google_ads" | "tiktok" | "utmify" | "discord";
+export type StoreProviderId = "meta_pixel" | "google_ads" | "tiktok" | "utmify" | "discord" | "telegram";
 
 export interface ProviderApp {
   kind: "provider";
@@ -90,6 +92,8 @@ export interface FeatureApp {
   /** `domains` abre a gestão da allowlist por VSL; `info` é informativo + CTA. */
   detail: "domains" | "info";
   icon?: LucideIcon;
+  /** Logo de src/assets quando disponível. */
+  logo?: string;
   /** Marca inline de globo/escudo (SVG no componente, sem arquivo novo). */
   globeShield?: boolean;
   actionLabel: string;
@@ -193,28 +197,54 @@ export const PROVIDER_APPS: ProviderApp[] = [
   },
   {
     kind: "provider",
-    id: "outgoing_webhooks",
+    id: "discord",
     provider: "discord",
-    name: "Webhooks de saída",
+    name: "Discord",
     category: "webhooks",
-    description: "Eventos em tempo real para Discord ou qualquer endpoint HTTPS compatível.",
-    icon: Webhook,
+    description: "Receba eventos das suas VSLs em um canal do seu servidor Discord.",
+    logo: "/assets/discord.svg",
     showAvailableBadge: true,
-    fields: [{ key: "webhookUrl", label: "Endpoint HTTPS do webhook", placeholder: "https://discord.com/api/webhooks/… ou qualquer URL HTTPS" }],
+    fields: [{ key: "webhookUrl", label: "Webhook do Discord", placeholder: "https://discord.com/api/webhooks/…" }],
     events: {
       title: "Eventos em tempo real",
       tag: "play · progress · cta_click · conversion · complete",
-      detail: "Disparados conforme a VSL é assistida — um POST HTTPS por evento.",
+      detail: "Disparados conforme a VSL é assistida — uma mensagem formatada por evento no canal.",
     },
     howItWorks: {
-      intro: "Os eventos das suas VSLs são entregues em tempo real no endpoint que você cadastrar — um webhook do Discord ou qualquer serviço compatível com HTTPS.",
+      intro: "Os eventos das suas VSLs são entregues em tempo real no canal do seu servidor Discord via webhook.",
       bullets: [
         "Play, progresso, clique no CTA, conversão e conclusão da VSL",
-        "Endereços do Discord recebem a mensagem formatada para o canal",
+        "Mensagem formatada para o canal do Discord",
         "A URL fica salva no servidor — nunca vai para a embed",
-        "Uma única URL para todas as VSLs vinculadas",
+        "Múltiplos webhooks: cadastre um para cada canal ou servidor",
       ],
       note: "A escolha das atividades enviadas e o teste de entrega ficam na Inteligência.",
+    },
+  },
+  {
+    kind: "provider",
+    id: "telegram",
+    provider: "telegram",
+    name: "Telegram",
+    category: "webhooks",
+    description: "Receba eventos das suas VSLs no seu bot do Telegram.",
+    logo: "/assets/telegram.png",
+    showAvailableBadge: true,
+    fields: [{ key: "webhookUrl", label: "Webhook do Telegram", placeholder: "https://api.telegram.org/bot…/sendMessage" }],
+    events: {
+      title: "Eventos em tempo real",
+      tag: "play · progress · cta_click · conversion · complete",
+      detail: "Disparados conforme a VSL é assistida — uma mensagem por evento no bot.",
+    },
+    howItWorks: {
+      intro: "Os eventos das suas VSLs são entregues em tempo real no chat do seu bot do Telegram via API.",
+      bullets: [
+        "Play, progresso, clique no CTA, conversão e conclusão da VSL",
+        "Mensagem direto no chat do bot do Telegram",
+        "A URL fica salva no servidor — nunca vai para a embed",
+        "Múltiplos bots: cadastre um webhook para cada chat",
+      ],
+      note: "Crie um bot com o @BotFather e cole a URL de sendMessage aqui.",
     },
   },
 ];
@@ -247,7 +277,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     category: "intelligence",
     description: "Receba um resumo periódico com plays, conversões e desempenho da operação.",
     detail: "info",
-    icon: FileClock,
+    logo: "/assets/Relatórios automáticos.png",
     actionLabel: "Abrir",
     cta: { label: "Ativar na Inteligência", href: "intelligence" },
     howItWorks: {

@@ -29,14 +29,14 @@ interface Props {
 }
 
 /** Badge verde de destaque (tokens da Prisma: verde-lima sobre tinta). */
-function GreenBadge({ children }: { children: string }) {
+function GreenBadge({ children }: { children: React.ReactNode }) {
   return <Badge className="bg-[#B9FF66] text-[#191A23] hover:bg-[#B9FF66]">{children}</Badge>;
 }
 
-function CardBadge({ app, installed }: { app: StoreApp; installed: boolean }) {
+function CardBadge({ app, count }: { app: StoreApp; count: number }) {
   if (app.kind === "provider") {
     if (app.comingSoon) return <Badge variant="secondary">Em breve</Badge>;
-    if (installed) return <GreenBadge>Instalado</GreenBadge>;
+    if (count > 0) return <GreenBadge>{count} instância{count === 1 ? "" : "s"}</GreenBadge>;
     if (app.showAvailableBadge) return <GreenBadge>Disponível</GreenBadge>;
     return null;
   }
@@ -47,9 +47,14 @@ export default function IntegrationsStore({ integrations, vsls }: Props) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<StoreApp | null>(null);
 
-  const byProvider = useMemo(() => {
-    const map = new Map<string, IntegrationItem>();
-    for (const item of integrations) map.set(item.provider, item);
+  /** Agrupa TODAS as instâncias por provider (multi-instância). */
+  const instancesByProvider = useMemo(() => {
+    const map = new Map<string, IntegrationItem[]>();
+    for (const item of integrations) {
+      const list = map.get(item.provider) ?? [];
+      list.push(item);
+      map.set(item.provider, list);
+    }
     return map;
   }, [integrations]);
 
@@ -57,7 +62,7 @@ export default function IntegrationsStore({ integrations, vsls }: Props) {
     return (
       <IntegrationDetail
         app={selected}
-        existing={byProvider.get(selected.provider) ?? null}
+        instances={instancesByProvider.get(selected.provider) ?? []}
         vsls={vsls}
         onBack={() => setSelected(null)}
       />
@@ -88,17 +93,17 @@ export default function IntegrationsStore({ integrations, vsls }: Props) {
             <h3 className="text-[13px] font-semibold text-muted-foreground">{CATEGORY_LABEL[category]}</h3>
             <div className="grid gap-4 md:grid-cols-2">
               {items.map((app) => {
-                const existing = app.kind === "provider" ? byProvider.get(app.provider) : undefined;
-                const installed = Boolean(existing);
-                const linkedCount = existing?.vslIds.length ?? 0;
-                const actionLabel = app.kind === "provider" ? (installed ? "Configurar" : "Integrar") : app.actionLabel;
+                const instances = app.kind === "provider" ? instancesByProvider.get(app.provider) ?? [] : [];
+                const count = instances.length;
+                const linkedCount = instances.reduce((total, item) => total + item.vslIds.length, 0);
+                const actionLabel = app.kind === "provider" ? (count > 0 ? "Configurar" : "Integrar") : app.actionLabel;
                 return (
-                  <Card key={app.id} size="sm" className={installed ? "ring-[#B9FF66]/40" : undefined}>
+                  <Card key={app.id} size="sm" className={count > 0 ? "ring-[#B9FF66]/40" : undefined}>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2.5">
                         <AppMark app={app} />
                         {app.name}
-                        <CardBadge app={app} installed={installed} />
+                        <CardBadge app={app} count={count} />
                       </CardTitle>
                       <CardDescription>{app.description}</CardDescription>
                       <CardAction>
@@ -106,8 +111,8 @@ export default function IntegrationsStore({ integrations, vsls }: Props) {
                           <Button
                             type="button"
                             size="sm"
-                            variant={app.kind === "provider" && installed ? "outline" : "default"}
-                            className={app.kind === "provider" && installed ? "" : "bg-[#B9FF66] font-semibold text-[#191A23] hover:bg-[#a8f052]"}
+                            variant={app.kind === "provider" && count > 0 ? "outline" : "default"}
+                            className={app.kind === "provider" && count > 0 ? "" : "bg-[#B9FF66] font-semibold text-[#191A23] hover:bg-[#a8f052]"}
                             onClick={() => setSelected(app)}
                           >
                             {actionLabel}
@@ -116,9 +121,9 @@ export default function IntegrationsStore({ integrations, vsls }: Props) {
                       </CardAction>
                     </CardHeader>
                     <CardContent>
-                      {installed && (
+                      {count > 0 && (
                         <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                          <Check /> {linkedCount} VSL{linkedCount === 1 ? "" : "s"} conectada{linkedCount === 1 ? "" : "s"}
+                          <Check /> {count} instância{count === 1 ? "" : "s"} · {linkedCount} VSL{linkedCount === 1 ? "" : "s"} conectada{linkedCount === 1 ? "" : "s"}
                         </p>
                       )}
                     </CardContent>

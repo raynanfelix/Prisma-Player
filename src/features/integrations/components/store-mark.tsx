@@ -21,10 +21,11 @@ export function GlobeShieldMark({ className }: { className?: string }) {
 
 export function AppMark({ app, large = false }: { app: StoreApp; large?: boolean }) {
   const box = large ? "size-14 rounded-2xl p-2.5" : "size-9 rounded-xl p-1.5";
+  const logo = app.kind === "provider" ? app.logo : app.kind === "feature" ? app.logo : undefined;
   return (
     <span className={`grid ${box} shrink-0 place-items-center border bg-white text-[#191A23] dark:bg-white/95 dark:text-white`}>
-      {app.kind === "provider" && app.logo ? (
-        <Image src={app.logo} alt="" width={large ? 40 : 24} height={large ? 40 : 24} className={large ? "size-10 object-contain" : "size-6 object-contain"} />
+      {logo ? (
+        <Image src={logo} alt="" width={large ? 40 : 24} height={large ? 40 : 24} className={large ? "size-10 object-contain" : "size-6 object-contain"} />
       ) : app.kind === "feature" && app.globeShield ? (
         <GlobeShieldMark className={large ? "size-8" : "size-5"} />
       ) : app.icon ? (
