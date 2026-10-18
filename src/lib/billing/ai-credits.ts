@@ -2,11 +2,9 @@ import "server-only";
 
 import { and, eq, gte, sql } from "drizzle-orm";
 
-import { abacateRequest } from "./abacatepay/client";
-import type { AbacateCheckout, AbacateProduct } from "./abacatepay/types";
 import { db, schema } from "@/lib/db";
 
-const { aiCreditCheckouts, aiCreditLedger, aiCreditProducts, aiCreditWallets } = schema;
+const { aiCreditLedger, aiCreditWallets } = schema;
 
 /** Localiza o código 23505 (unique_violation) na cadeia de causes do pg/Drizzle. */
 function isUniqueViolationError(error: unknown): boolean {
@@ -99,30 +97,3 @@ export async function refundAiCredit(userId: string, reference: string): Promise
   });
 }
 
-type CreditProduct = { id: string; slug: string; name: string; credits: number; bonus_credits: number; amount_cents: number; provider_product_id: string | null };
-function siteUrl() { return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, ""); }
-
-async function ensureProviderProduct(product: CreditProduct) {
-  if (product.provider_product_id) return product.provider_product_id;
-  const externalId = `prisma-${product.slug}`;
-  const listed = await abacateRequest<AbacateProduct[]>("/products/list?limit=100");
-  let provider = listed.find((item) => item.externalId === externalId);
-  if (!provider) provider = await abacateRequest<AbacateProduct>("/products/create", { method: "POST", body: JSON.stringify({ externalId, name: `${product.name} - Creditos Prisma IA`, description: `${product.credits + product.bonus_credits} creditos para analises e recomendacoes`, price: product.amount_cents, currency: "BRL" }) });
-  await db.update(aiCreditProducts).set({ providerProductId: provider.id, updatedAt: new Date() }).where(eq(aiCreditProducts.id, product.id));
-  return provider.id;
-}
-
-export async function createAiCreditCheckout(userId: string, product: CreditProduct) {
-  const providerProductId = await ensureProviderProduct(product);
-  const id = crypto.randomUUID();
-  const externalId = `prisma_ai_${id}`;
-  await db.insert(aiCreditCheckouts).values({ id, userId, productId: product.id, externalId, amountCents: product.amount_cents });
-  try {
-    const checkout = await abacateRequest<AbacateCheckout>("/checkouts/create", { method: "POST", body: JSON.stringify({ items: [{ id: providerProductId, quantity: 1 }], externalId, methods: ["PIX", "CARD"], returnUrl: `${siteUrl()}/dashboard/billing`, completionUrl: `${siteUrl()}/dashboard/billing?creditCheckout=${id}`, metadata: { prismaUserId: userId, prismaAiProduct: product.slug, prismaCreditCheckoutId: id } }) });
-    await db.update(aiCreditCheckouts).set({ providerCheckoutId: checkout.id, checkoutUrl: checkout.url, status: "pending", updatedAt: new Date() }).where(eq(aiCreditCheckouts.id, id));
-    return { id, url: checkout.url };
-  } catch (error) {
-    await db.update(aiCreditCheckouts).set({ status: "failed", updatedAt: new Date() }).where(eq(aiCreditCheckouts.id, id));
-    throw error;
-  }
-}
