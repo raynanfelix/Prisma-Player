@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, CheckCircle2, Clock3, Code2, Copy, ExternalLink, FileVideo2, Folder, FolderPlus, MoreHorizontal, Pencil, Play, Plus, Search, Trash2, Upload, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/components/dashboard/EmptyState";
+import Reveal from "@/components/motion/reveal";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Tabs from "@/components/dashboard/Tabs";
 import Dialog from "@/components/ui/Dialog";
@@ -194,7 +195,8 @@ export default function VideosPage() {
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <Reveal>
+        <div className="grid gap-4 sm:grid-cols-3">
         <article className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs">
           <span className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
             <Video size={15} className="text-[#191A23] dark:text-[#B9FF66]" />Biblioteca
@@ -218,7 +220,8 @@ export default function VideosPage() {
           <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white">{tabs.find((item) => item.id === "processing")?.count ?? 0}</strong>
           <small className="text-slate-500 dark:text-zinc-400 font-medium">Uploads e processamento ativos</small>
         </article>
-      </div>
+        </div>
+      </Reveal>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex gap-2 overflow-x-auto pb-1">
