@@ -99,18 +99,39 @@ describe("verifyMeta", () => {
     expect(callOf(fetchMock, 1)[1].signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("pixel inexistente → falha honesta com o motivo real no detail", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ error: { message: "Unsupported get request. Object with ID '999' does not exist" } }, 400)));
+  it("pixel inexistente → falha honesta com o motivo real no detail (veredito do POST)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) =>
+      url.includes("/events")
+        ? jsonResponse({ error: { message: "Unsupported post request. Object with ID '999' does not exist" } }, 400)
+        : jsonResponse({ error: { message: "(#100) Missing Permission" } }, 400)));
 
     const result = await verifyMeta({ pixelId: "999", accessToken: META_TOKEN });
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain("Pixel não encontrado");
+    expect(result.detail).toContain("POST /events");
     expect(result.detail).toContain("does not exist");
   });
 
-  it("token inválido → mensagem honesta e token NUNCA vaza no detail", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ error: { message: `Error validating access token. Session expired (${META_TOKEN})` } }, 400)));
+  it("token de CAPI (GET sem permissão) + POST ok → teste PASSA (veredito é o envio, não a leitura)", async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url.includes("/events")
+        ? jsonResponse({ events_received: 1, messages: [] })
+        : jsonResponse({ error: { message: "(#100) Missing Permission" } }, 400));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await verifyMeta({ pixelId: "123456789012345", accessToken: META_TOKEN });
+
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("recebeu 1 evento");
+    expect(result.detail).toBe("events_received: 1");
+  });
+
+  it("token inválido → mensagem honesta e token NUNCA vaza no detail (POST reprova)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) =>
+      url.includes("/events")
+        ? jsonResponse({ error: { message: `Error validating access token. Session expired (${META_TOKEN})` } }, 400)
+        : jsonResponse({ error: { message: "(#100) Missing Permission" } }, 400)));
 
     const result = await verifyMeta({ pixelId: "123456789012345", accessToken: META_TOKEN });
 

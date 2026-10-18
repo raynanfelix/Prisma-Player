@@ -101,7 +101,7 @@ function metaRefusalMessage(status: number, reason: string): string {
   if (text.includes("validating access token") || text.includes("invalid oauth") || text.includes("access token")) {
     return "Access Token inválido ou expirado — gere um novo no Events Manager (API de Conversões).";
   }
-  if (status === 404 || text.includes("does not exist") || text.includes("nonexist") || text.includes("unsupported get request")) {
+  if (status === 404 || text.includes("does not exist") || text.includes("nonexist") || text.includes("unsupported get request") || text.includes("unsupported post request")) {
     return "Pixel não encontrado — confira o ID e se o token pertence à mesma conta de anúncios.";
   }
   return `Meta recusou a chamada (HTTP ${status}).`;
@@ -117,18 +117,22 @@ export async function verifyMeta(config: Record<string, unknown>): Promise<Pixel
 
   const version = graphApiVersion();
   try {
-    // 1) O pixel existe e o token consegue enxergá-lo (400/404 se ID inválido).
-    const check = await platformFetch(
-      `https://graph.facebook.com/${version}/${encodeURIComponent(pixelId)}?fields=id%2Cname&access_token=${encodeURIComponent(accessToken)}`,
-      { method: "GET" },
-    );
-    const checkBody = await readJson(check);
-    if (!check.ok) {
-      const error = checkBody?.["error"] as { message?: string } | undefined;
-      const reason = error?.message ?? `HTTP ${check.status}`;
-      return result(false, "meta", metaRefusalMessage(check.status, reason), redact(`GET ${pixelId}: ${reason}`, [accessToken]));
+    // 1) Best-effort: pegar o nome do pixel (tokens de CAPI têm permissão de
+    //    ENVIO, não de leitura — GET com "Missing Permission" é NORMAL e não
+    //    pode falhar o teste; o veredito é o POST /events abaixo).
+    let pixelName = "";
+    try {
+      const check = await platformFetch(
+        `https://graph.facebook.com/${version}/${encodeURIComponent(pixelId)}?fields=id%2Cname&access_token=${encodeURIComponent(accessToken)}`,
+        { method: "GET" },
+      );
+      const checkBody = await readJson(check);
+      if (check.ok && typeof checkBody?.["name"] === "string") {
+        pixelName = (checkBody["name"] as string).slice(0, 60);
+      }
+    } catch {
+      // GET é opcional — segue pro POST mesmo sem ele.
     }
-    const pixelName = typeof checkBody?.["name"] === "string" ? (checkBody["name"] as string).slice(0, 60) : "";
 
     // 2) Evento de teste REAL na API de Conversões.
     const response = await platformFetch(`https://graph.facebook.com/${version}/${encodeURIComponent(pixelId)}/events`, {
