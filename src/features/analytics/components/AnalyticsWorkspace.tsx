@@ -1016,36 +1016,6 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       </ComposedChart>
                     </div>
                   )}
-
-                  <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-zinc-800">
-                    <table className="w-full min-w-[600px] text-left text-xs font-medium text-[#191A23] dark:text-zinc-200">
-                      <thead className="bg-slate-50 dark:bg-card uppercase text-slate-500 dark:text-zinc-400 border-b border-slate-100 dark:border-zinc-800 font-semibold">
-                        <tr>
-                          <th className="p-3">Marco</th>
-                          <th className="p-3 text-right">Tempo no Vídeo</th>
-                          <th className="p-3 text-right">Retenção</th>
-                          <th className="p-3 text-right">Espectadores</th>
-                          <th className="p-3 text-right">Desistiram</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                        {data.retention.map((point) => {
-                          const duration = data.video.duration_seconds || 0;
-                          const timeAtPoint = Math.round(duration * point.point / 100);
-                          const dropped = (point.point === 10 ? data.summary.plays : data.retention.find(p => p.point === point.point - 10)?.viewers ?? data.summary.plays) - point.viewers;
-                          return (
-                            <tr key={point.point} className="group transition-colors duration-150 hover:bg-slate-50/60 dark:hover:bg-transparent">
-                              <td className="p-3 font-semibold text-[#191A23] dark:text-zinc-100">{point.point}%</td>
-                              <td className="p-3 text-right font-mono text-slate-600 dark:text-zinc-400">{formatSecondsToTimeString(timeAtPoint)}</td>
-                              <td className="p-3 text-right font-bold text-[#191A23] dark:text-zinc-100">{format(point.rate, true)}</td>
-                              <td className="p-3 text-right font-medium text-slate-600 dark:text-zinc-400">{format(point.viewers)}</td>
-                              <td className="p-3 text-right font-medium text-red-600 dark:text-red-400">{format(Math.max(0, dropped))}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
                 </section>
               </div>
             )}
