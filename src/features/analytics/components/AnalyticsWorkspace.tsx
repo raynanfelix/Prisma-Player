@@ -523,18 +523,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
     return rows.slice(0, 6).map((s) => ({ label: s.name, impressions: s.impressions }));
   }, [data]);
 
-  // Donut de CTA (funil): cliques e conversões como fatia do total de plays.
-  const ctaRingData = useMemo(() => {
-    if (!data) return [];
-    const plays = Math.max(data.summary.plays, 1);
-    return [
-      { label: "Cliques na CTA", value: data.summary.ctaClicks, maxValue: plays },
-      { label: "Conversões", value: data.summary.conversions, maxValue: plays },
-    ];
-  }, [data]);
-
   const [hoveredCountriesIndex, setHoveredCountriesIndex] = useState<number | null>(null);
-  const [hoveredCtaIndex, setHoveredCtaIndex] = useState<number | null>(null);
 
   // Derived watch duration totals
   const totalPlayTimeSeconds = useMemo(() => {
@@ -1076,43 +1065,8 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                   <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Perda de público e taxas de conversão relativas a cada etapa da VSL.</p>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                  <div className="w-full min-w-0 py-6 flex justify-center">
-                    <FunnelChart data={funnelChartData} layers={3} className="w-full h-[400px]" />
-                  </div>
-
-                  {/* Donut de CTA: mesmo padrão de anéis da aba de dispositivos */}
-                  <div className="flex flex-col justify-center gap-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-card p-5">
-                    <div>
-                      <h3 className="text-sm font-bold text-[#191A23] dark:text-white">Cliques na CTA</h3>
-                      <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                        Participação dos cliques e das compras no total de plays.
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-center gap-4 xl:flex-row xl:items-center xl:justify-center">
-                      <div aria-hidden="true">
-                        <RingChart
-                          data={ctaRingData}
-                          size={170}
-                          strokeWidth={12}
-                          baseInnerRadius={46}
-                          hoveredIndex={hoveredCtaIndex}
-                          onHoverChange={setHoveredCtaIndex}
-                        >
-                          {ctaRingData.map((item, index) => (
-                            <Ring key={item.label} index={index} />
-                          ))}
-                          <RingCenter defaultLabel="Interações" />
-                        </RingChart>
-                      </div>
-                      <Legend
-                        items={ctaRingData}
-                        hoveredIndex={hoveredCtaIndex}
-                        onHoverChange={setHoveredCtaIndex}
-                        className="w-full text-xs font-semibold"
-                      />
-                    </div>
-                  </div>
+                <div className="w-full min-w-0 py-6 flex justify-center">
+                  <FunnelChart data={funnelChartData} layers={3} className="w-full h-[400px]" />
                 </div>
               </section>
             )}
