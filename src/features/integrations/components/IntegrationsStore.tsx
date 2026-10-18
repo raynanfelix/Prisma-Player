@@ -17,6 +17,7 @@ import BenchmarksScreen from "./BenchmarksScreen";
 import IntegrationDetail from "./IntegrationDetail";
 import { DomainsManager } from "./FeatureAppDetails";
 import ReportsConfigScreen from "./ReportsConfigScreen";
+import { shortRelativeTime } from "./relative-time";
 import { AppMark } from "./store-mark";
 import {
   CATEGORY_LABEL,
@@ -43,10 +44,21 @@ function GreenBadge({ children }: { children: React.ReactNode }) {
   return <Badge className="bg-[#B9FF66] text-[#191A23] hover:bg-[#B9FF66]">{children}</Badge>;
 }
 
-function CardBadge({ app, count }: { app: StoreApp; count: number }) {
+function CardBadge({ app, count, verifiedAt }: { app: StoreApp; count: number; verifiedAt?: string }) {
   if (app.kind === "provider") {
     if (app.comingSoon) return <Badge variant="secondary">Em breve</Badge>;
-    if (count > 0) return <GreenBadge>{count} instância{count === 1 ? "" : "s"}</GreenBadge>;
+    if (count > 0) {
+      return (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <GreenBadge>{count} instância{count === 1 ? "" : "s"}</GreenBadge>
+          {verifiedAt ? (
+            <Badge variant="outline" className="text-[10px]">
+              <Check aria-hidden className="text-[#B9FF66]" /> Verificada {verifiedAt}
+            </Badge>
+          ) : null}
+        </span>
+      );
+    }
     if (app.showAvailableBadge) return <GreenBadge>Disponível</GreenBadge>;
     return null;
   }
@@ -119,13 +131,19 @@ export default function IntegrationsStore({ integrations, vsls, capabilities, be
                 const count = instances.length;
                 const linkedCount = instances.reduce((total, item) => total + item.vslIds.length, 0);
                 const actionLabel = app.kind === "provider" ? (count > 0 ? "Configurar" : "Integrar") : app.actionLabel;
+                // "Verificada" no card: a última verificação bem-sucedida entre as instâncias.
+                const verifiedDates = instances
+                  .map((item) => (item.config?.lastVerifyOk === true && typeof item.config?.lastVerifiedAt === "string" ? item.config.lastVerifiedAt : ""))
+                  .filter(Boolean)
+                  .sort();
+                const verifiedShort = verifiedDates.length > 0 ? shortRelativeTime(verifiedDates[verifiedDates.length - 1]) : "";
                 return (
                   <Card key={app.id} size="sm" className={count > 0 ? "ring-[#B9FF66]/40" : undefined}>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2.5">
                         <AppMark app={app} />
                         {app.name}
-                        <CardBadge app={app} count={count} />
+                        <CardBadge app={app} count={count} verifiedAt={verifiedShort} />
                       </CardTitle>
                       <CardDescription>{app.description}</CardDescription>
                       <CardAction>

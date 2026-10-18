@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Plus } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Plus, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 
 import type { IntegrationItem, ProviderApp, VslOption } from "./store-data";
 import { AppMark } from "./store-mark";
+import PixelVerifyPanel, { type PixelVerifyResultDto } from "./PixelVerifyPanel";
+import { shortRelativeTime } from "./relative-time";
 
 interface Props {
   app: ProviderApp;
@@ -36,6 +38,9 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
+  /** Metadados de "Testar conexão" persistidos no config da instância (lastVerifiedAt/lastVerifyOk). */
+  const [verifyMeta, setVerifyMeta] = useState<{ lastVerifiedAt: string; lastVerifyOk: boolean } | null>(null);
+  const [verifyResult, setVerifyResult] = useState<PixelVerifyResultDto | null>(null);
 
   const installed = instances.length > 0;
 
@@ -70,6 +75,22 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
     }
   }
 
+  /**
+   * "Testar conexão" (Sprint 1 Pixel Verdadeiro): guarda a resposta REAL da
+   * plataforma e, quando o teste passa em instância SALVA, chama o PUT normal
+   * já com config.lastVerifiedAt/lastVerifyOk — o badge "Verificada" nasce.
+   * Em instância nova o metadado fica no estado e entra no "Criar instância".
+   */
+  async function handleVerifyResult(result: PixelVerifyResultDto) {
+    setVerifyResult(result);
+    if (!result.ok) return;
+    const meta = { lastVerifiedAt: new Date().toISOString(), lastVerifyOk: true };
+    setVerifyMeta(meta);
+    // typeof null === "object": só salva quando existe instância salva aberta
+    // (um cancelamento durante o teste não pode disparar PUT fantasma).
+    if (editing !== null && editing !== "new") await save(meta);
+  }
+
   function openNew() {
     setDraft(Object.fromEntries(app.fields.map((field) => [field.key, ""])));
     setDraftName(`Instância ${instances.length + 1}`);
@@ -78,6 +99,8 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
     setDraftEnabled(true);
     setDraftEvents(Object.fromEntries((app.selectableEvents ?? []).map((event) => [event.key, true])));
     setError("");
+    setVerifyMeta(null);
+    setVerifyResult(null);
     setEditing("new");
   }
 
@@ -91,11 +114,14 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
     setDraftEnabled(item.enabled !== false);
     const savedEvents = typeof item.config?.events === "object" && item.config.events !== null ? (item.config.events as Record<string, boolean>) : undefined;
     setDraftEvents(savedEvents ?? Object.fromEntries((app.selectableEvents ?? []).map((event) => [event.key, true])));
+    const savedVerifiedAt = typeof item.config?.lastVerifiedAt === "string" ? item.config.lastVerifiedAt : "";
+    setVerifyMeta(item.config?.lastVerifyOk === true && savedVerifiedAt ? { lastVerifiedAt: savedVerifiedAt, lastVerifyOk: true } : null);
+    setVerifyResult(null);
     setError("");
     setEditing(item);
   }
 
-  async function save() {
+  async function save(extraVerifyMeta?: { lastVerifiedAt: string; lastVerifyOk: boolean }) {
     setSaving(true);
     setError("");
     try {
@@ -106,7 +132,7 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
           provider: app.provider,
           instanceId: draftInstance,
           name: draftName,
-          config: { ...draft, ...(app.selectableEvents?.length ? { events: draftEvents } : {}) },
+          config: { ...draft, ...(app.selectableEvents?.length ? { events: draftEvents } : {}), ...(extraVerifyMeta ?? verifyMeta) },
           vslIds: draftVsls,
           enabled: draftEnabled,
         }),
@@ -272,10 +298,19 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
             {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           </CardContent>
           <CardFooter className="flex-col items-stretch gap-2">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button type="button" className="flex-1 bg-[#B9FF66] font-semibold text-[#191A23] hover:bg-[#a8f052]" disabled={saving} onClick={() => void save()}>
                 {saving ? "Salvando…" : editing === "new" ? "Criar instância" : "Salvar alterações"}
               </Button>
+              {app.verify === "pixel" && (
+                <PixelVerifyPanel
+                  key={editing === "new" ? "new" : editing.instanceId}
+                  provider={app.provider}
+                  config={draft}
+                  disabled={saving}
+                  onResult={(result) => void handleVerifyResult(result)}
+                />
+              )}
               <Button type="button" variant="outline" disabled={saving} onClick={() => setEditing(null)}>
                 Cancelar
               </Button>
@@ -285,6 +320,23 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
                 </Button>
               )}
             </div>
+            {verifyResult?.ok ? (
+              <div role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Badge className="bg-[#B9FF66] text-[#191A23] hover:bg-[#B9FF66]">
+                  <CheckCircle2 aria-hidden /> Evento recebido
+                </Badge>
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{verifyResult.message}</span>
+                {verifyResult.detail ? <span className="text-[11px] text-muted-foreground">({verifyResult.detail})</span> : null}
+              </div>
+            ) : verifyResult ? (
+              <p role="alert" className="flex items-start gap-1.5 text-xs text-destructive">
+                <XCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span>
+                  <strong className="font-semibold">Falha no teste.</strong> {verifyResult.message}
+                  {verifyResult.detail ? <span className="ml-1 text-muted-foreground">({verifyResult.detail})</span> : null}
+                </span>
+              </p>
+            ) : null}
           </CardFooter>
         </Card>
       )}
@@ -296,26 +348,38 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
             <CardDescription>{instances.length} de {app.name} na sua conta — clique para editar.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {instances.map((item) => (
-              <button
-                key={item.instanceId}
-                type="button"
-                onClick={() => openEdit(item)}
-                className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 text-left text-[13px] transition-colors ${typeof editing === "object" && editing?.instanceId === item.instanceId ? "border-[#B9FF66]/60 bg-[#B9FF66]/10" : "hover:bg-muted/50"}`}
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-foreground">{item.name}</p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Check className="size-3" aria-hidden />
-                    {item.vslIds.length} VSL{item.vslIds.length === 1 ? "" : "s"}
-                    {!item.enabled && <span className="ml-1 font-semibold text-amber-600 dark:text-amber-400">· desativada</span>}
-                  </p>
-                </div>
-                <Badge variant={item.enabled ? "secondary" : "outline"} className="shrink-0 text-[10px]">
-                  {item.enabled ? "Ativa" : "Inativa"}
-                </Badge>
-              </button>
-            ))}
+            {instances.map((item) => {
+              const verifiedOk = item.config?.lastVerifyOk === true;
+              const verifiedAt = typeof item.config?.lastVerifiedAt === "string" ? item.config.lastVerifiedAt : "";
+              return (
+                <button
+                  key={item.instanceId}
+                  type="button"
+                  onClick={() => openEdit(item)}
+                  className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 text-left text-[13px] transition-colors ${typeof editing === "object" && editing?.instanceId === item.instanceId ? "border-[#B9FF66]/60 bg-[#B9FF66]/10" : "hover:bg-muted/50"}`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{item.name}</p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Check className="size-3" aria-hidden />
+                      {item.vslIds.length} VSL{item.vslIds.length === 1 ? "" : "s"}
+                      {verifiedOk && verifiedAt ? <span>· verificada {shortRelativeTime(verifiedAt)}</span> : null}
+                      {!item.enabled && <span className="ml-1 font-semibold text-amber-600 dark:text-amber-400">· desativada</span>}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {verifiedOk && (
+                      <Badge className="bg-[#B9FF66] text-[10px] text-[#191A23] hover:bg-[#B9FF66]">
+                        <Check aria-hidden /> Verificada
+                      </Badge>
+                    )}
+                    <Badge variant={item.enabled ? "secondary" : "outline"} className="text-[10px]">
+                      {item.enabled ? "Ativa" : "Inativa"}
+                    </Badge>
+                  </div>
+                </button>
+              );
+            })}
           </CardContent>
         </Card>
       )}

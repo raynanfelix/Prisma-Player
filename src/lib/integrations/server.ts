@@ -53,19 +53,24 @@ export function sanitizeIntegrationConfig(provider: IntegrationProvider, raw: un
     const testEventCode = str("testEventCode", 40);
     if (pixelId && !META_PIXEL_ID.test(pixelId)) return null;
     if (accessToken && accessToken.length < 16) return null;
-    return { pixelId, accessToken, ...(testEventCode ? { testEventCode } : {}) };
+    return withVerifyMeta({ pixelId, accessToken, ...(testEventCode ? { testEventCode } : {}) }, input);
   }
   if (provider === "google_ads") {
     const tagId = str("tagId", 40).toUpperCase();
     const conversionDestination = str("conversionDestination", 120);
+    const apiSecret = str("apiSecret", 120);
     if (tagId && !GOOGLE_TAG_ID.test(tagId)) return null;
     if (conversionDestination && !GOOGLE_DESTINATION.test(conversionDestination)) return null;
-    return { tagId, conversionDestination };
+    if (apiSecret && !/^[A-Za-z0-9_-]{20,120}$/.test(apiSecret)) return null;
+    return withVerifyMeta({ tagId, conversionDestination, ...(apiSecret ? { apiSecret } : {}) }, input);
   }
   if (provider === "tiktok") {
     const pixelId = str("pixelId", 40).toUpperCase();
+    const accessToken = str("accessToken", 400);
+    const testEventCode = str("testEventCode", 40);
     if (pixelId && !TIKTOK_PIXEL_ID.test(pixelId)) return null;
-    return { pixelId };
+    if (accessToken && accessToken.length < 16) return null;
+    return withVerifyMeta({ pixelId, ...(accessToken ? { accessToken } : {}), ...(testEventCode ? { testEventCode } : {}) }, input);
   }
   if (provider === "discord" || provider === "telegram") {
     if (provider === "telegram") {
@@ -97,6 +102,23 @@ function sanitizeEvents(raw: unknown): Record<string, boolean> | null {
     if (allowed.includes(key) && typeof value === "boolean") output[key] = value;
   }
   return Object.keys(output).length > 0 ? output : null;
+}
+
+/**
+ * Metadados do "Testar conexão" (Sprint 1 Pixel Verdadeiro): quando o dono
+ * testa uma instância salva, o PUT normal chega com
+ * config.lastVerifiedAt (ISO) + config.lastVerifyOk — preservados aqui para
+ * o badge "Verificada" da lista e da vitrine. Um re-save sem testar de novo
+ * mantém os metadados anteriores (o dono continua vendo a última verificação).
+ */
+function withVerifyMeta(config: Record<string, unknown>, input: Record<string, unknown>): Record<string, unknown> {
+  const lastVerifiedAt = input["lastVerifiedAt"];
+  if (typeof lastVerifiedAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(lastVerifiedAt.trim().slice(0, 40))) {
+    config.lastVerifiedAt = lastVerifiedAt.trim().slice(0, 40);
+  }
+  const lastVerifyOk = input["lastVerifyOk"];
+  if (typeof lastVerifyOk === "boolean") config.lastVerifyOk = lastVerifyOk;
+  return config;
 }
 
 /** Nome de instância válido: 1–80 caracteres visíveis. */
