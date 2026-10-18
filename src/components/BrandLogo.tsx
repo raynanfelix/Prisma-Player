@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+import favicon from "@/app/favicon.ico";
+
 interface BrandLogoProps {
   className?: string;
   priority?: boolean;
@@ -13,8 +15,8 @@ export default function BrandLogo({
   return (
     <div className={`flex items-center gap-2 font-black tracking-tight text-[#191A23] dark:text-white ${className}`}>
       <Image
-        src="/faviconnovo.ico"
-        alt="Prisma Player Logo"
+        src={favicon}
+        alt="Logo da Prisma Player"
         width={32}
         height={32}
         priority={priority}
