@@ -810,8 +810,8 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       </div>
                     </div>
 
-                    <div className="h-28 w-full pt-2 overflow-hidden rounded-xl">
-                      <AreaChart data={retentionChartData} xDataKey="date">
+                    <div className="w-full pt-2">
+                      <AreaChart data={retentionChartData} xDataKey="date" height={150}>
                         <Grid horizontal />
                         <Area dataKey="visitors" fill="#0066cc" fillOpacity={0.3} />
                         <AreaXAxis tickMode="data" />
@@ -1021,6 +1021,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                             data={heatmapColumns}
                             layout="fluid"
                             gap={3}
+                            binSize={16}
                             levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}
                           >
                             <HeatmapCells />

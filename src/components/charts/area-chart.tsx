@@ -14,6 +14,8 @@ export interface AreaChartProps {
   data: Record<string, unknown>[];
   xDataKey?: string;
   className?: string;
+  /** Altura em px. Default: 300. */
+  height?: number;
   children: React.ReactNode;
 }
 
@@ -21,13 +23,14 @@ export function AreaChart({
   data,
   xDataKey = "date",
   className,
+  height = 300,
   children,
 }: AreaChartProps) {
   const gradientId = `area-gradient-${useId().replace(/:/g, "")}`;
 
   // We clone children to inject the gradientId if needed, or pass it implicitly
   return (
-    <div className={className} style={{ width: "100%", height: 300 }}>
+    <div className={className} style={{ width: "100%", height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsAreaChart
           data={data}
