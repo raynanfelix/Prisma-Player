@@ -103,7 +103,7 @@ export interface LegendLabelProps {
 
 export function LegendLabel({ children, className }: LegendLabelProps) {
   return (
-    <span className={cn("min-w-0 flex-1 truncate font-semibold text-[#191A23] dark:text-zinc-200", className)}>
+    <span className={cn("min-w-0 flex-1 truncate whitespace-nowrap font-semibold text-[#191A23] dark:text-zinc-200", className)}>
       {children}
     </span>
   );

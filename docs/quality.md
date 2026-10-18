@@ -4,44 +4,67 @@
 
 - `npm run verify` — check composto: typecheck + lint + test.
 - `npm run typecheck` — `tsc --noEmit`.
-- `npm run lint` — ESLint (presets core-web-vitals + typescript; teto de 350
-  linhas em warn; skills vendorizadas excluídas).
+- `npm run lint` — ESLint (presets core-web-vitals + typescript; quality
+  gates do toolkit; skills vendorizadas excluídas).
+- `node scripts/verify-quality-rules.mjs` — self-check das regras locais
+  de lint (gates do Vibe Coding Toolkit, rev. `f13bb35`): 3× ok, exit 0.
 - `npm run test` — Vitest offline (sem rede/banco real).
 - `npm run build` — build de produção.
 - `npx knip` — arquivos/dependências/exports não usados (config `knip.json`).
 
+## Quality gates (regras locais `quality/*`)
+
+Instalados em 17/10/2026 (cópia byte a byte da revisão `f13bb35` do
+toolkit; self-check verde). Severidades medidas antes — sem violação =
+`error`; com legado = `warn` + plano; promover a `error` quando a contagem
+própria chegar a zero.
+
+| Regra | Escopo | Linha de base (17/10) | Severidade | Plano |
+|---|---|---|---|---|
+| `quality/max-lines` (350) | `src/**` produção; testes com `includeTests` | **32** (27 produção + 5 testes) | warn | Prompt 09 do toolkit: um arquivo por vez, testes entre etapas |
+| `quality/no-direct-console` | `src/**` (adaptador `src/lib/utils/log.ts` eximido) | **45** (28 arquivos) | warn | Migrar para `safeLog()`; rotas de API primeiro |
+| `quality/no-direct-data-access` | `src/components/**` + `src/features/**` não importam o client `db` (`@/lib/db`) | **1** (`Nav.tsx`) | warn | Mover a busca do Nav para serviço/Server Component; depois `error` |
+
+Fronteira de dados por design: rotas e páginas em `src/app/**` usam `db`
+diretamente (guard → serviço → resposta; ver `docs/ARCHITECTURE.md`) — a
+regra protege só a camada de apresentação. Importar apenas `schema`
+(tipos/tabelas) não puxa o client e não é sinalizado.
+
 ## Linha de base e estado (com atribuição)
 
-| Check | Linha de base (15/10 23:07) | Após setup (16/10 08:11) | Atribuição |
+| Check | Linha de base (15/10 23:07) | Após setup (16/10 08:11) | Com gates (17/10 18:40) |
 |---|---|---|---|
-| Testes | 212/212 (27 arquivos) | 266/274 (28 arquivos; 8 falhas) | Falhas 100% em `tests/videos-routes.test.ts` — arquivo novo de sessão paralela (WIP não commitado); os 27 arquivos originais passam |
-| Typecheck | limpo | 2 erros TS2554 | Ambos no mesmo arquivo novo da sessão paralela |
-| Lint | 413 (13 erros, 400 warns), incluindo skills vendorizadas | **137 (13 erros, 124 warns)** | Exclusão de skills vendorizadas removeu ~280 falsos positivos; +26 warns da regra `max-lines` (nova, intencional); os 13 erros são os mesmos da linha de base |
-| npm audit | — | **25 vulnerabilidades (4 críticas, 12 high, 8 moderate, 1 low)** | Triagem pendente |
+| Testes | 212/212 (27 arquivos) | 266/274 (8 falhas em WIP paralelo) | **435/435 (37 arquivos), exit 0** |
+| Typecheck | limpo | 2 erros TS2554 (WIP paralelo) | **0 erros** |
+| Lint | 413 (13 erros, 400 warns) | 137 (13 erros, 124 warns) | **0 erros, 178 warns** — os 13 erros vigentes em 16/10 foram corrigidos por outras sessões |
+| npm audit | — | 25 vulnerabilidades (4 críticas) | Sem mudança nesta sessão (lockfile intocado) |
+
+Distribuição atual dos warns: `@typescript-eslint/no-unused-vars` (91),
+`quality/no-direct-console` (45), `quality/max-lines` (32),
+`react-hooks/exhaustive-deps` (4), `@next/next/no-img-element` (4),
+`quality/no-direct-data-access` (1).
 
 Concorrência: outras sessões trabalham no repositório simultaneamente. Antes
 de atribuir falha de check, confira `git status` e a autoria do arquivo.
 
-## Erros vigentes (13) — prioridade de correção
+## Erros de 16/10 (resolvidos)
 
-1. `react-hooks/refs` (5) — `src/features/player/components/EmbedPlayer.tsx:442-445`:
-   watermark lê refs durante o render; mover para state/eventos.
-2. `react-hooks/purity` (2) — `Date.now()` no render de
-   `src/app/admin/finance/page.tsx:28` e `src/app/admin/page.tsx:36`.
-3. `react-hooks/set-state-in-effect` (3) — `src/components/ui/toast-save.tsx:44`,
-   `src/features/studio/components/VslStudio.tsx:383,388`.
-4. `react-hooks/immutability` (1) — `src/app/dashboard/support/[id]/page.tsx:60`
-   reatribui `lastDay` no render.
-5. `@typescript-eslint/no-explicit-any` (1) — `src/features/player/components/VideoPlayer.tsx:43`.
+Os 13 erros listados em 16/10 (`react-hooks/refs`, `react-hooks/purity`,
+`react-hooks/set-state-in-effect`, `react-hooks/immutability`,
+`no-explicit-any`) foram corrigidos por sessões paralelas — `npx eslint
+--quiet` retorna 0 em 17/10. Mantém-se a regra: **0 erros é o piso**; warns
+não são apagados com `ignore`, reduzem na fonte.
 
 ## Regras de base
 
 - TypeScript strict; presets oficiais `eslint-config-next`.
-- Teto de **350 linhas** por arquivo — `max-lines` em **warn** (26 arquivos do
-  projeto acima hoje; endurecer conforme o burndown).
+- Quality gates do toolkit (`eslint-rules/`) — teto de 350 linhas,
+  console direto e fronteira de dados, com linhas de base anotadas em
+  `eslint.config.mjs`.
 - Skills vendorizadas (`.agents/`, `.claude/`, `.codex/`, `.github/`,
-  `.superpowers/`) ficam fora do lint: são código de terceiros, não da aplicação.
-- Warnings não são apagados com `ignore` — reduzir na fonte (os 90
+  `.superpowers/`) ficam fora do lint: são código de terceiros, não da
+  aplicação.
+- Warnings não são apagados com `ignore` — reduzir na fonte (os 91
   `no-unused-vars` casam com achados do knip).
 
 ## Estratégia de testes

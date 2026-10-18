@@ -1,4 +1,4 @@
-import { Bell, Calculator, CreditCard, Database, HardDrive, Play, Shield, Sparkles } from "lucide-react";
+import { Bell, CreditCard, Database, HardDrive, Play, Shield, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { AccountOverview, AccountProfile } from "@/features/account/model/types";
@@ -48,17 +48,7 @@ export function OverviewPanel({
     },
   ];
 
-  const bandwidth = overview.usage.bandwidth;
-  if (bandwidth) {
-    const trendDetail = bandwidth.trendPct === null ? "" : ` · ${bandwidth.trendPct > 0 ? "+" : ""}${bandwidth.trendPct.toFixed(0)}% últimos 7 dias`;
-    metrics.push({
-      icon: Calculator,
-      label: "Custo de banda (estimado)",
-      value: formatBRL(bandwidth.monthCostCents),
-      detail: `${bandwidth.gb.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} GB / ${formatStorageOverage(bandwidth.centsPerGb)} por GB${trendDetail}`,
-      percent: 0,
-    });
-  }
+  
 
   return (
     <div className="space-y-5">

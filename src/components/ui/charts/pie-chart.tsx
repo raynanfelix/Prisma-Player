@@ -164,14 +164,13 @@ export function PieCenter({
   formatValue = formatChartNumber,
   className,
 }: PieCenterProps) {
-  const { data, hoveredIndex } = usePieChartContext();
+  const { data } = usePieChartContext();
 
-  const activeItem = hoveredIndex !== null ? data[hoveredIndex] : null;
   const fallbackItem = defaultIndex !== undefined ? data[defaultIndex] : null;
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
-  const displayValue = activeItem ? activeItem.value : fallbackItem ? fallbackItem.value : total;
-  const displayLabel = activeItem ? activeItem.label : defaultLabel;
+  const displayValue = fallbackItem ? fallbackItem.value : total;
+  const displayLabel = defaultLabel;
 
   return (
     <div
@@ -180,7 +179,7 @@ export function PieCenter({
         className,
       )}
     >
-      <span className="text-[10px] font-bold uppercase tracking-wider text-[#7a7a7a] transition-all duration-300 dark:text-[#cccccc]">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-[#7a7a7a] dark:text-[#cccccc]">
         {displayLabel}
       </span>
       <strong className="mt-0.5 text-[18px] font-bold leading-none tabular-nums text-[#191A23] dark:text-white">

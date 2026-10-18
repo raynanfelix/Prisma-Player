@@ -1004,8 +1004,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                         data={retentionComposedData}
                         xDataKey="point"
                         aspectRatio="3 / 2"
-                        maxBarSize={30}
-                        rightAxis={{ domain: [0, 100], tickFormatter: (value: number) => `${value}%` }}
+                                                rightAxis={{ domain: [0, 100], tickFormatter: (value: number) => `${value}%` }}
                         valueFormatter={(value, name) =>
                           name === "Taxa de retenção"
                             ? formatPercentValue(value)
@@ -1013,8 +1012,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                         }
                       >
                         <ComposedGrid horizontal />
-                        <SeriesBar dataKey="viewers" name="Espectadores" color={CHART_SERIES_COLORS[0]} />
-                        <ComposedArea dataKey="rate" name="Taxa de retenção" color="#0066cc" fillOpacity={0.22} yAxisId="right" />
+                                                <ComposedArea dataKey="rate" name="Taxa de retenção" color="#0066cc" fillOpacity={0.22} yAxisId="right" />
                       </ComposedChart>
                     </div>
                   )}

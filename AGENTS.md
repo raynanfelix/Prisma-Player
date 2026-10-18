@@ -35,6 +35,7 @@ módulo servidor novo recebe `import "server-only"` + entrada em
 - Lint: `npm run lint` — Tipos: `npm run typecheck`
 - Testes: `npm run test` — Build: `npm run build`
 - Verificar base: `npm run verify` (typecheck + lint + test)
+- Regras locais de lint (gates): `node scripts/verify-quality-rules.mjs`
 - Schema Drizzle: `npx drizzle-kit generate` (aplicar exige `DATABASE_URL_UNPOOLED`)
 - Código não usado: `npx knip`
 
@@ -49,10 +50,16 @@ módulo servidor novo recebe `import "server-only"` + entrada em
 ## Documentação e ferramentas
 
 - Escopo do produto: `PRODUCT.md`. Checks: `docs/quality.md`. Preparação local: `docs/onboarding.md`. Setup e evidências: `docs/setup.md`.
-- Skills locais: conjunto web Vercel + `find-skills` em `.agents/skills/` com lock versionado (`skills-lock.json`); atualizar via `npx skills update --project`.
+- Quality gates (Vibe Coding Toolkit, rev. `f13bb35`): regras locais `quality/*` em `eslint-rules/` — teto de 350 linhas, `console` direto e fronteira de dados (`src/components`/`src/features` não importam o client `db`); severidades em warn com linha de base anotada em `eslint.config.mjs`; promover a `error` quando a contagem própria chegar a zero. Self-check: `node scripts/verify-quality-rules.mjs`.
+- Skills locais: conjunto web Vercel + `find-skills` em `.agents/skills/` com lock versionado (`skills-lock.json`); atualizar via `npx skills update --project`. Skills instaladas fora do catálogo (ex.: `mantis-*`, `impeccable`) precisam de entrada no lock ou decisão do dono — ver `docs/setup.md`.
 - Context7/RTK/Graphify não integrados ao cliente atual: use documentação oficial e registre a limitação em `docs/setup.md`.
 
-Após cada ciclo de implementação ou correção, sugira de 3 a 8 ciclos posteriores de code review, com focos e prompt de continuação (ver `docs/quality.md`).
+## Delegação e revisão
+
+- Delegue quando isolar contexto, especializar ou paralelizar compensar; tarefas pequenas ficam no agente principal. Sem elenco fixo de especialistas — papéis nascem do briefing da tarefa (objetivo, contexto mínimo, arquivos permitidos, dependências, aceite e checks).
+- Prática em uso neste repo: subagentes em background por frente de trabalho, com escopos de arquivos disjuntos (um escritor por arquivo; lockfiles/config compartilhados têm responsável único) e validação de diff + checks pelo coordenador (Lead) antes de aceitar. Implementador não publica; o Lead valida e envia.
+- Trabalho paralelo só na mesma frente quando os arquivos forem totalmente disjuntos e não houver dependência; na dúvida, serialize (degrada para execução normal, nunca para corrida de escrita).
+- Após cada ciclo de implementação ou correção, sugira de 3 a 8 ciclos posteriores de code review, com focos e prompt de continuação (ver `docs/quality.md`). Sugerir não executa; novas rodadas dependem de pedido.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -1,8 +1,9 @@
+@AGENTS.md
+
 # Prisma Player
 
-As regras oficiais de desenvolvimento deste repositório estão em:
+Além do `AGENTS.md` (importado acima), as fontes canônicas deste repositório são:
 
-- `AGENTS.md`
 - `docs/ARCHITECTURE.md` (fronteiras, guard, checklist de nova funcionalidade)
 - `docs/SECURITY.md` (isolamento, padrão de rotas, testes de segurança)
 - `docs/UI_ARCHITECTURE.md`

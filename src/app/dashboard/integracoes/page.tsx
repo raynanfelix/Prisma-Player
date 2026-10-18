@@ -11,7 +11,7 @@ import { listIntegrations } from "@/lib/integrations/server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Integrações · Prisma Player" };
+export const metadata: Metadata = { title: "Marketplace de apps · Prisma Player" };
 
 const { videos } = schema;
 
@@ -41,8 +41,7 @@ export default async function IntegracoesPage() {
   return (
     <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-6">
       <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-prisma-blue dark:text-white">App de integrações</p>
-        <h1 className="mt-1 text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">Integrações</h1>
+        <h1 className="text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">Marketplace de apps</h1>
         <p className="mt-1 text-[12px] themeable-text-ink-muted-48">Pixels, webhooks e atribuição para suas VSLs — configurados uma vez por conta.</p>
       </header>
       <IntegrationsStore integrations={integrations} vsls={vsls} />
