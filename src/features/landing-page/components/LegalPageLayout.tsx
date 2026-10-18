@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CheckCircle2, Mail, type LucideIcon } from "lucide-react";
 import type { LegalSection } from "@/content/legal/prisma-legal";
 import Nav from "./Nav";
