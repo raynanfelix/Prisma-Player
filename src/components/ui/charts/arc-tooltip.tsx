@@ -18,10 +18,13 @@ export function ArcTooltip({ children, value, label, color, className }: ArcTool
     <g onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
-          ? React.cloneElement(child as React.ReactElement<any>, {
-              onMouseEnter: () => setIsHovered(true),
-              onMouseLeave: () => setIsHovered(false),
-            })
+          ? React.cloneElement(
+              child as React.ReactElement<{ onMouseEnter?: () => void; onMouseLeave?: () => void }>,
+              {
+                onMouseEnter: () => setIsHovered(true),
+                onMouseLeave: () => setIsHovered(false),
+              },
+            )
           : child
       )}
       {isHovered && (

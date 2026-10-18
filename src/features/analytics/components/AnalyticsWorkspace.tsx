@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import AdminSelect from "@/components/ui/custom/AdminSelect";
+import { DateRangePicker, type PickerDateRange } from "@/components/ui/date-picker";
+import { differenceInCalendarDays, startOfToday, subDays } from "date-fns";
 import {
   Activity,
   ArrowLeft,
   BarChart3,
-  BrainCircuit,
   CalendarDays,
   Clock,
   Clock3,
@@ -29,6 +29,16 @@ import {
   X,
 } from "lucide-react";
 import ClaudeChatInput from "@/components/ui/claude-style-chat-input";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { MessageGroup, Message, MessageAvatar, MessageContent } from "@/components/ui/message";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/components/ui/message-scroller";
 import type { LucideIcon } from "lucide-react";
 
 // Custom charts imports (gráficos já interativos e bons — mantidos)
@@ -72,7 +82,6 @@ import {
 } from "@/components/ui/charts";
 import { buildHeatmapColumns } from "@/lib/heatmap-data";
 import { StatCardChoropleth } from "@/components/stat-card-choropleth";
-import IntelligenceControls from "@/features/intelligence/components/IntelligenceControls";
 
 type Summary = {
   impressions: number;
@@ -91,9 +100,6 @@ type Summary = {
 type Point = { point: number; viewers: number; rate: number };
 type Dimension = { name: string; impressions: number; plays: number; playRate: number; completes: number; completionRate: number };
 type TimelinePoint = { date: string; label: string; impressions: number; plays: number; completes: number; conversions: number };
-// Espelha os tipos de benchmark definidos em IntelligenceControls (não exportados lá).
-type GlobalBenchmark = { qualified: boolean; sampleVideos: number; samplePlays: number; playRate: number; completion: number; conversion: number };
-type BenchmarkData = { leader: { title: string; completion: number; conversion: number; playRate: number } | null; average: { completion: number; conversion: number; playRate: number }; videoCount: number; global: GlobalBenchmark };
 type Data = {
   video: { title: string; duration_seconds: number | null; source: string | null; type: string | null; created_at?: string };
   summary: Summary;
@@ -105,11 +111,7 @@ type Data = {
   insights: { tone: string; title: string; detail: string }[];
   live: number;
   liveCountries: Dimension[];
-  capabilities?: Record<string, boolean>;
-  benchmarkData?: BenchmarkData;
 };
-
-type VideoItem = { id: string; title: string; status: string; created_at: string; plays?: number };
 
 type AiResult = {
   headline: string;
@@ -128,7 +130,6 @@ const tabs = [
   { id: "audience", label: "Audiência & Países", icon: Users },
   { id: "traffic", label: "Dispositivos & Tecnologia", icon: MonitorSmartphone },
   { id: "live", label: "Ao Vivo", icon: Radio },
-  { id: "intelligence", label: "Inteligência", icon: BrainCircuit },
 ];
 
 const FUNNEL_RAMP = ["#6366f1", "#8b5cf6", "#a855f7", "#c026d3", "#ec4899", "#f43f5e"];
@@ -333,17 +334,21 @@ function DimensionTable({ title, rows, isCountry = false, onRowClick }: { title:
 export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoId: string }) {
   const [currentVideoId, setCurrentVideoId] = useState(initialVideoId);
   const [tab, setTab] = useState("performance");
-  const [days, setDays] = useState(30);
+  // Período das métricas: range (from–to) no date picker; a API continua
+  // recebendo ?days= derivado da diferença inclusiva do período.
+  const [range, setRange] = useState<PickerDateRange | undefined>(() => ({ from: subDays(startOfToday(), 29), to: startOfToday() }));
+  const days = useMemo(() => {
+    if (!range) return 30;
+    return Math.min(Math.max(differenceInCalendarDays(range.to, range.from) + 1, 1), 3650);
+  }, [range]);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Videos list for IntelligenceControls
-  const [allVideos, setAllVideos] = useState<VideoItem[]>([]);
 
   // AI Chat states
   const [aiOpen, setAiOpen] = useState(false);
   const [aiFullscreen, setAiFullscreen] = useState(false);
   const [aiQuestion, setAiQuestion] = useState("");
+  const [activeQuestion, setActiveQuestion] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [aiConversations, setAiConversations] = useState<AiConversation[]>([]);
@@ -355,18 +360,6 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
 
   // Ring chart active hover states
   const [hoveredTechIndex, setHoveredTechIndex] = useState<number | null>(null);
-
-  // Load all user videos for IntelligenceControls
-  useEffect(() => {
-    fetch("/api/videos", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.videos) {
-          setAllVideos(data.videos.filter((v: VideoItem) => v.status === "ready"));
-        }
-      })
-      .catch(() => null);
-  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -540,6 +533,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
     if (!q.trim() || aiLoading) return;
     setAiLoading(true);
     setAiError("");
+    setActiveQuestion(q.trim());
     setAiQuestion("");
     try {
       const response = await fetch("/api/ai/analyze", {
@@ -599,7 +593,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <AdminSelect label="Período das métricas" value={String(days)} onChange={(v) => setDays(Number(v))} className="min-w-40" options={[{ value: "7", label: "Últimos 7 dias" }, { value: "30", label: "Últimos 30 dias" }, { value: "90", label: "Últimos 90 dias" }, { value: "365", label: "Último ano" }]} />
+            <DateRangePicker value={range} onChange={setRange} label="Período das métricas" className="min-w-40 max-w-60" />
 
             <button 
               onClick={() => void load()} 
@@ -679,7 +673,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     ]}
                     centerLabel="Total"
                     delta={`+${data.comparison.delta.plays >= 0 ? data.comparison.delta.plays : 20}% vs período anterior`}
-                    footer={`Últimos ${days} dias ativos`}
+                    footer={days === 1 ? "Somente hoje" : `Últimos ${days} dias ativos`}
                     srValue={format(data.summary.plays)}
                   />
 
@@ -1218,25 +1212,6 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
               </section>
             )}
 
-            {/* TAB: INTELLIGENCE ENGINE */}
-            {tab === "intelligence" && (
-              <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-6">
-                <div>
-                  <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Configurações de Inteligência</h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
-                    Configurações operacionais com dados reais para esta VSL, organizadas em um único lugar.
-                  </p>
-                </div>
-
-                <IntelligenceControls
-                  capabilities={data.capabilities ?? { automatic_reports: true, audience_sync: true, outgoing_webhooks: true, private_benchmark: true, conversion_drop_alerts: true }}
-                  videoCount={allVideos.length}
-                  benchmarkData={data.benchmarkData ?? { leader: null, average: { completion: data.summary.completionRate, conversion: 0, playRate: data.summary.playRate }, videoCount: 1, global: { qualified: false, sampleVideos: 0, samplePlays: 0, playRate: 0, completion: 0, conversion: 0 } }}
-                  videos={allVideos.map((v) => ({ id: v.id, title: v.title }))}
-                />
-              </section>
-            )}
-
           </div>
         )}
       </main>
@@ -1275,7 +1250,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       <button 
                         key={conversation.id} 
                         type="button" 
-                        onClick={() => { setAiQuestion(conversation.question); setAiResult(conversation.result); setAiHistoryOpen(false); }} 
+                        onClick={() => { setAiQuestion(conversation.question); setActiveQuestion(conversation.question); setAiResult(conversation.result); setAiHistoryOpen(false); }}
                         className="block w-full rounded-lg p-2 text-left hover:bg-slate-50 dark:hover:bg-transparent transition-colors"
                       >
                         <span className="block truncate text-xs font-bold text-[#191A23] dark:text-zinc-100">{conversation.title}</span>
@@ -1289,76 +1264,111 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-card p-5 space-y-4">
-          <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#B9FF66] text-[#191A23] shadow-xs">
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[#191A23] dark:text-white">Como posso otimizar sua VSL?</h3>
-                <p className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Consulte recomendações baseadas no tráfego real.</p>
-              </div>
-            </div>
-            <div className="grid gap-1.5 pt-1">
-              {suggestionPrompts.map((prompt) => (
-                <button 
-                  key={prompt} 
-                  onClick={() => void askAi(prompt)} 
-                  className="rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-transparent transition-all cursor-pointer"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {aiError && <p className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-3.5 text-xs font-semibold text-red-700 dark:text-red-400">{aiError}</p>}
-
-          {aiResult && (
-            <div className="space-y-3 font-sans">
-              <article className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-4 shadow-xs">
-                <h3 className="text-xs font-bold text-[#191A23] dark:text-white flex items-center gap-1.5">
-                  <Sparkles size={15} /> {aiResult.headline}
-                </h3>
-                <p className="mt-1.5 text-xs font-medium text-slate-600 dark:text-zinc-300 leading-relaxed">{aiResult.executiveSummary}</p>
-              </article>
-
-              {aiResult.warnings.length > 0 && (
-                <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
-                  <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider mb-1">Pontos de Atenção</h4>
-                  <ul className="list-disc pl-4 text-xs font-medium text-amber-700 dark:text-amber-300 space-y-1">
-                    {aiResult.warnings.map((w, idx) => <li key={idx}>{w}</li>)}
-                  </ul>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-zinc-500">Oportunidades Recomendadas</h4>
-                {aiResult.opportunities.map((op, index) => (
-                  <article key={index} className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-4 shadow-xs space-y-1.5">
-                    <div className="flex items-center justify-between gap-3">
-                      <strong className="text-xs font-bold text-[#191A23] dark:text-white">{op.title}</strong>
-                      <span className="rounded-full bg-[#B9FF66] px-2 py-0.5 text-[10px] font-bold text-[#191A23]">
-                        {op.priority}
-                      </span>
+        <MessageScrollerProvider>
+          <MessageScroller className="min-h-0 flex-1 bg-slate-50/50 dark:bg-card">
+            <MessageScrollerViewport className="p-5">
+              <MessageScrollerContent className="gap-4">
+                <MessageScrollerItem>
+                  <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#B9FF66] text-[#191A23] shadow-xs">
+                        <Sparkles size={16} />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#191A23] dark:text-white">Como posso otimizar sua VSL?</h3>
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">Consulte recomendações baseadas no tráfego real.</p>
+                      </div>
                     </div>
-                    <div className="text-xs font-medium text-slate-600 dark:text-zinc-400 space-y-1">
-                      <p><b>Evidência:</b> {op.evidence}</p>
-                      <p className="border-t border-slate-100 dark:border-zinc-800 pt-1 text-slate-800 dark:text-zinc-200 font-semibold"><b>Ação sugerida:</b> {op.action}</p>
+                    <div className="grid gap-1.5 pt-1">
+                      {suggestionPrompts.map((prompt) => (
+                        <button
+                          key={prompt}
+                          onClick={() => void askAi(prompt)}
+                          className="rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3 py-2 text-left text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-transparent transition-all cursor-pointer"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
                     </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          )}
+                  </div>
+                </MessageScrollerItem>
 
-          {aiLoading && (
-            <div className="flex items-center justify-center py-10">
-              <RefreshCw className="animate-spin text-slate-600 dark:text-zinc-400" size={20} />
-            </div>
-          )}
-        </div>
+                {aiError && (
+                  <MessageScrollerItem>
+                    <p className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-3.5 text-xs font-semibold text-red-700 dark:text-red-400">{aiError}</p>
+                  </MessageScrollerItem>
+                )}
+
+                {activeQuestion && aiResult && (
+                  <MessageScrollerItem>
+                    <MessageGroup>
+                      <Message align="end">
+                        <MessageAvatar className="size-8 min-w-0 bg-slate-200 text-[11px] font-bold text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">V</MessageAvatar>
+                        <MessageContent>
+                          <Bubble variant="default" align="end">
+                            <BubbleContent>
+                              <p className="text-[13px] leading-relaxed">{activeQuestion}</p>
+                            </BubbleContent>
+                          </Bubble>
+                        </MessageContent>
+                      </Message>
+
+                      <Message align="start">
+                        <MessageAvatar className="size-8 min-w-0 bg-[#B9FF66] text-[11px] font-bold text-[#191A23]">P</MessageAvatar>
+                        <MessageContent>
+                          <Bubble variant="outline" align="start">
+                            <BubbleContent>
+                              <h3 className="text-xs font-bold text-[#191A23] dark:text-white flex items-center gap-1.5">
+                                <Sparkles size={15} /> {aiResult.headline}
+                              </h3>
+                              <p className="mt-1.5 text-xs font-medium text-slate-600 dark:text-zinc-300 leading-relaxed">{aiResult.executiveSummary}</p>
+                            </BubbleContent>
+                          </Bubble>
+
+                          {aiResult.warnings.length > 0 && (
+                            <div className="mt-1 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
+                              <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider mb-1">Pontos de Atenção</h4>
+                              <ul className="list-disc pl-4 text-xs font-medium text-amber-700 dark:text-amber-300 space-y-1">
+                                {aiResult.warnings.map((w, idx) => <li key={idx}>{w}</li>)}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="mt-1 flex flex-col gap-2">
+                            <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-zinc-500">Oportunidades Recomendadas</h4>
+                            {aiResult.opportunities.map((op, index) => (
+                              <article key={index} className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-4 shadow-xs space-y-1.5">
+                                <div className="flex items-center justify-between gap-3">
+                                  <strong className="text-xs font-bold text-[#191A23] dark:text-white">{op.title}</strong>
+                                  <span className="rounded-full bg-[#B9FF66] px-2 py-0.5 text-[10px] font-bold text-[#191A23]">
+                                    {op.priority}
+                                  </span>
+                                </div>
+                                <div className="text-xs font-medium text-slate-600 dark:text-zinc-400 space-y-1">
+                                  <p><b>Evidência:</b> {op.evidence}</p>
+                                  <p className="border-t border-slate-100 dark:border-zinc-800 pt-1 text-slate-800 dark:text-zinc-200 font-semibold"><b>Ação sugerida:</b> {op.action}</p>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </MessageContent>
+                      </Message>
+                    </MessageGroup>
+                  </MessageScrollerItem>
+                )}
+
+                {aiLoading && (
+                  <MessageScrollerItem>
+                    <div className="flex items-center justify-center py-10">
+                      <RefreshCw className="animate-spin text-slate-600 dark:text-zinc-400" size={20} />
+                    </div>
+                  </MessageScrollerItem>
+                )}
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
 
         <div className="border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-card p-4">
           <ClaudeChatInput
