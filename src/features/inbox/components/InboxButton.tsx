@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Bell, Gift, Inbox, LoaderCircle, Trash2 } from "lucide-react";
+import NumberTicker from "@/components/motion/number-ticker";
 
 type Item = { id: string; title: string; message: string; action_label: string | null; action_url: string | null; read_at: string | null };
 
@@ -67,7 +68,7 @@ export default function InboxButton() {
         <Bell size={16} />
         {unread > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B9FF66] px-1 text-[10px] font-bold text-[#191A23]">
-            {unread}
+            <NumberTicker value={unread} />
           </span>
         )}
       </button>

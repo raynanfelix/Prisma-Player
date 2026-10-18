@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, CheckCircle2, Clock3, Code2, Copy, ExternalLink, FileVideo2, Folder, FolderPlus, MoreHorizontal, Pencil, Play, Plus, Search, Trash2, Upload, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/components/dashboard/EmptyState";
+import NumberTicker from "@/components/motion/number-ticker";
 import Reveal from "@/components/motion/reveal";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Tabs from "@/components/dashboard/Tabs";
@@ -201,7 +202,7 @@ export default function VideosPage() {
           <span className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
             <Video size={15} className="text-[#191A23] dark:text-[#B9FF66]" />Biblioteca
           </span>
-          <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white">{videos.length}</strong>
+          <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white"><NumberTicker value={videos.length} /></strong>
           <small className="text-slate-500 dark:text-zinc-400 font-medium">VSLs organizadas na conta</small>
         </article>
         
@@ -209,7 +210,7 @@ export default function VideosPage() {
           <span className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
             <CheckCircle2 size={15} className="text-emerald-500" />Publicadas
           </span>
-          <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white">{tabs.find((item) => item.id === "published")?.count ?? 0}</strong>
+          <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white"><NumberTicker value={tabs.find((item) => item.id === "published")?.count ?? 0} delay={0.08} /></strong>
           <small className="text-slate-500 dark:text-zinc-400 font-medium">Players disponíveis nas páginas</small>
         </article>
         
@@ -217,7 +218,7 @@ export default function VideosPage() {
           <span className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
             <Clock3 size={15} className="text-amber-500" />Em andamento
           </span>
-          <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white">{tabs.find((item) => item.id === "processing")?.count ?? 0}</strong>
+          <strong className="mt-2 block text-2xl font-bold text-[#191A23] dark:text-white"><NumberTicker value={tabs.find((item) => item.id === "processing")?.count ?? 0} delay={0.16} /></strong>
           <small className="text-slate-500 dark:text-zinc-400 font-medium">Uploads e processamento ativos</small>
         </article>
         </div>

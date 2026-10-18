@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PartyPopper, ShieldCheck, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
+import NumberTicker from "@/components/motion/number-ticker";
 import Reveal from "@/components/motion/reveal";
 import { Card, CardContent } from "@/components/ui/card";
 import WelcomeActions from "@/features/access/components/WelcomeActions";
@@ -41,7 +42,7 @@ export default async function WelcomePage() {
             <Reveal delay={0.14}>
               <h1 className="mt-5 text-3xl font-semibold tracking-tight">Sua conta Prisma está pronta.</h1>
               <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                Você ganhou 14 dias de acesso completo, sem cartão e sem cobrança automática.
+                Você ganhou <strong className="font-bold text-foreground"><NumberTicker value={14} /> dias</strong> de acesso completo, sem cartão e sem cobrança automática.
               </p>
             </Reveal>
             <Reveal delay={0.22}>

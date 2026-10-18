@@ -2,6 +2,7 @@ import { Check, CreditCard, Info, QrCode } from "lucide-react";
 import Image from "next/image";
 import { asc, eq } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
+import NumberTicker from "@/components/motion/number-ticker";
 import Reveal from "@/components/motion/reveal";
 import CancelSubscriptionButton from "@/features/billing/components/CancelSubscriptionButton";
 import CheckoutActions from "@/features/billing/components/CheckoutActions";
@@ -147,7 +148,7 @@ export default async function BillingPage() {
                 <p className="pr-20 text-lg font-bold text-[#191A23] dark:text-white">{item.name}</p>
                 <p className="mt-1 min-h-10 text-xs font-medium text-slate-500 dark:text-zinc-400 leading-relaxed">{item.description}</p>
                 <p className="mt-3 text-3xl font-bold text-[#191A23] dark:text-white tracking-tight">
-                  {formatBRL(item.amount_cents)}
+                  <NumberTicker value={item.amount_cents / 100} decimalPlaces={2} prefix="R$ " />
                   <span className="ml-1 text-xs font-normal text-slate-400 dark:text-zinc-500">/mês</span>
                 </p>
 
@@ -201,7 +202,7 @@ export default async function BillingPage() {
             Créditos Prisma IA
           </h2>
           <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-            Saldo atual: <strong className="font-bold text-[#191A23] dark:text-white">{walletRows[0]?.balance ?? 0} créditos</strong>. Os créditos não expiram.
+            Saldo atual: <strong className="font-bold text-[#191A23] dark:text-white"><NumberTicker value={walletRows[0]?.balance ?? 0} /> créditos</strong>. Os créditos não expiram.
           </p>
         </div>
 
@@ -214,14 +215,14 @@ export default async function BillingPage() {
               <Image src="/prisma-credits.png" width={56} height={56} alt="" aria-hidden="true" className="absolute right-4 top-4 h-10 w-10 object-contain opacity-80" />
               <p className="pr-14 text-sm font-bold text-[#191A23] dark:text-white">{item.name}</p>
               <p className="text-2xl font-bold text-[#191A23] dark:text-white">
-                {item.credits + item.bonusCredits} <span className="text-xs font-normal text-slate-400 dark:text-zinc-500">créditos</span>
+                <NumberTicker value={item.credits + item.bonusCredits} /> <span className="text-xs font-normal text-slate-400 dark:text-zinc-500">créditos</span>
               </p>
               {item.bonusCredits > 0 && (
                 <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-full px-2.5 py-0.5 w-fit">
                   +{item.bonusCredits} de bônus incluídos
                 </p>
               )}
-              <p className="text-xl font-bold text-[#191A23] dark:text-white">{formatBRL(item.amountCents)}</p>
+              <p className="text-xl font-bold text-[#191A23] dark:text-white"><NumberTicker value={item.amountCents / 100} decimalPlaces={2} prefix="R$ " /></p>
               <AiCreditCheckoutButton product={item.slug} />
             </article>
           ))}
