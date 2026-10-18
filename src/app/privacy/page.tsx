@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Nav from "@/features/marketing/components/Nav";
-import Footer from "@/features/marketing/components/Footer";
+import { ShieldCheck } from "lucide-react";
+import LegalPageLayout from "@/features/landing-page/components/LegalPageLayout";
 import { legalContactEmail, legalUpdatedAt, privacySections } from "@/content/legal/prisma-legal";
 
 export const metadata: Metadata = {
@@ -11,41 +11,16 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="themeable-bg-canvas-parchment min-h-dvh">
-      <Nav />
-      <section className="mx-auto max-w-[920px] px-6 pb-20 pt-28">
-        <p className="mb-3 text-caption-strong uppercase tracking-[0.18em] text-prisma-blue">LGPD</p>
-        <h1 className="text-display-xl themeable-text-ink">Política de Privacidade</h1>
-        <p className="mt-4 max-w-[760px] text-body-lg themeable-text-ink-muted-64">
-          Esta política descreve como a Prisma Player trata dados pessoais de usuários, equipes e visitantes das VSLs publicadas.
-        </p>
-        <p className="mt-4 text-caption themeable-text-ink-muted-48">Última atualização: {legalUpdatedAt}</p>
-
-        <div className="mt-10 space-y-5">
-          {privacySections.map((section) => (
-            <article key={section.title} className="rounded-[28px] border themeable-border-hairline themeable-bg-canvas p-6 shadow-[0_18px_50px_rgba(0,0,0,0.04)]">
-              <h2 className="text-title-md themeable-text-ink">{section.title}</h2>
-              <p className="mt-3 text-body themeable-text-ink-muted-64">{section.body}</p>
-              {section.items ? (
-                <ul className="mt-3 list-disc space-y-1.5 pl-5 text-body themeable-text-ink-muted-64">
-                  {section.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-8 rounded-[28px] border border-prisma-blue/20 bg-prisma-blue/5 p-6">
-          <h2 className="text-title-md themeable-text-ink">Canal de privacidade</h2>
-          <p className="mt-3 text-body themeable-text-ink-muted-64">
-            Para exercer direitos previstos na LGPD, envie sua solicitação para{" "}
-            <a className="text-prisma-blue hover:underline" href={`mailto:${legalContactEmail}`}>{legalContactEmail}</a>.
-          </p>
-        </div>
-      </section>
-      <Footer />
-    </main>
+    <LegalPageLayout
+      tag="LGPD · GDPR · CCPA"
+      title="Política de Privacidade"
+      intro="Esta política descreve como a Prisma Player trata dados pessoais de usuários, equipes e visitantes das VSLs publicadas — no Brasil, na Europa e no mundo."
+      icon={ShieldCheck}
+      sections={privacySections}
+      updatedAt={legalUpdatedAt}
+      contactEmail={legalContactEmail}
+      contactTitle="Canal de privacidade"
+      contactIntro="Para exercer seus direitos previstos na LGPD, no GDPR ou na CCPA, envie sua solicitação para o nosso encarregado."
+    />
   );
 }

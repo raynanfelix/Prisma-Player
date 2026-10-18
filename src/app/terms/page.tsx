@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Nav from "@/features/marketing/components/Nav";
-import Footer from "@/features/marketing/components/Footer";
+import { Scale } from "lucide-react";
+import LegalPageLayout from "@/features/landing-page/components/LegalPageLayout";
 import { legalContactEmail, legalUpdatedAt, termsSections } from "@/content/legal/prisma-legal";
 
 export const metadata: Metadata = {
@@ -11,41 +11,16 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="themeable-bg-canvas-parchment min-h-dvh">
-      <Nav />
-      <section className="mx-auto max-w-[920px] px-6 pb-20 pt-28">
-        <p className="mb-3 text-caption-strong uppercase tracking-[0.18em] text-prisma-blue">Legal</p>
-        <h1 className="text-display-xl themeable-text-ink">Termos de Uso</h1>
-        <p className="mt-4 max-w-[720px] text-body-lg themeable-text-ink-muted-64">
-          Estes termos explicam as regras para usar a Prisma Player de forma segura, profissional e transparente.
-        </p>
-        <p className="mt-4 text-caption themeable-text-ink-muted-48">Última atualização: {legalUpdatedAt}</p>
-
-        <div className="mt-10 space-y-5">
-          {termsSections.map((section) => (
-            <article key={section.title} className="rounded-[28px] border themeable-border-hairline themeable-bg-canvas p-6 shadow-[0_18px_50px_rgba(0,0,0,0.04)]">
-              <h2 className="text-title-md themeable-text-ink">{section.title}</h2>
-              <p className="mt-3 text-body themeable-text-ink-muted-64">{section.body}</p>
-              {section.items ? (
-                <ul className="mt-3 list-disc space-y-1.5 pl-5 text-body themeable-text-ink-muted-64">
-                  {section.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-8 rounded-[28px] border border-prisma-blue/20 bg-prisma-blue/5 p-6">
-          <h2 className="text-title-md themeable-text-ink">Contato</h2>
-          <p className="mt-3 text-body themeable-text-ink-muted-64">
-            Para dúvidas sobre estes Termos, fale com a Prisma Player pelo e-mail{" "}
-            <a className="text-prisma-blue hover:underline" href={`mailto:${legalContactEmail}`}>{legalContactEmail}</a>.
-          </p>
-        </div>
-      </section>
-      <Footer />
-    </main>
+    <LegalPageLayout
+      tag="Legal"
+      title="Termos de Uso"
+      intro="Estes termos explicam as regras para usar a Prisma Player de forma segura, profissional e transparente — inclusive quando o produto é vendido globalmente."
+      icon={Scale}
+      sections={termsSections}
+      updatedAt={legalUpdatedAt}
+      contactEmail={legalContactEmail}
+      contactTitle="Fale com a Prisma Player"
+      contactIntro="Para dúvidas sobre estes Termos, notificações de direitos autorais ou questões contratuais, fale com a gente."
+    />
   );
 }
