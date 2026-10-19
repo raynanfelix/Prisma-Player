@@ -84,7 +84,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F3F3F3] text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
+    <div className="min-h-screen bg-white text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
       <Nav account={account} />
 
       <main className="py-12 sm:py-20">
@@ -92,7 +92,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
 
           {/* Header */}
           <div className="text-center space-y-6 max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
               <Sparkles className="h-4 w-4" />
               14 Dias Grátis • Sem Cartão de Crédito
             </div>
@@ -110,7 +110,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
               <div
                 role="group"
                 aria-label="Ciclo de cobrança"
-                className="inline-flex flex-wrap items-center justify-center gap-1 rounded-2xl border-2 border-[#191A23] bg-white p-1.5 shadow-[2px_2px_0px_#191A23]"
+                className="inline-flex flex-wrap items-center justify-center gap-1 rounded-2xl border border-[#191A23]/10 bg-white p-1.5 shadow-[2px_2px_0px_#191A23]"
               >
                 <button
                   type="button"
@@ -119,7 +119,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                   className={`rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
                     !isAnnual
                       ? "border-[#191A23] bg-[#191A23] text-white shadow-[1px_1px_0px_#191A23]"
-                      : "hover:bg-[#F3F3F3]"
+                      : "hover:bg-white"
                   }`}
                 >
                   Cobrança Mensal
@@ -131,7 +131,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                   className={`inline-flex items-center gap-2 rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
                     isAnnual
                       ? "border-[#191A23] bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]"
-                      : "hover:bg-[#F3F3F3]"
+                      : "hover:bg-white"
                   }`}
                 >
                   Cobrança Anual
@@ -151,12 +151,12 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
               return (
                 <div
                   key={idx}
-                  className={`relative rounded-[35px] border-2 border-[#191A23] ${p.bg} p-8 sm:p-10 shadow-[4px_4px_0px_#191A23] flex flex-col justify-between transition-transform hover:-translate-y-1 ${
-                    p.isFeatured ? "ring-4 ring-[#191A23]" : ""
+                  className={`relative rounded-3xl border border-[#191A23]/10 ${p.bg} p-8 sm:p-10 shadow-[4px_4px_0px_#191A23] flex flex-col justify-between transition-transform hover:-translate-y-1 ${
+                    p.isFeatured ? "ring-2 ring-[#B9FF66]" : ""
                   }`}
                 >
                   {p.isFeatured && (
-                    <span className="absolute -top-4 right-8 rounded-xl border-2 border-[#191A23] bg-[#191A23] px-4 py-1.5 text-xs font-black text-[#B9FF66] uppercase tracking-wider shadow-[2px_2px_0px_#B9FF66] flex items-center gap-1.5">
+                    <span className="absolute -top-4 right-8 rounded-xl border border-[#191A23]/10 bg-[#191A23] px-4 py-1.5 text-xs font-black text-[#B9FF66] uppercase tracking-wider shadow-[2px_2px_0px_#B9FF66] flex items-center gap-1.5">
                       <Star className="h-3.5 w-3.5 fill-[#B9FF66] text-[#B9FF66]" />
                       <span>{p.badge}</span>
                     </span>
@@ -165,7 +165,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                   <div>
                     {/* Header */}
                     <div className="space-y-2">
-                      <span className={`inline-block rounded-lg border border-[#191A23] ${isDark ? "bg-white text-[#191A23]" : "bg-[#F3F3F3] text-[#191A23]"} px-3 py-1 text-xs font-black`}>
+                      <span className={`inline-block rounded-lg border border-[#191A23] ${isDark ? "bg-white text-[#191A23]" : "bg-white text-[#191A23]"} px-3 py-1 text-xs font-black`}>
                         {p.badge}
                       </span>
                       <h3 className={`text-3xl font-black ${p.textColor}`}>{p.name}</h3>
@@ -175,7 +175,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                     </div>
 
                     {/* Price */}
-                    <div className="my-6 py-4 border-y border-[#191A23]/20">
+                    <div className="my-6 py-4 border-y border-[#191A23]/8">
                       <div className="flex items-baseline gap-2">
                         <span className={`text-5xl font-black ${p.textColor} tracking-tight font-mono`}>
                           R$ {currentPrice}
@@ -193,11 +193,11 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
 
                     {/* Capacity */}
                     <div className="space-y-2 mb-6">
-                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
+                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-white"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
                         <Zap className="h-4 w-4 shrink-0 text-[#B9FF66]" />
                         <span>{p.plays}</span>
                       </div>
-                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
+                      <div className={`rounded-xl border border-[#191A23]/30 ${isDark ? "bg-white/10" : "bg-white"} p-3 text-xs font-black ${p.textColor} flex items-center gap-2`}>
                         <Package className="h-4 w-4 shrink-0 text-[#B9FF66]" />
                         <span>R$ 0,02 por play adicional</span>
                       </div>
@@ -221,7 +221,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
                   <div className="mt-8 pt-6 border-t border-[#191A23]/15">
                     <Link
                       href={account ? "/dashboard/billing" : "/signup"}
-                      className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[#191A23] ${p.btnBg} ${p.btnText} px-6 py-4 text-base font-black shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all`}
+                      className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-[#191A23]/10 ${p.btnBg} ${p.btnText} px-6 py-4 text-base font-black shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all`}
                     >
                       <span>{account ? "Escolher no Painel" : "Testar 14 Dias Grátis"}</span>
                       <ArrowUpRight className="h-5 w-5" />
@@ -234,9 +234,9 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
           </div>
 
           {/* Guarantee Banner */}
-          <div className="rounded-[35px] border-2 border-[#191A23] bg-white p-8 shadow-[3px_3px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="rounded-3xl border border-[#191A23]/10 bg-white p-8 shadow-[3px_3px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]">
                 <Shield className="h-7 w-7 text-[#191A23]" />
               </div>
               <div>
@@ -248,7 +248,7 @@ export default function PositivusPricing({ account }: PositivusPricingProps) {
             </div>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-6 py-3.5 text-sm font-bold text-white shadow-[2px_2px_0px_#191A23] whitespace-nowrap"
+              className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-6 py-3.5 text-sm font-bold text-white shadow-[2px_2px_0px_#191A23] whitespace-nowrap"
             >
               Criar Conta Grátis
             </Link>

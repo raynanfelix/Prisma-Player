@@ -19,7 +19,7 @@ interface PositivusLandingProps {
 
 export default function PositivusLanding({ account }: PositivusLandingProps) {
   return (
-    <div className="min-h-screen bg-[#F3F3F3] text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
+    <div className="min-h-screen bg-white text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
       <Nav account={account} />
       <main>
         <Hero />

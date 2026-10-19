@@ -14,12 +14,12 @@ export default function ContactForm() {
   };
 
   return (
-    <section id="contato" className="bg-[#F3F3F3] py-20">
+    <section id="contato" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
             Fale Conosco
           </div>
           <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
@@ -28,14 +28,14 @@ export default function ContactForm() {
         </div>
 
         {/* Card Form */}
-        <div className="relative overflow-hidden rounded-[45px] border-2 border-[#191A23] bg-[#F3F3F3] p-8 sm:p-14 shadow-[8px_8px_0px_#191A23]">
+        <div className="relative overflow-hidden rounded-[45px] border border-[#191A23]/10 bg-white p-8 sm:p-14 shadow-[8px_8px_0px_#191A23]">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             {/* Form Column */}
             <div className="lg:col-span-7">
               {submitted ? (
-                <div className="rounded-3xl border-2 border-[#191A23] bg-[#B9FF66] p-8 text-center space-y-4 shadow-[4px_4px_0px_#191A23]">
+                <div className="rounded-3xl border border-[#191A23]/10 bg-[#B9FF66] p-8 text-center space-y-4 shadow-[4px_4px_0px_#191A23]">
                   <CheckCircle className="mx-auto h-12 w-12 text-[#191A23]" />
                   <h3 className="text-2xl font-black text-[#191A23]">Mensagem Enviada com Sucesso!</h3>
                   <p className="text-sm font-bold text-[#191A23]/80">
@@ -79,7 +79,7 @@ export default function ContactForm() {
                       placeholder="Seu nome"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full rounded-2xl border-2 border-[#191A23] bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
+                      className="w-full rounded-2xl border border-[#191A23]/10 bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
                     />
                   </div>
 
@@ -92,7 +92,7 @@ export default function ContactForm() {
                       placeholder="seuemail@empresa.com ou (11) 99999-9999"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-2xl border-2 border-[#191A23] bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
+                      className="w-full rounded-2xl border border-[#191A23]/10 bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
                     />
                   </div>
 
@@ -105,14 +105,14 @@ export default function ContactForm() {
                       placeholder="Descreva seu volume de tráfego, dúvidas ou necessidades de migração..."
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      className="w-full rounded-2xl border-2 border-[#191A23] bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
+                      className="w-full rounded-2xl border border-[#191A23]/10 bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
                     />
                   </div>
 
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-8 py-4 text-lg font-bold text-white shadow-[4px_4px_0px_#B9FF66] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-lg font-bold text-white shadow-[4px_4px_0px_#B9FF66] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer"
                   >
                     <span>Enviar Mensagem</span>
                     <Send className="h-5 w-5 text-[#B9FF66]" />
@@ -124,7 +124,7 @@ export default function ContactForm() {
 
             {/* Positivus Graphic Card Column */}
             <div className="lg:col-span-5 hidden lg:flex justify-center">
-              <div className="w-full max-w-sm rounded-[35px] border-2 border-[#191A23] bg-[#191A23] p-8 text-white shadow-[6px_6px_0px_#B9FF66] space-y-6">
+              <div className="w-full max-w-sm rounded-3xl border border-[#191A23]/10 bg-[#191A23] p-8 text-white shadow-[6px_6px_0px_#B9FF66] space-y-6">
                 <div className="rounded-2xl border-2 border-[#B9FF66] bg-[#B9FF66] p-4 text-[#191A23]">
                   <p className="text-xs font-black uppercase tracking-wider">Atendimento Prioritário</p>
                   <p className="text-lg font-black mt-1">Resposta rápida por e-mail ou WhatsApp</p>

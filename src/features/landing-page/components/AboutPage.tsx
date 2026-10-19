@@ -35,7 +35,7 @@ export default function AboutPage({ account }: AboutPageProps) {
     {
       title: "Foco no Sucesso do Cliente",
       description: "Acompanhamento próximo e suporte humanizado via WhatsApp para ajudar sua operação a escalar sem sobressaltos.",
-      bg: "bg-[#F3F3F3]",
+      bg: "bg-white",
       textColor: "text-[#191A23]",
       icon: Heart,
     },
@@ -78,7 +78,7 @@ export default function AboutPage({ account }: AboutPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F3F3F3] text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
+    <div className="min-h-screen bg-white text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
       <Nav account={account} />
 
       <main className="py-12 sm:py-20">
@@ -87,7 +87,7 @@ export default function AboutPage({ account }: AboutPageProps) {
           {/* Hero Section */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[3px_3px_0px_#191A23]">
                 <Sparkles className="h-4 w-4" />
                 Sobre a Prisma Player
               </div>
@@ -103,7 +103,7 @@ export default function AboutPage({ account }: AboutPageProps) {
 
             {/* Graphic Badge */}
             <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-md rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 text-white shadow-[8px_8px_0px_#B9FF66] space-y-6">
+              <div className="w-full max-w-md rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 text-white shadow-[8px_8px_0px_#B9FF66] space-y-6">
                 <div className="flex items-center justify-between border-b border-white/20 pb-4">
                   <span className="text-xs font-mono text-[#B9FF66]">prisma_tech_manifesto</span>
                   <Award className="h-6 w-6 text-[#B9FF66]" />
@@ -122,8 +122,8 @@ export default function AboutPage({ account }: AboutPageProps) {
           </div>
 
           {/* Manifesto Section */}
-          <div className="rounded-[45px] border-2 border-[#191A23] bg-white p-8 sm:p-14 shadow-[8px_8px_0px_#191A23] space-y-6">
-            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+          <div className="rounded-[45px] border border-[#191A23]/10 bg-white p-8 sm:p-14 shadow-[8px_8px_0px_#191A23] space-y-6">
+            <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
               Nosso Manifesto
             </div>
             <h2 className="text-3xl sm:text-4xl font-black text-[#191A23] tracking-tight">
@@ -137,7 +137,7 @@ export default function AboutPage({ account }: AboutPageProps) {
           {/* Values Grid */}
           <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
                 Nossos Valores
               </div>
               <p className="text-lg text-[#191A23]/80 font-medium">
@@ -151,10 +151,10 @@ export default function AboutPage({ account }: AboutPageProps) {
                 return (
                   <div
                     key={idx}
-                    className={`rounded-[40px] border-2 border-[#191A23] ${v.bg} p-8 sm:p-10 shadow-[6px_6px_0px_#191A23] flex flex-col justify-between space-y-6`}
+                    className={`rounded-[40px] border border-[#191A23]/10 ${v.bg} p-8 sm:p-10 shadow-[6px_6px_0px_#191A23] flex flex-col justify-between space-y-6`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-white shadow-[2px_2px_0px_#191A23]">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-white shadow-[2px_2px_0px_#191A23]">
                         <IconComp className="h-6 w-6 text-[#191A23]" />
                       </div>
                       <span className={`text-xl font-black ${v.textColor} font-mono opacity-50`}>
@@ -177,7 +177,7 @@ export default function AboutPage({ account }: AboutPageProps) {
           </div>
 
           {/* Timeline Section */}
-          <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-14 text-white shadow-[8px_8px_0px_#191A23] space-y-10">
+          <div className="rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 sm:p-14 text-white shadow-[8px_8px_0px_#191A23] space-y-10">
             <div className="inline-flex items-center rounded-xl border-2 border-white bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_white]">
               Nossa Trajetória
             </div>
@@ -205,7 +205,7 @@ export default function AboutPage({ account }: AboutPageProps) {
           {/* Leadership Section */}
           <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
                 Liderança & Time
               </div>
               <p className="text-lg text-[#191A23]/80 font-medium">
@@ -217,9 +217,9 @@ export default function AboutPage({ account }: AboutPageProps) {
               {leaders.map((leader, idx) => (
                 <div
                   key={idx}
-                  className="rounded-[35px] border-2 border-[#191A23] bg-white p-8 shadow-[5px_5px_0px_#191A23] space-y-4"
+                  className="rounded-3xl border border-[#191A23]/10 bg-white p-8 shadow-[5px_5px_0px_#191A23] space-y-4"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
                     <Users className="h-7 w-7 text-[#191A23]" />
                   </div>
                   <div>
@@ -235,7 +235,7 @@ export default function AboutPage({ account }: AboutPageProps) {
           </div>
 
           {/* CTA Banner */}
-          <div className="rounded-[45px] border-2 border-[#191A23] bg-[#B9FF66] p-8 sm:p-12 shadow-[8px_8px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="rounded-[45px] border border-[#191A23]/10 bg-[#B9FF66] p-8 sm:p-12 shadow-[8px_8px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="space-y-2 text-center md:text-left">
               <h2 className="text-3xl font-black text-[#191A23]">
                 Quer fazer parte dessa história de alta conversão?
@@ -246,7 +246,7 @@ export default function AboutPage({ account }: AboutPageProps) {
             </div>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-8 py-4 text-base font-extrabold text-white shadow-[4px_4px_0px_white] hover:bg-[#191A23]/90 transition-all"
+              className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-base font-extrabold text-white shadow-[4px_4px_0px_white] hover:bg-[#191A23]/90 transition-all"
             >
               <span>Testar 14 Dias Grátis</span>
               <ArrowUpRight className="h-5 w-5 ml-2 text-[#B9FF66]" />

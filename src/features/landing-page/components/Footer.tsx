@@ -14,7 +14,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#F3F3F3] pt-12">
+    <footer className="bg-white pt-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Main Footer Container (Dark Positivus) */}
@@ -90,7 +90,7 @@ export default function Footer() {
                   />
                   <button
                     type="submit"
-                    className="rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-6 py-3 text-sm font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:bg-[#B9FF66]/90 transition-colors whitespace-nowrap cursor-pointer"
+                    className="rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-6 py-3 text-sm font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:bg-[#B9FF66]/90 transition-colors whitespace-nowrap cursor-pointer"
                   >
                     Inscrever-se
                   </button>

@@ -58,7 +58,7 @@ export default function Nav({ account }: NavProps) {
     >
       {/* Floating Pill Container */}
       <div
-        className={`rounded-full border-2 border-[#191A23] bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between transition-all duration-300 ${
+        className={`rounded-full border border-[#191A23]/10 bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between transition-all duration-300 ${
           scrolled ? "py-2 shadow-[2px_2px_0px_#191A23]" : "py-2.5 shadow-[4px_4px_0px_#191A23]"
         }`}
       >
@@ -91,7 +91,7 @@ export default function Nav({ account }: NavProps) {
           {account ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center rounded-full border-2 border-[#191A23] bg-[#B9FF66] px-5 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+              className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] px-5 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
             >
               Painel ({account.firstName})
             </Link>
@@ -99,7 +99,7 @@ export default function Nav({ account }: NavProps) {
             <>
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center rounded-full border-2 border-[#191A23] bg-[#B9FF66] px-5 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] px-5 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
               >
                 Testar Grátis
               </Link>
@@ -120,7 +120,7 @@ export default function Nav({ account }: NavProps) {
         <div className="flex lg:hidden">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="inline-flex items-center justify-center rounded-full border-2 border-[#191A23] bg-white p-2 text-[#191A23] shadow-[2px_2px_0px_#191A23]"
+            className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-white p-2 text-[#191A23] shadow-[2px_2px_0px_#191A23]"
             aria-label="Menu"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -131,13 +131,13 @@ export default function Nav({ account }: NavProps) {
 
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
-        <div className="mt-3 lg:hidden rounded-3xl border-2 border-[#191A23] bg-white p-5 shadow-[6px_6px_0px_#191A23] space-y-2">
+        <div className="mt-3 lg:hidden rounded-3xl border border-[#191A23]/10 bg-white p-5 shadow-[6px_6px_0px_#191A23] space-y-2">
           {navLinks.map((link) => (
             <a
               key={link.name}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block rounded-2xl border border-[#191A23]/10 bg-[#F3F3F3] px-4 py-2.5 text-sm font-bold text-[#191A23]"
+              className="block rounded-2xl border border-[#191A23]/10 bg-white px-4 py-2.5 text-sm font-bold text-[#191A23]"
             >
               {link.name}
             </a>
@@ -147,7 +147,7 @@ export default function Nav({ account }: NavProps) {
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center rounded-full border-2 border-[#191A23] bg-[#B9FF66] py-3 text-sm font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]"
+                className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] py-3 text-sm font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]"
               >
                 Acessar Painel ({account.firstName})
               </Link>
@@ -156,14 +156,14 @@ export default function Nav({ account }: NavProps) {
                 <Link
                   href="/signup"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-center rounded-full border-2 border-[#191A23] bg-[#B9FF66] py-3 text-sm font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]"
+                  className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] py-3 text-sm font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]"
                 >
                   Testar 14 Dias Grátis
                 </Link>
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-center rounded-full border-2 border-[#191A23] bg-white py-2.5 text-sm font-bold text-[#191A23] shadow-[2px_2px_0px_#191A23]"
+                  className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-white py-2.5 text-sm font-bold text-[#191A23] shadow-[2px_2px_0px_#191A23]"
                 >
                   Fazer Login
                 </Link>

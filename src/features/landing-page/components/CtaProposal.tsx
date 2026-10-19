@@ -5,14 +5,14 @@ import { Sparkles, Play, CheckCircle2 } from "lucide-react";
 
 export default function CtaProposal() {
   return (
-    <section className="bg-[#F3F3F3] py-12">
+    <section className="bg-white py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-[45px] border-2 border-[#191A23] bg-[#F3F3F3] p-8 sm:p-14 shadow-[4px_4px_0px_#191A23]">
+        <div className="relative overflow-hidden rounded-[45px] border border-[#191A23]/10 bg-white p-8 sm:p-14 shadow-[4px_4px_0px_#191A23]">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
                 <Sparkles className="h-4 w-4" />
                 Sem necessidade de cartão de crédito
               </div>
@@ -28,13 +28,13 @@ export default function CtaProposal() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <Link
                   href="/signup"
-                  className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-8 py-4 text-lg font-extrabold text-white shadow-[2px_2px_0px_#B9FF66] hover:bg-[#191A23]/90 hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-center"
+                  className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-lg font-extrabold text-white shadow-[2px_2px_0px_#B9FF66] hover:bg-[#191A23]/90 hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-center"
                 >
                   Criar Conta Grátis por 14 Dias
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-white px-6 py-4 text-base font-bold text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-center"
+                  className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-white px-6 py-4 text-base font-bold text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-center"
                 >
                   Já tenho conta
                 </Link>
@@ -54,8 +54,8 @@ export default function CtaProposal() {
 
             {/* Right Graphic Positivus style */}
             <div className="lg:col-span-5 relative flex justify-center">
-              <div className="w-full max-w-sm rounded-[35px] border-2 border-[#191A23] bg-[#B9FF66] p-8 shadow-[3px_3px_0px_#191A23] text-center space-y-4">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="w-full max-w-sm rounded-3xl border border-[#191A23]/10 bg-[#B9FF66] p-8 shadow-[3px_3px_0px_#191A23] text-center space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] shadow-[3px_3px_0px_#191A23]">
                   <Play className="h-8 w-8 text-[#B9FF66] fill-[#B9FF66] ml-1" />
                 </div>
                 <h3 className="text-xl font-black text-[#191A23]">

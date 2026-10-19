@@ -9,7 +9,7 @@ export default function ServicesGrid() {
       badgeTitle: "Pitch Delay",
       fullTitle: "Revele a oferta no segundo exato do seu pitch",
       description: "Exiba o botão de compra, preço e checkout sincronizados ao tempo da sua VSL, inclusive se o lead pausar ou avançar o vídeo.",
-      bg: "bg-[#F3F3F3]",
+      bg: "bg-white",
       badgeBg: "bg-[#B9FF66]",
       badgeText: "text-[#191A23]",
       textColor: "text-[#191A23]",
@@ -48,7 +48,7 @@ export default function ServicesGrid() {
       badgeTitle: "Autoplay com Som",
       fullTitle: "Mais atenção nos primeiros segundos",
       description: "Reprodução automática inteligente com convite para ativar o som, para que o lead escute a mensagem desde o início.",
-      bg: "bg-[#F3F3F3]",
+      bg: "bg-white",
       badgeBg: "bg-[#B9FF66]",
       badgeText: "text-[#191A23]",
       textColor: "text-[#191A23]",
@@ -85,12 +85,12 @@ export default function ServicesGrid() {
   ];
 
   return (
-    <section id="recursos" className="bg-[#F3F3F3] py-20">
+    <section id="recursos" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
             Recursos da VSL
           </div>
           <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
@@ -105,13 +105,13 @@ export default function ServicesGrid() {
             return (
               <div
                 key={item.id}
-                className={`relative rounded-[35px] border-2 border-[#191A23] ${item.bg} p-8 sm:p-10 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform`}
+                className={`relative rounded-3xl border border-[#191A23]/10 ${item.bg} p-8 sm:p-10 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform`}
               >
                 <div>
                   {/* Badge Header */}
                   <div className="flex items-center justify-between gap-4 mb-6">
                     <span
-                      className={`inline-block rounded-xl border-2 border-[#191A23] ${item.badgeBg} ${item.badgeText} px-4 py-1.5 text-base font-black shadow-[1px_1px_0px_#191A23]`}
+                      className={`inline-block rounded-xl border border-[#191A23]/10 ${item.badgeBg} ${item.badgeText} px-4 py-1.5 text-base font-black shadow-[1px_1px_0px_#191A23]`}
                     >
                       {item.badgeTitle}
                     </span>
@@ -137,7 +137,7 @@ export default function ServicesGrid() {
                     className="flex items-center gap-3 font-bold text-base hover:opacity-80 transition-opacity"
                   >
                     <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#191A23] ${item.btnBg} shadow-[1px_1px_0px_#191A23]`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full border border-[#191A23]/10 ${item.btnBg} shadow-[1px_1px_0px_#191A23]`}
                     >
                       <ArrowUpRight className={`h-6 w-6 ${item.btnIcon}`} />
                     </div>
@@ -146,7 +146,7 @@ export default function ServicesGrid() {
                     </span>
                   </a>
 
-                  <div className={`p-3 rounded-2xl border-2 border-[#191A23] ${item.badgeBg} shadow-[1px_1px_0px_#191A23]`}>
+                  <div className={`p-3 rounded-2xl border border-[#191A23]/10 ${item.badgeBg} shadow-[1px_1px_0px_#191A23]`}>
                     <IconComponent className="h-7 w-7 text-[#191A23]" />
                   </div>
                 </div>

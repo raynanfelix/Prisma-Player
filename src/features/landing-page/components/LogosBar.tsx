@@ -11,7 +11,7 @@ export default function LogosBar() {
   ];
 
   return (
-    <section className="bg-[#F3F3F3] py-10 border-y-2 border-[#191A23]/10">
+    <section className="bg-white py-10 border-y-2 border-[#191A23]/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <p className="text-center text-xs font-bold uppercase tracking-widest text-[#191A23]/60 mb-6">
           Funciona com as principais plataformas e construtores do mercado digital
@@ -21,7 +21,7 @@ export default function LogosBar() {
           {platforms.map((p) => (
             <div
               key={p.name}
-              className="flex flex-col items-center justify-center rounded-2xl border-2 border-[#191A23] bg-white p-4 text-center shadow-[3px_3px_0px_#191A23] hover:bg-[#B9FF66]/40 transition-colors group cursor-default"
+              className="flex flex-col items-center justify-center rounded-2xl border border-[#191A23]/10 bg-white p-4 text-center shadow-[3px_3px_0px_#191A23] hover:bg-[#B9FF66]/40 transition-colors group cursor-default"
             >
               <span className="text-base font-black text-[#191A23] tracking-tight">
                 {p.name}

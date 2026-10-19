@@ -5,13 +5,13 @@ import { Play, Sparkles, Zap, ShieldCheck, Volume2 } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-[#F3F3F3] pt-12 pb-20 md:pt-20 md:pb-28">
+    <section className="relative overflow-hidden bg-white pt-12 pb-20 md:pt-20 md:pb-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8 lg:items-center">
           
           {/* Left Column: Headlines & CTA */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase tracking-wider text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase tracking-wider text-[#191A23] shadow-[2px_2px_0px_#191A23]">
               <Sparkles className="h-4 w-4" />
               Player de VSL para lançamentos e ofertas
             </div>
@@ -28,13 +28,13 @@ export default function Hero() {
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-8 py-4 text-lg font-bold text-white shadow-[3px_3px_0px_#B9FF66] hover:bg-[#191A23]/90 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#B9FF66] transition-all text-center"
+                className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-lg font-bold text-white shadow-[3px_3px_0px_#B9FF66] hover:bg-[#191A23]/90 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#B9FF66] transition-all text-center"
               >
                 Testar 14 Dias Grátis
               </Link>
               <a
                 href="#recursos"
-                className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-white px-6 py-4 text-base font-bold text-[#191A23] shadow-[3px_3px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#191A23] transition-all text-center"
+                className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-white px-6 py-4 text-base font-bold text-[#191A23] shadow-[3px_3px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#191A23] transition-all text-center"
               >
                 Ver Recursos do Player
               </a>
@@ -55,7 +55,7 @@ export default function Hero() {
 
           {/* Right Column: Positivus Styled Illustration Card */}
           <div className="lg:col-span-6 relative flex justify-center">
-            <div className="relative w-full max-w-lg rounded-[35px] border-2 border-[#191A23] bg-white p-6 sm:p-8 shadow-[4px_4px_0px_#191A23] transition-transform hover:scale-[1.01]">
+            <div className="relative w-full max-w-lg rounded-3xl border border-[#191A23]/10 bg-white p-6 sm:p-8 shadow-[4px_4px_0px_#191A23] transition-transform hover:scale-[1.01]">
               
               {/* Top Bar Illustration */}
               <div className="flex items-center justify-between border-b-2 border-[#191A23] pb-4 mb-6">
@@ -64,13 +64,13 @@ export default function Hero() {
                   <div className="h-4 w-4 rounded-full bg-[#B9FF66] border border-[#191A23]" />
                   <div className="h-4 w-4 rounded-full border border-[#191A23]" />
                 </div>
-                <div className="rounded-full border border-[#191A23] bg-[#F3F3F3] px-3 py-1 text-xs font-bold text-[#191A23]">
+                <div className="rounded-full border border-[#191A23] bg-white px-3 py-1 text-xs font-bold text-[#191A23]">
                   vsl_alta_conversao.mp4
                 </div>
               </div>
 
               {/* Player Preview Box */}
-              <div className="relative aspect-video rounded-3xl border-2 border-[#191A23] bg-[#191A23] overflow-hidden flex items-center justify-center p-6 text-white group cursor-pointer">
+              <div className="relative aspect-video rounded-3xl border border-[#191A23]/10 bg-[#191A23] overflow-hidden flex items-center justify-center p-6 text-white group cursor-pointer">
                 {/* Background SVG Grid pattern */}
                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#B9FF66_1px,transparent_1px)] [background-size:16px_16px]" />
 
@@ -81,12 +81,12 @@ export default function Hero() {
                 </div>
 
                 {/* Main Play Icon in Positivus style */}
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#191A23] bg-[#B9FF66] shadow-[4px_4px_0px_#191A23] group-hover:scale-110 transition-transform">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] shadow-[4px_4px_0px_#191A23] group-hover:scale-110 transition-transform">
                   <Play className="h-10 w-10 text-[#191A23] fill-[#191A23] ml-1.5" />
                 </div>
 
                 {/* Sound Prompt Floating Badge */}
-                <div className="absolute bottom-3 right-3 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-3 py-1.5 text-xs font-extrabold text-[#191A23] shadow-[2px_2px_0px_#191A23] flex items-center gap-1.5">
+                <div className="absolute bottom-3 right-3 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-3 py-1.5 text-xs font-extrabold text-[#191A23] shadow-[2px_2px_0px_#191A23] flex items-center gap-1.5">
                   <Volume2 className="h-4 w-4 text-[#191A23]" />
                   <span>Clique para ouvir o áudio</span>
                 </div>
@@ -94,15 +94,15 @@ export default function Hero() {
 
               {/* Stats Bar below Video */}
               <div className="mt-6 grid grid-cols-3 gap-3">
-                <div className="rounded-2xl border-2 border-[#191A23] bg-[#F3F3F3] p-3 text-center shadow-[2px_2px_0px_#191A23]">
+                <div className="rounded-2xl border border-[#191A23]/10 bg-white p-3 text-center shadow-[2px_2px_0px_#191A23]">
                   <p className="text-[11px] font-bold uppercase text-[#191A23]/60">Retenção</p>
                   <p className="text-lg font-black text-[#191A23]">84.2%</p>
                 </div>
-                <div className="rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] p-3 text-center shadow-[2px_2px_0px_#191A23]">
+                <div className="rounded-2xl border border-[#191A23]/10 bg-[#B9FF66] p-3 text-center shadow-[2px_2px_0px_#191A23]">
                   <p className="text-[11px] font-bold uppercase text-[#191A23]">Pitch Views</p>
                   <p className="text-lg font-black text-[#191A23]">+14.8k</p>
                 </div>
-                <div className="rounded-2xl border-2 border-[#191A23] bg-[#191A23] p-3 text-center text-white shadow-[2px_2px_0px_#191A23]">
+                <div className="rounded-2xl border border-[#191A23]/10 bg-[#191A23] p-3 text-center text-white shadow-[2px_2px_0px_#191A23]">
                   <p className="text-[11px] font-bold uppercase text-[#B9FF66]">Carregamento</p>
                   <p className="text-lg font-black text-white">0.18s</p>
                 </div>

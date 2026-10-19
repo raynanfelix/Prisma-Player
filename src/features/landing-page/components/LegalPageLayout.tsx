@@ -28,7 +28,7 @@ const CARD_SKINS = [
   { card: "bg-white", badge: "bg-[#B9FF66] text-[#191A23]", text: "text-[#191A23]", check: "text-[#191A23]", dark: false },
   { card: "bg-[#B9FF66]", badge: "bg-[#191A23] text-[#B9FF66]", text: "text-[#191A23]", check: "text-[#191A23]", dark: false },
   { card: "bg-[#191A23]", badge: "bg-[#B9FF66] text-[#191A23]", text: "text-white", check: "text-[#B9FF66]", dark: true },
-  { card: "bg-[#F3F3F3]", badge: "bg-[#B9FF66] text-[#191A23]", text: "text-[#191A23]", check: "text-[#191A23]", dark: false },
+  { card: "bg-white", badge: "bg-[#B9FF66] text-[#191A23]", text: "text-[#191A23]", check: "text-[#191A23]", dark: false },
 ] as const;
 
 interface LegalPageLayoutProps {
@@ -62,7 +62,7 @@ export default function LegalPageLayout({
       <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Cabeçalho — mesmo padrão de seção das páginas de vendas */}
         <header className="space-y-6">
-          <div className="inline-flex items-center gap-3 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+          <div className="inline-flex items-center gap-3 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
             <Icon className="h-6 w-6" />
             {tag}
           </div>
@@ -72,7 +72,7 @@ export default function LegalPageLayout({
           <p className="text-base sm:text-lg font-medium text-[#191A23]/80 max-w-2xl leading-relaxed">
             {intro}
           </p>
-          <span className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-white px-4 py-2 text-xs font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+          <span className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-white px-4 py-2 text-xs font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
             Última atualização: {updatedAt}
           </span>
         </header>
@@ -87,11 +87,11 @@ export default function LegalPageLayout({
             return (
               <article
                 key={section.title}
-                className={`rounded-[45px] border-2 border-[#191A23] ${skin.card} p-6 sm:p-10 shadow-[6px_6px_0px_#191A23] hover:-translate-y-1 transition-transform`}
+                className={`rounded-[45px] border border-[#191A23]/10 ${skin.card} p-6 sm:p-10 shadow-[6px_6px_0px_#191A23] hover:-translate-y-1 transition-transform`}
               >
                 <div className="flex items-center justify-between gap-4 mb-6">
                   <span
-                    className={`inline-flex items-center rounded-xl border-2 border-[#191A23] ${skin.badge} px-4 py-1.5 text-xs font-black shadow-[2px_2px_0px_#191A23] font-mono`}
+                    className={`inline-flex items-center rounded-xl border border-[#191A23]/10 ${skin.badge} px-4 py-1.5 text-xs font-black shadow-[2px_2px_0px_#191A23] font-mono`}
                   >
                     {number}
                   </span>
@@ -126,7 +126,7 @@ export default function LegalPageLayout({
         </div>
 
         {/* Contato — cópia da caixa escura das páginas de vendas */}
-        <div className="mt-10 rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-12 text-white shadow-[8px_8px_0px_#191A23]">
+        <div className="mt-10 rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 sm:p-12 text-white shadow-[8px_8px_0px_#191A23]">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="space-y-3">
               <span className="inline-block rounded-lg bg-[#B9FF66] px-3 py-1 text-xs font-black text-[#191A23]">
@@ -141,7 +141,7 @@ export default function LegalPageLayout({
             </div>
             <a
               href={`mailto:${contactEmail}`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-6 py-3 text-sm font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:bg-[#B9FF66]/90 transition-colors whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-6 py-3 text-sm font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:bg-[#B9FF66]/90 transition-colors whitespace-nowrap"
             >
               <Mail className="h-4 w-4" />
               {contactEmail}

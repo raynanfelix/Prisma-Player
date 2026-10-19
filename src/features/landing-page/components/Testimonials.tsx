@@ -42,12 +42,12 @@ export default function Testimonials() {
   };
 
   return (
-    <section id="depoimentos" className="bg-[#F3F3F3] py-20">
+    <section id="depoimentos" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
             Depoimentos
           </div>
           <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
@@ -56,11 +56,11 @@ export default function Testimonials() {
         </div>
 
         {/* Testimonials Dark Container */}
-        <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-14 shadow-[4px_4px_0px_#191A23] text-white">
+        <div className="rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 sm:p-14 shadow-[4px_4px_0px_#191A23] text-white">
           
           <div className="mx-auto max-w-3xl">
             {/* Speech Bubble Box */}
-            <div className="relative rounded-[30px] border-2 border-[#B9FF66] bg-[#191A23] p-8 sm:p-10 shadow-[4px_4px_0px_#B9FF66]">
+            <div className="relative rounded-3xl border-2 border-[#B9FF66] bg-[#191A23] p-8 sm:p-10 shadow-[4px_4px_0px_#B9FF66]">
               {/* Star Ratings */}
               <div className="flex items-center gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (

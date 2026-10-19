@@ -31,12 +31,12 @@ export default function TeamSupport() {
   ];
 
   return (
-    <section className="bg-[#F3F3F3] py-20">
+    <section className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
             Tecnologia & Suporte Especializado
           </div>
           <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
@@ -51,11 +51,11 @@ export default function TeamSupport() {
             return (
               <div
                 key={idx}
-                className="relative rounded-[35px] border-2 border-[#191A23] bg-white p-6 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform"
+                className="relative rounded-3xl border border-[#191A23]/10 bg-white p-6 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform"
               >
                 <div>
                   <div className="flex items-center justify-between pb-4 border-b-2 border-[#191A23]">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
                       <IconComp className="h-6 w-6 text-[#191A23]" />
                     </div>
                     <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#191A23] bg-[#191A23] text-[#B9FF66]">

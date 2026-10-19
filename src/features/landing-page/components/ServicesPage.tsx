@@ -92,7 +92,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
         "Sem necessidade de criar páginas duplicadas",
       ],
       icon: Split,
-      bg: "bg-[#F3F3F3]",
+      bg: "bg-white",
       badgeBg: "bg-[#B9FF66]",
       textColor: "text-[#191A23]",
     },
@@ -158,7 +158,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
         "Ativação simples com um clique",
       ],
       icon: FastForward,
-      bg: "bg-[#F3F3F3]",
+      bg: "bg-white",
       badgeBg: "bg-[#B9FF66]",
       textColor: "text-[#191A23]",
     },
@@ -224,7 +224,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
         "Player exclusivo com a identidade da sua marca",
       ],
       icon: Palette,
-      bg: "bg-[#F3F3F3]",
+      bg: "bg-white",
       badgeBg: "bg-[#B9FF66]",
       textColor: "text-[#191A23]",
     },
@@ -315,17 +315,17 @@ export default function ServicesPage({ account }: ServicesPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F3F3F3] text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
+    <div className="min-h-screen bg-white text-[#191A23] font-sans antialiased selection:bg-[#B9FF66] selection:text-[#191A23]">
       <Nav account={account} />
 
       <main className="py-12 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
           
           {/* Section 1: Hero Header Banner (Positivus Figma Style) */}
-          <div className="rounded-[45px] border-2 border-[#191A23] bg-white p-8 sm:p-14 shadow-[8px_8px_0px_#191A23]">
+          <div className="rounded-[45px] border border-[#191A23]/10 bg-white p-8 sm:p-14 shadow-[8px_8px_0px_#191A23]">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8 space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+                <div className="inline-flex items-center gap-2 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
                   <Sparkles className="h-4 w-4" />
                   Serviços & Funcionalidades
                 </div>
@@ -338,7 +338,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
               </div>
 
               <div className="lg:col-span-4 flex justify-center">
-                <div className="w-full max-w-xs rounded-[35px] border-2 border-[#191A23] bg-[#191A23] p-6 text-white shadow-[6px_6px_0px_#B9FF66] text-center space-y-4">
+                <div className="w-full max-w-xs rounded-3xl border border-[#191A23]/10 bg-[#191A23] p-6 text-white shadow-[6px_6px_0px_#B9FF66] text-center space-y-4">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-[#B9FF66] bg-[#B9FF66] text-[#191A23]">
                     <Layers className="h-7 w-7" />
                   </div>
@@ -352,7 +352,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
           </div>
 
           {/* Section 2: CTA Notice Bar */}
-          <div className="rounded-[35px] border-2 border-[#191A23] bg-[#191A23] p-8 text-white shadow-[6px_6px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="rounded-3xl border border-[#191A23]/10 bg-[#191A23] p-8 text-white shadow-[6px_6px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-[#B9FF66] bg-[#B9FF66] text-[#191A23]">
                 <Zap className="h-6 w-6" />
@@ -368,7 +368,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
             </div>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#B9FF66] px-8 py-3.5 text-base font-black text-[#191A23] shadow-[3px_3px_0px_white] hover:bg-[#B9FF66]/90 transition-all whitespace-nowrap"
+              className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#B9FF66] px-8 py-3.5 text-base font-black text-[#191A23] shadow-[3px_3px_0px_white] hover:bg-[#B9FF66]/90 transition-all whitespace-nowrap"
             >
               Testar 14 Dias Grátis
             </Link>
@@ -377,7 +377,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
           {/* Section 3: How We Work / Process Steps (Matching Figma Image Star Badges) */}
           <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
                 Nosso Processo de Otimização
               </div>
               <p className="text-lg text-[#191A23]/80 font-medium max-w-xl">
@@ -389,9 +389,9 @@ export default function ServicesPage({ account }: ServicesPageProps) {
               {processSteps.map((step) => (
                 <div
                   key={step.num}
-                  className="rounded-[30px] border-2 border-[#191A23] bg-white p-6 sm:p-8 shadow-[4px_4px_0px_#191A23] flex items-center gap-6 hover:translate-x-1 transition-all"
+                  className="rounded-3xl border border-[#191A23]/10 bg-white p-6 sm:p-8 shadow-[4px_4px_0px_#191A23] flex items-center gap-6 hover:translate-x-1 transition-all"
                 >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] text-[#B9FF66] font-mono font-black text-2xl shadow-[2px_2px_0px_#B9FF66]">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] text-[#B9FF66] font-mono font-black text-2xl shadow-[2px_2px_0px_#B9FF66]">
                     {step.num}
                   </div>
                   <div>
@@ -406,12 +406,12 @@ export default function ServicesPage({ account }: ServicesPageProps) {
           {/* Section 4: Use Cases (Figma 3-Column Dark Box) */}
           <div className="space-y-8">
             <div className="flex items-center gap-4">
-              <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
                 Casos de Sucesso por Nicho
               </div>
             </div>
 
-            <div className="rounded-[45px] border-2 border-[#191A23] bg-[#191A23] p-8 sm:p-12 text-white shadow-[8px_8px_0px_#191A23]">
+            <div className="rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 sm:p-12 text-white shadow-[8px_8px_0px_#191A23]">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-white/20">
                 {caseStudies.map((cs, idx) => (
                   <div key={idx} className={`space-y-4 ${idx > 0 ? "pt-8 lg:pt-0 lg:pl-8" : ""}`}>
@@ -429,7 +429,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
           {/* Section 5: Our Other Services (The Complete 14 Features Grid) */}
           <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+              <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
                 Todos os Nossos Serviços & Recursos (14)
               </div>
               <p className="text-lg text-[#191A23]/80 font-medium max-w-xl">
@@ -444,13 +444,13 @@ export default function ServicesPage({ account }: ServicesPageProps) {
                 return (
                   <div
                     key={service.id}
-                    className={`rounded-[45px] border-2 border-[#191A23] ${service.bg} p-8 sm:p-10 shadow-[6px_6px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform`}
+                    className={`rounded-[45px] border border-[#191A23]/10 ${service.bg} p-8 sm:p-10 shadow-[6px_6px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform`}
                   >
                     <div>
                       {/* Header */}
                       <div className="flex items-center justify-between gap-4 mb-6">
                         <span
-                          className={`inline-block rounded-xl border-2 border-[#191A23] ${service.badgeBg} ${
+                          className={`inline-block rounded-xl border border-[#191A23]/10 ${service.badgeBg} ${
                             service.badgeText || "text-[#191A23]"
                           } px-4 py-1.5 text-xs font-black shadow-[2px_2px_0px_#191A23]`}
                         >
@@ -487,7 +487,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
                         href="/signup"
                         className="flex items-center gap-3 font-bold text-sm hover:opacity-80 transition-opacity"
                       >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#191A23] bg-[#191A23] text-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#191A23]/10 bg-[#191A23] text-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
                           <ArrowUpRight className="h-5 w-5" />
                         </div>
                         <span className={`${service.textColor} underline underline-offset-4 decoration-2`}>
@@ -495,7 +495,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
                         </span>
                       </Link>
 
-                      <div className={`p-3 rounded-2xl border-2 border-[#191A23] ${service.badgeBg} shadow-[2px_2px_0px_#191A23]`}>
+                      <div className={`p-3 rounded-2xl border border-[#191A23]/10 ${service.badgeBg} shadow-[2px_2px_0px_#191A23]`}>
                         <IconComp className="h-6 w-6 text-[#191A23]" />
                       </div>
                     </div>
@@ -506,7 +506,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
           </div>
 
           {/* Section 6: Bottom CTA Banner (Figma Bottom Box) */}
-          <div className="rounded-[45px] border-2 border-[#191A23] bg-[#B9FF66] p-8 sm:p-14 shadow-[8px_8px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="rounded-[45px] border border-[#191A23]/10 bg-[#B9FF66] p-8 sm:p-14 shadow-[8px_8px_0px_#191A23] flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="space-y-3 text-center md:text-left">
               <h2 className="text-3xl sm:text-4xl font-black text-[#191A23]">
                 Pronto para Escalar suas Vendas de VSL?
@@ -517,7 +517,7 @@ export default function ServicesPage({ account }: ServicesPageProps) {
             </div>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] bg-[#191A23] px-8 py-4 text-base font-black text-white shadow-[4px_4px_0px_white] hover:bg-[#191A23]/90 transition-all whitespace-nowrap"
+              className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-base font-black text-white shadow-[4px_4px_0px_white] hover:bg-[#191A23]/90 transition-all whitespace-nowrap"
             >
               Criar Conta Grátis
             </Link>

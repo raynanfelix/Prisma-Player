@@ -44,12 +44,12 @@ export default function WorkingProcess() {
   };
 
   return (
-    <section id="processo" className="bg-[#F3F3F3] py-20">
+    <section id="processo" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
             Como Funciona
           </div>
           <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
@@ -64,10 +64,10 @@ export default function WorkingProcess() {
             return (
               <div
                 key={step.id}
-                className={`rounded-[45px] border-2 border-[#191A23] transition-all duration-300 ${
+                className={`rounded-[45px] border border-[#191A23]/10 transition-all duration-300 ${
                   isOpen
                     ? "bg-white shadow-[3px_3px_0px_#B9FF66]"
-                    : "bg-[#F3F3F3] shadow-[2px_2px_0px_#191A23] hover:bg-white"
+                    : "bg-white shadow-[2px_2px_0px_#191A23] hover:bg-white"
                 } p-6 sm:p-10 cursor-pointer`}
                 onClick={() => toggleStep(idx)}
               >
@@ -83,7 +83,7 @@ export default function WorkingProcess() {
                   </div>
 
                   {/* Toggle Button */}
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#191A23] bg-white shadow-[2px_2px_0px_#191A23]">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#191A23]/10 bg-white shadow-[2px_2px_0px_#191A23]">
                     {isOpen ? (
                       <Minus className="h-6 w-6 text-[#191A23]" />
                     ) : (
