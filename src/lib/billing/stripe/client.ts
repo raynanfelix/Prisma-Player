@@ -62,14 +62,72 @@ export function getStripe(): Stripe {
 }
 
 /**
+ * Auto-provisionamento: se o lookup_key não existir no Stripe, o Price (e o
+ * Product embutido) é CRIADO na hora a partir desta definição local — o dono
+ * não precisa criar produto manualmente nem rodar o seed. O seed continua
+ * existindo para quem quiser provisionar tudo de uma vez.
+ */
+interface PriceDefinition {
+  productName: string;
+  amountCents: number;
+  recurring?: "month" | "year";
+  planSlug?: string;
+  description?: string;
+}
+
+const PRICE_DEFINITIONS: Record<string, PriceDefinition> = {
+  plano_iniciante_mensal: { productName: "Prisma Iniciante", amountCents: 6790, recurring: "month", planSlug: "iniciante", description: "Para produtores e afiliados testando e validando suas primeiras VSLs." },
+  plano_iniciante_anual: { productName: "Prisma Iniciante", amountCents: 53880, recurring: "year", planSlug: "iniciante", description: "Para produtores e afiliados testando e validando suas primeiras VSLs." },
+  plano_pro_mensal: { productName: "Prisma Pro", amountCents: 14790, recurring: "month", planSlug: "pro", description: "Para ofertas validadas com tráfego pago constante e trabalho recorrente de retenção." },
+  plano_pro_anual: { productName: "Prisma Pro", amountCents: 117480, recurring: "year", planSlug: "pro", description: "Para ofertas validadas com tráfego pago constante e trabalho recorrente de retenção." },
+  plano_escala_mensal: { productName: "Prisma Escala", amountCents: 34790, recurring: "month", planSlug: "escala", description: "Para agências, coprodutores e lançamentos de alto volume." },
+  plano_escala_anual: { productName: "Prisma Escala", amountCents: 275880, recurring: "year", planSlug: "escala", description: "Para agências, coprodutores e lançamentos de alto volume." },
+  creditos_ia_start: { productName: "Créditos IA — Start", amountCents: 1990, planSlug: "credits-start", description: "100 créditos da Prisma IA — não expiram." },
+  creditos_ia_pro: { productName: "Créditos IA — Pro", amountCents: 8990, planSlug: "credits-pro", description: "500 créditos + 100 de bônus da Prisma IA — não expiram." },
+  creditos_ia_escala: { productName: "Créditos IA — Escala", amountCents: 32990, planSlug: "credits-escala", description: "2.000 créditos + 500 de bônus da Prisma IA — não expiram." },
+};
+
+/**
+ * Cria o Price no Stripe a partir da definição local (product embutido).
+ * Race-safe: se dois checkouts simultâneos criarem o mesmo lookup_key, o
+ * segundo recebe "resource already exists" → re-lista e devolve o primeiro.
+ */
+async function autoProvisionPrice(stripe: Stripe, lookupKey: string, definition: PriceDefinition): Promise<string | null> {
+  try {
+    const price = await stripe.prices.create({
+      lookup_key: lookupKey,
+      unit_amount: definition.amountCents,
+      currency: "brl",
+      ...(definition.recurring ? { recurring: { interval: definition.recurring } } : {}),
+      product_data: {
+        name: definition.productName,
+        ...(definition.description ? { description: definition.description } : {}),
+        metadata: { prisma_plan: definition.planSlug ?? "" },
+      },
+    });
+    return price.id;
+  } catch (error) {
+    // Dois checkouts ao mesmo tempo criaram o mesmo lookup_key: o que chegou
+    // segundo falha com "resource_already_exists" — busca o que o primeiro criou.
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    if (message.includes("lookup_key") || message.includes("already exists")) {
+      const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+      return prices.data[0]?.id ?? null;
+    }
+    throw error;
+  }
+}
+
+/**
  * Resolve o ID do Price ativo pelo `lookup_key` (o catálogo vive no Stripe —
  * zero migration no nosso DB). Cache em memória com TTL de 10 min por lookup;
  * cache miss (ou TTL expirado) cai no `prices.list` — o caminho oficial de
- * busca por lookup_key. Miss não é cacheado: rodar o seed libera o checkout
- * imediatamente, sem esperar o TTL.
+ * busca por lookup_key. Se o lookup NÃO existe mas há definição local
+ * (auto-provisionamento), o Price é criado na hora. Miss não é cacheado:
+ * um price criado fora (seed/painel) libera o checkout na próxima chamada.
  *
- * Retorna null quando o lookup não existe (seed ainda não rodado, price
- * arquivado…). A rota converte isso num erro honesto para o cliente.
+ * Retorna null quando não existe nem no Stripe nem na definição local
+ * (lookup desconhecido → erro honesto na rota).
  */
 export async function resolvePriceByLookupKey(lookupKey: string): Promise<string | null> {
   const cache = priceCache();
@@ -78,7 +136,15 @@ export async function resolvePriceByLookupKey(lookupKey: string): Promise<string
 
   const stripe = getStripe();
   const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-  const priceId = prices.data[0]?.id ?? null;
+  let priceId: string | null = prices.data[0]?.id ?? null;
+
+  if (!priceId) {
+    const definition = PRICE_DEFINITIONS[lookupKey];
+    if (definition) {
+      priceId = await autoProvisionPrice(stripe, lookupKey, definition);
+    }
+  }
+
   if (priceId) {
     cache.set(lookupKey, { priceId, expiresAt: Date.now() + PRICE_CACHE_TTL_MS });
   }

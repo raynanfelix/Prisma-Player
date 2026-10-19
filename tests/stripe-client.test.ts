@@ -10,7 +10,11 @@ const { stripeState } = vi.hoisted(() => ({
   stripeState: {
     keys: [] as string[],
     listCalls: [] as Array<Record<string, unknown>>,
+    createCalls: [] as Array<Record<string, unknown>>,
+    listResponses: [] as Array<string | null>,
     priceId: "price_hit" as string | null,
+    createdPriceId: "price_auto_created" as string | null,
+    createShouldRace: false,
   },
 }));
 
@@ -22,7 +26,17 @@ vi.mock("stripe", () => {
     prices = {
       list: async (params: Record<string, unknown>) => {
         stripeState.listCalls.push(params);
-        return { data: stripeState.priceId ? [{ id: stripeState.priceId }] : [] };
+        const queued = stripeState.listResponses.length ? stripeState.listResponses.shift()! : stripeState.priceId;
+        return { data: queued ? [{ id: queued }] : [] };
+      },
+      create: async (params: Record<string, unknown>) => {
+        stripeState.createCalls.push(params);
+        if (stripeState.createShouldRace) {
+          stripeState.createShouldRace = false;
+          const error = new Error("Price with lookup_key already exists for this account") as Error & { statusCode?: number };
+          throw error;
+        }
+        return { id: stripeState.createdPriceId };
       },
     };
   }
@@ -37,7 +51,11 @@ beforeEach(() => {
   resetStripePriceCacheForTests();
   stripeState.keys = [];
   stripeState.listCalls = [];
+  stripeState.createCalls = [];
+  stripeState.listResponses = [];
   stripeState.priceId = "price_hit";
+  stripeState.createdPriceId = "price_auto_created";
+  stripeState.createShouldRace = false;
 });
 
 afterEach(() => {
@@ -82,13 +100,46 @@ describe("resolvePriceByLookupKey", () => {
     expect(stripeState.listCalls).toHaveLength(2);
   });
 
-  it("lookup inexistente → null SEM cachear o miss (seed posterior libera na hora)", async () => {
+  it("lookup conhecido sem price → AUTO-CRIA a partir da definição local (dono não precisa seed)", async () => {
     stripeState.priceId = null;
 
-    expect(await resolvePriceByLookupKey("plano_escala_anual")).toBeNull();
+    const created = await resolvePriceByLookupKey("plano_escala_anual");
 
+    expect(created).toBe("price_auto_created");
+    expect(stripeState.createCalls).toHaveLength(1);
+    const createParams = stripeState.createCalls[0] as Record<string, unknown>;
+    expect(createParams["lookup_key"]).toBe("plano_escala_anual");
+    expect(createParams["unit_amount"]).toBe(275880);
+    expect(createParams["currency"]).toBe("brl");
+    expect((createParams["recurring"] as Record<string, unknown>)["interval"]).toBe("year");
+    expect((createParams["product_data"] as Record<string, unknown>)["name"]).toBe("Prisma Escala");
+
+    // Criação cacheia o resultado (próxima chamada não re-cria).
+    await resolvePriceByLookupKey("plano_escala_anual");
+    expect(stripeState.createCalls).toHaveLength(1);
+  });
+
+  it("race de criação (lookup_key duplicado) → re-lista e devolve o price do vencedor", async () => {
+    // 1º list: vazio (ninguém criou ainda) → create falha com "already exists"
+    // (outra lambda venceu) → 2º list: o price do vencedor aparece.
+    stripeState.listResponses = [null, "price_from_winner"];
+    stripeState.createShouldRace = true;
+
+    const resolved = await resolvePriceByLookupKey("plano_pro_anual");
+
+    expect(resolved).toBe("price_from_winner");
+    expect(stripeState.listCalls).toHaveLength(2);
+  });
+
+  it("lookup DESCONHECIDO (sem definição local) → null SEM cachear o miss", async () => {
+    stripeState.priceId = null;
+
+    expect(await resolvePriceByLookupKey("lookup_que_nao_existe")).toBeNull();
+    expect(stripeState.createCalls).toHaveLength(0);
+
+    // Apareceu depois (ex.: criado no painel) → resolve na hora sem esperar TTL.
     stripeState.priceId = "price_now_there";
-    expect(await resolvePriceByLookupKey("plano_escala_anual")).toBe("price_now_there");
+    expect(await resolvePriceByLookupKey("lookup_que_nao_existe")).toBe("price_now_there");
     expect(stripeState.listCalls).toHaveLength(2);
   });
 
