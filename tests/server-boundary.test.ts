@@ -35,6 +35,8 @@ const PRIVILEGED = [
   "lib/posthog-server.ts",
   "lib/billing/service.ts",
   "lib/billing/ai-credits.ts",
+  "lib/billing/stripe/client.ts",
+  "lib/billing/stripe/webhook.ts",
   "lib/cron-tasks/tasks.ts",
   "lib/ai/nvidia.ts",
   "lib/api/guard.ts",

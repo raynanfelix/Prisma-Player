@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS "ai_credit_ledger" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "ai_credit_ledger_reference_unique" UNIQUE("reference"),
 	CONSTRAINT "ai_credit_ledger_amount_check" CHECK ("ai_credit_ledger"."amount" <> 0),
-	CONSTRAINT "ai_credit_ledger_reason_check" CHECK ("ai_credit_ledger"."reason" in ('purchase', 'plan_grant', 'usage', 'refund', 'adjustment'))
+	CONSTRAINT "ai_credit_ledger_reason_check" CHECK ("ai_credit_ledger"."reason" in ('purchase', 'plan_grant', 'usage', 'refund', 'adjustment', 'stripe_checkout'))
 );
 
 CREATE TABLE IF NOT EXISTS "ai_credit_products" (
@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS "payment_webhook_events" (
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"processed_at" timestamp with time zone,
 	CONSTRAINT "payment_webhook_events_provider_event_id_unique" UNIQUE("provider_event_id"),
-	CONSTRAINT "payment_webhook_events_provider_check" CHECK ("payment_webhook_events"."provider" = 'abacatepay'),
+	CONSTRAINT "payment_webhook_events_provider_check" CHECK ("payment_webhook_events"."provider" in ('abacatepay', 'stripe')),
 	CONSTRAINT "payment_webhook_events_status_check" CHECK ("payment_webhook_events"."status" in ('received', 'processing', 'processed', 'ignored', 'failed'))
 );
 
@@ -420,6 +420,7 @@ CREATE TABLE IF NOT EXISTS "profiles" (
 	"full_name" text,
 	"phone" text,
 	"avatar_url" text,
+	"stripe_customer_id" text,
 	"locale" text DEFAULT 'pt-BR' NOT NULL,
 	"email_notifications" boolean DEFAULT true NOT NULL,
 	"security_notifications" boolean DEFAULT true NOT NULL,
@@ -849,6 +850,25 @@ CREATE INDEX IF NOT EXISTS "videos_user_status_created_idx" ON "videos" USING bt
 CREATE INDEX IF NOT EXISTS "videos_folder_id_idx" ON "videos" USING btree ("folder_id");
 CREATE INDEX IF NOT EXISTS "videos_storage_provider_idx" ON "videos" USING btree ("storage_provider","status");
 CREATE INDEX IF NOT EXISTS "visibility_checks_target_idx" ON "visibility_checks" USING btree ("target_id","checked_at" DESC NULLS LAST);
+
+-- ============================================================================
+-- MIGRATIONS INCREMENTAIS (idempotentes) — Stripe Opção A (drizzle 0002)
+-- ============================================================================
+-- Para bancos criados ANTES do Stripe: o CREATE TABLE IF NOT EXISTS acima
+-- não altera tabelas existentes — este bloco converte o schema atual.
+-- Bancos novos já nascem com tudo (o DDL acima já reflete).
+
+-- Customer do Stripe criado no primeiro Checkout (portal + reuso de session).
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "stripe_customer_id" text;
+
+-- Idempotência de webhooks do Stripe: a MESMA tabela que a AbacatePay usa
+-- (o admin/UptimeCard continua lendo sem mudança) — libera o provider.
+ALTER TABLE "payment_webhook_events" DROP CONSTRAINT IF EXISTS "payment_webhook_events_provider_check";
+ALTER TABLE "payment_webhook_events" ADD CONSTRAINT "payment_webhook_events_provider_check" CHECK ("payment_webhook_events"."provider" in ('abacatepay', 'stripe'));
+
+-- Razão do ledger para compras de créditos via Stripe Checkout.
+ALTER TABLE "ai_credit_ledger" DROP CONSTRAINT IF EXISTS "ai_credit_ledger_reason_check";
+ALTER TABLE "ai_credit_ledger" ADD CONSTRAINT "ai_credit_ledger_reason_check" CHECK ("ai_credit_ledger"."reason" in ('purchase', 'plan_grant', 'usage', 'refund', 'adjustment', 'stripe_checkout'));
 
 -- ============================================================================
 -- ROW LEVEL SECURITY — habilita e restringe por proprietário (auth.user_id())

@@ -1,24 +1,29 @@
 import Image from "next/image";
-import { CheckCircle2, Construction, CreditCard, QrCode } from "lucide-react";
+import { CheckCircle2, CreditCard, QrCode } from "lucide-react";
 import { eq } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Reveal from "@/components/motion/reveal";
 import { requireUser } from "@/lib/auth/server";
 import { getAccountAccess, isSubscriptionEffective } from "@/lib/access/service";
 import { CATALOG_CREDIT_PACKAGES, CATALOG_PLANS, formatBRL, formatPlayOverage, getPlanBenefits } from "@/lib/billing/catalog";
+import { CreditsCheckoutButton, ManageSubscriptionButton, PlanCheckoutButton } from "@/features/account/components/BillingCheckoutButtons";
 import { db, schema } from "@/lib/db";
 
 const { aiCreditWallets, billingPlans, subscriptions } = schema;
 
 export const dynamic = "force-dynamic";
 
-export default async function BillingPage() {
+type BillingSearchParams = { checkout?: string };
+
+export default async function BillingPage({ searchParams }: { searchParams: Promise<BillingSearchParams> }) {
   const userId = await requireUser("/dashboard/billing");
-  const [subscriptionRows, access] = await Promise.all([
+  const [params, subscriptionRows, access] = await Promise.all([
+    searchParams,
     db.select({
       status: subscriptions.status,
       billingMethod: subscriptions.billingMethod,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
+      provider: subscriptions.provider,
       planSlug: billingPlans.slug,
       planName: billingPlans.name,
     })
@@ -40,12 +45,16 @@ export default async function BillingPage() {
     status: subscriptionRow.status,
     billing_method: subscriptionRow.billingMethod,
     current_period_end: subscriptionRow.currentPeriodEnd ? subscriptionRow.currentPeriodEnd.toISOString() : null,
+    provider: subscriptionRow.provider,
     plan: subscriptionRow.planSlug ? { slug: subscriptionRow.planSlug, name: subscriptionRow.planName ?? "" } : null,
   } : null;
   const plan = subscription?.plan ?? null;
   // Verdade efetiva, não status cru: linha `active` com período vencido é
   // plano terminado (o cron marca `expired`, mas a tela não pode mentir).
   const subActive = isSubscriptionEffective(subscription ? { status: subscription.status, current_period_end: subscription.current_period_end } : null);
+  // Portal só para assinatura DO Stripe (profiles.stripe_customer_id existe):
+  // assinatura legada (AbacatePay) continua com os CTAs de plano para migrar.
+  const showPortal = subActive && subscription?.provider === "stripe";
 
   return (
     <main className="dashboard-content pb-16 space-y-6">
@@ -54,7 +63,23 @@ export default async function BillingPage() {
         title="Plano, Faturamento & Créditos"
       />
 
-      <Reveal>
+      {params.checkout === "success" && (
+        <Reveal>
+          <div role="status" className="rounded-2xl border border-[#B9FF66]/40 bg-[#B9FF66]/10 px-5 py-4 text-xs font-medium text-[#191A23] dark:text-[#B9FF66]">
+            <strong className="font-bold">Pagamento confirmado — processando.</strong> A liberação do plano/créditos
+            acontece automaticamente em instantes (confirmação via webhook); se não aparecer, recarregue em alguns segundos.
+          </div>
+        </Reveal>
+      )}
+      {params.checkout === "cancelled" && (
+        <Reveal>
+          <div role="status" className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-card px-5 py-4 text-xs font-medium text-slate-600 dark:text-zinc-300">
+            Checkout cancelado — nenhuma cobrança foi feita.
+          </div>
+        </Reveal>
+      )}
+
+      <Reveal delay={0.04}>
         <section className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 sm:p-7 shadow-xs">
           {subActive ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -72,6 +97,7 @@ export default async function BillingPage() {
                 {subscription?.billing_method === "card" ? <CreditCard size={15} /> : <QrCode size={15} />}
                 {subscription?.billing_method === "card" ? "Cartão recorrente" : "Pix 30 dias"}
               </span>
+              {showPortal && <ManageSubscriptionButton />}
             </div>
           </div>
         ) : subscription?.status === "active" ? (
@@ -81,7 +107,7 @@ export default async function BillingPage() {
             </span>
             <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{plan?.name ?? "Plano Prisma Pro"} terminou em {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "—"}</h2>
             <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
-              Estamos integrando um novo provedor de pagamento — em breve você reativa seu plano por aqui.
+              Reative por aqui em segundos — o checkout já está no ar.
             </p>
           </div>
         ) : access.trialStatus === "active" ? (
@@ -98,7 +124,7 @@ export default async function BillingPage() {
           <div>
             <h2 className="text-xl font-bold text-[#191A23] dark:text-white">Nenhum plano ativo</h2>
             <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-              Quando os pagamentos voltarem, você assina o plano ideal para sua operação por aqui.
+              Assine o plano ideal para a sua operação por aqui — o checkout leva alguns segundos.
             </p>
           </div>
         )}
@@ -111,12 +137,9 @@ export default async function BillingPage() {
             <div>
               <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Planos Prisma Player</h2>
               <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                Escolha o plano ideal para a sua operação — a assinatura volta com o novo provedor de pagamento.
+                Escolha o plano ideal para a sua operação — assinatura recorrente com checkout Stripe.
               </p>
             </div>
-            <span className="flex items-center gap-1.5 rounded-full bg-[#B9FF66]/15 border border-[#B9FF66]/40 px-3 py-1 text-[11px] font-bold text-[#191A23] dark:text-[#B9FF66]">
-              <Construction size={13} aria-hidden /> Pagamentos em atualização
-            </span>
           </div>
           <div className="grid items-stretch gap-5 xl:grid-cols-3">
             {CATALOG_PLANS.map((item) => {
@@ -145,11 +168,20 @@ export default async function BillingPage() {
                       </li>
                     ))}
                   </ul>
-                  <span
-                    className={`mt-5 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold ${isCurrentPlan ? "bg-[#B9FF66] text-[#191A23]" : "border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-transparent text-slate-500 dark:text-zinc-400"}`}
-                  >
-                    {isCurrentPlan ? "Seu plano atual" : "Em breve com o novo provedor"}
-                  </span>
+                  {isCurrentPlan ? (
+                    <span className="mt-5 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold bg-[#B9FF66] text-[#191A23]">
+                      Seu plano atual
+                    </span>
+                  ) : showPortal ? (
+                    <span className="mt-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-transparent px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-zinc-400">
+                      Gerencie pelo portal
+                    </span>
+                  ) : (
+                    <PlanCheckoutButton
+                      planSlug={item.slug}
+                      label={subscription?.plan ? "Mudar para este plano" : "Assinar este plano"}
+                    />
+                  )}
                 </article>
               );
             })}
@@ -187,9 +219,7 @@ export default async function BillingPage() {
                   </p>
                 )}
                 <p className="text-xl font-bold text-[#191A23] dark:text-white">{formatBRL(item.amount_cents)}</p>
-                <span className="mt-1 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-transparent px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400">
-                  Em breve com o novo provedor
-                </span>
+                <CreditsCheckoutButton packageSlug={item.slug} />
               </article>
             ))}
           </div>

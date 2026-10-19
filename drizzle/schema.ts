@@ -62,6 +62,9 @@ export const profiles = pgTable(
     fullName: text("full_name"),
     phone: text("phone"),
     avatarUrl: text("avatar_url"),
+    // Customer do Stripe criado no primeiro Checkout — alimenta o
+    // Customer Portal e o reuso de customer nas próximas sessions.
+    stripeCustomerId: text("stripe_customer_id"),
     locale: text("locale").notNull().default("pt-BR"),
     emailNotifications: boolean("email_notifications").notNull().default(true),
     securityNotifications: boolean("security_notifications").notNull().default(true),
@@ -856,7 +859,7 @@ export const paymentWebhookEvents = pgTable(
     processedAt: timestamp("processed_at", { withTimezone: true }),
   },
   (t) => [
-    check("payment_webhook_events_provider_check", sql`${t.provider} = 'abacatepay'`),
+    check("payment_webhook_events_provider_check", sql`${t.provider} in ('abacatepay', 'stripe')`),
     check(
       "payment_webhook_events_status_check",
       sql`${t.status} in ('received', 'processing', 'processed', 'ignored', 'failed')`,
@@ -1011,7 +1014,7 @@ export const aiCreditLedger = pgTable(
     check("ai_credit_ledger_amount_check", sql`${t.amount} <> 0`),
     check(
       "ai_credit_ledger_reason_check",
-      sql`${t.reason} in ('purchase', 'plan_grant', 'usage', 'refund', 'adjustment')`,
+      sql`${t.reason} in ('purchase', 'plan_grant', 'usage', 'refund', 'adjustment', 'stripe_checkout')`,
     ),
     index("ai_credit_ledger_user_idx").on(t.userId, t.createdAt.desc()),
   ],

@@ -8,6 +8,8 @@
 - ❌ `CLOUDFLARE_PURGE_SECRET` / `SHARED_PURGE_SECRET`
 - ❌ `ABACATEPAY_API_KEY`
 - ❌ `ABACATEPAY_WEBHOOK_SECRET`
+- ❌ `STRIPE_SECRET_KEY` (use restricted key `rk_` no env — nunca em código)
+- ❌ `STRIPE_WEBHOOK_SECRET`
 - ❌ `CRON_SECRET`
 - ❌ `RESEND_API_KEY`
 - ❌ `NVIDIA_API_KEY`
