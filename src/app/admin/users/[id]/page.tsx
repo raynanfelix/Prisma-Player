@@ -141,7 +141,6 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const plan = subscription?.plan ?? null;
   const storageBytes = videos.reduce((sum, item) => sum + Number(item.size_bytes || 0), 0);
   const storageGb = storageBytes / 1024 ** 3;
-  const quotaGb = plan?.storage_gb ?? 5;
   const adminIds = [...new Set(logs.map((log) => log.admin_user_id))];
   const operators = adminIds.length ? await db.select({ id: profiles.id, email: profiles.email }).from(profiles).where(inArray(profiles.id, adminIds)) : [];
   const operatorEmail = new Map(operators.map((item) => [item.id, item.email]));
@@ -152,7 +151,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <AdminMetric label="Assinatura" value={subscriptionDisplayStatus(subscription ?? null)} detail={plan ? `${plan.name} · ${money(plan.amount_cents)}/mês` : "sem plano"} icon={CreditCard} tone={isSubscriptionEffective(subscription ?? null) ? "green" : "red"} />
       <AdminMetric label="Trial" value={access?.trial_status ?? "—"} detail={access?.trial_ends_at ? `até ${new Date(access.trial_ends_at).toLocaleDateString("pt-BR")}` : "sem trial ativo"} icon={Video} />
-      <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`limite ${quotaGb} GB · ${videos.length} vídeos`} icon={HardDrive} tone={storageGb > quotaGb ? "red" : "blue"} />
+      <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`sem limite · ${videos.length} vídeo${videos.length === 1 ? "" : "s"}`} icon={HardDrive} tone="blue" />
       <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetimeUsed ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
     </section>
 

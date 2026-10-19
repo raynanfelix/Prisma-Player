@@ -1,8 +1,8 @@
-import { Bell, CreditCard, Database, HardDrive, Play, Shield, Sparkles } from "lucide-react";
+import { Bell, CreditCard, Database, Play, Shield, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { AccountOverview, AccountProfile } from "@/features/account/model/types";
-import { formatBRL, formatStorageOverage } from "@/lib/billing/catalog";
+import { formatBRL } from "@/lib/billing/catalog";
 import { InfoRow, SettingsCard, SettingsSkeleton } from "./SettingsUi";
 
 export function OverviewPanel({
@@ -26,11 +26,11 @@ export function OverviewPanel({
       percent: plan?.included_plays ? (overview.usage.plays / plan.included_plays) * 100 : 0,
     },
     {
-      icon: HardDrive,
+      icon: Database,
       label: "Biblioteca",
-      value: `${storageGb.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} GB`,
-      detail: plan ? `de ${plan.storage_gb} GB` : `${overview.usage.videos} vídeos`,
-      percent: plan?.storage_gb ? (storageGb / plan.storage_gb) * 100 : 0,
+      value: `${overview.usage.videos.toLocaleString("pt-BR")} vídeo${overview.usage.videos === 1 ? "" : "s"}`,
+      detail: `${storageGb.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} GB — sem limite`,
+      percent: 0,
     },
     {
       icon: Sparkles,

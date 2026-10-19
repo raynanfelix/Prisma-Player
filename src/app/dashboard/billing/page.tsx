@@ -1,4 +1,5 @@
-import { CheckCircle2, Construction, CreditCard, QrCode, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { CheckCircle2, Construction, CreditCard, QrCode } from "lucide-react";
 import { eq } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Reveal from "@/components/motion/reveal";
@@ -175,8 +176,8 @@ export default async function BillingPage() {
                 key={item.id}
                 className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-5 shadow-xs space-y-2.5"
               >
-                <Sparkles size={26} aria-hidden className="absolute right-4 top-4 text-[#B9FF66] opacity-80" />
-                <p className="pr-10 text-sm font-bold text-[#191A23] dark:text-white">{item.name}</p>
+                <Image src="/prisma-credits.png" width={40} height={40} alt="" aria-hidden className="absolute right-4 top-4 size-10 object-contain opacity-90" />
+                <p className="pr-12 text-sm font-bold text-[#191A23] dark:text-white">{item.name}</p>
                 <p className="text-2xl font-bold text-[#191A23] dark:text-white">
                   {(item.credits + item.bonus_credits).toLocaleString("pt-BR")} <span className="text-xs font-normal text-slate-400 dark:text-zinc-500">créditos</span>
                 </p>

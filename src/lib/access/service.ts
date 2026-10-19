@@ -259,15 +259,13 @@ export async function getAccountPlan(ownerId: string): Promise<AccountPlan> {
       ? ALL_CAPABILITIES
       : NO_CAPABILITIES;
 
-  const storageGb = access.subscriptionActive && plan?.storage_gb
-    ? Number(plan.storage_gb)
-    : envInt("TRIAL_STORAGE_GB", 5);
-
+  // Storage não é mais cobrado nem limitado (decisão do dono 2026-10-18):
+  // a cota de bytes virou ilimitada; getStorageUsedBytes segue para custo interno.
   return {
     access,
     capabilities,
     quotas: {
-      storageBytes: Math.max(0, storageGb) * GB,
+      storageBytes: Number.MAX_SAFE_INTEGER,
       includedPlays: plan?.included_plays ?? null,
       aiAnalyses: plan?.prisma_ai_analyses ?? null,
       teamSeats: plan?.team_seats ?? 1,
