@@ -14,141 +14,163 @@ export default function ContactForm() {
   };
 
   return (
-    <section id="contato" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+    <section id="contato" className="scroll-mt-28 bg-[#FAFAFB] px-4 py-20 sm:px-6 md:py-28">
+      <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#191A23]/50 ring-1 ring-[#191A23]/[0.06]">
             Fale Conosco
-          </div>
-          <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
-            Tem alguma dúvida sobre migração de VSL, integração ou planos corporativos? Envie sua mensagem.
-          </p>
+          </span>
+          <h2 className="mt-5 text-balance text-[22px] font-medium leading-snug tracking-tight text-[#191A23] sm:text-[26px]">
+            Tem alguma dúvida sobre migração de VSL, integração ou planos corporativos? Envie sua
+            mensagem.
+          </h2>
         </div>
 
-        {/* Card Form */}
-        <div className="relative overflow-hidden rounded-[45px] border border-[#191A23]/10 bg-white p-8 sm:p-14 shadow-[8px_8px_0px_#191A23]">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Form Column */}
+        <div className="mt-14 rounded-[32px] border border-[#191A23]/[0.07] bg-white p-7 sm:p-10">
+          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12">
             <div className="lg:col-span-7">
               {submitted ? (
-                <div className="rounded-3xl border border-[#191A23]/10 bg-[#B9FF66] p-8 text-center space-y-4 shadow-[4px_4px_0px_#191A23]">
-                  <CheckCircle className="mx-auto h-12 w-12 text-[#191A23]" />
-                  <h3 className="text-2xl font-black text-[#191A23]">Mensagem Enviada com Sucesso!</h3>
-                  <p className="text-sm font-bold text-[#191A23]/80">
+                <div className="rounded-[24px] bg-[#B9FF66]/30 p-8 text-center">
+                  <CheckCircle className="mx-auto h-10 w-10 text-[#191A23]" />
+                  <h3 className="mt-4 text-[19px] font-semibold tracking-tight text-[#191A23]">
+                    Mensagem Enviada com Sucesso!
+                  </h3>
+                  <p className="mt-2 text-[13px] text-[#191A23]/60">
                     Nosso time técnico entrará em contato com você via e-mail ou WhatsApp.
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  
-                  {/* Radio Selection Positivus Style */}
-                  <div className="flex items-center gap-6 pb-2">
-                    <label className="flex items-center gap-3 cursor-pointer">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <fieldset className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                    <legend className="sr-only">Tipo de perfil</legend>
+                    <label className="flex cursor-pointer items-center gap-2.5">
                       <input
                         type="radio"
                         name="profile"
                         checked={profileType === "produtor"}
                         onChange={() => setProfileType("produtor")}
-                        className="h-5 w-5 accent-[#191A23] cursor-pointer"
+                        className="h-4 w-4 cursor-pointer accent-[#191A23]"
                       />
-                      <span className="text-base font-bold text-[#191A23]">Sou Produtor / Coprodutor</span>
+                      <span className="text-[13px] font-medium text-[#191A23]">
+                        Sou Produtor / Coprodutor
+                      </span>
                     </label>
 
-                    <label className="flex items-center gap-3 cursor-pointer">
+                    <label className="flex cursor-pointer items-center gap-2.5">
                       <input
                         type="radio"
                         name="profile"
                         checked={profileType === "afiliado"}
                         onChange={() => setProfileType("afiliado")}
-                        className="h-5 w-5 accent-[#191A23] cursor-pointer"
+                        className="h-4 w-4 cursor-pointer accent-[#191A23]"
                       />
-                      <span className="text-base font-bold text-[#191A23]">Sou Afiliado / Agência</span>
+                      <span className="text-[13px] font-medium text-[#191A23]">
+                        Sou Afiliado / Agência
+                      </span>
                     </label>
-                  </div>
+                  </fieldset>
 
-                  {/* Name Input */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-[#191A23]">Nome Completo*</label>
+                  <div className="space-y-1.5">
+                    <label htmlFor="contact-name" className="block text-[12px] font-medium text-[#191A23]/60">
+                      Nome Completo*
+                    </label>
                     <input
+                      id="contact-name"
                       type="text"
+                      name="name"
+                      autoComplete="name"
                       required
                       placeholder="Seu nome"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full rounded-2xl border border-[#191A23]/10 bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
+                      className="w-full rounded-2xl border border-[#191A23]/[0.08] bg-[#FAFAFB] px-4 py-3 text-[14px] text-[#191A23] outline-none transition placeholder:text-[#191A23]/30 focus:border-[#191A23]/20 focus:bg-white focus:ring-4 focus:ring-[#B9FF66]/30"
                     />
                   </div>
 
-                  {/* Email Input */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-[#191A23]">E-mail Corporativo ou WhatsApp*</label>
+                  <div className="space-y-1.5">
+                    <label htmlFor="contact-email" className="block text-[12px] font-medium text-[#191A23]/60">
+                      E-mail Corporativo ou WhatsApp*
+                    </label>
                     <input
+                      id="contact-email"
                       type="text"
+                      name="email"
+                      autoComplete="email"
+                      spellCheck={false}
                       required
                       placeholder="seuemail@empresa.com ou (11) 99999-9999"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-2xl border border-[#191A23]/10 bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
+                      className="w-full rounded-2xl border border-[#191A23]/[0.08] bg-[#FAFAFB] px-4 py-3 text-[14px] text-[#191A23] outline-none transition placeholder:text-[#191A23]/30 focus:border-[#191A23]/20 focus:bg-white focus:ring-4 focus:ring-[#B9FF66]/30"
                     />
                   </div>
 
-                  {/* Message Input */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-[#191A23]">Como podemos ajudar sua operação?*</label>
+                  <div className="space-y-1.5">
+                    <label htmlFor="contact-message" className="block text-[12px] font-medium text-[#191A23]/60">
+                      Como podemos ajudar sua operação?*
+                    </label>
                     <textarea
+                      id="contact-message"
+                      name="message"
                       rows={4}
                       required
-                      placeholder="Descreva seu volume de tráfego, dúvidas ou necessidades de migração..."
+                      placeholder="Descreva seu volume de tráfego, dúvidas ou necessidades de migração…"
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      className="w-full rounded-2xl border border-[#191A23]/10 bg-white px-5 py-4 text-base font-medium text-[#191A23] shadow-[3px_3px_0px_#191A23] focus:outline-none focus:bg-[#B9FF66]/20 transition-colors"
+                      className="w-full resize-none rounded-2xl border border-[#191A23]/[0.08] bg-[#FAFAFB] px-4 py-3 text-[14px] text-[#191A23] outline-none transition placeholder:text-[#191A23]/30 focus:border-[#191A23]/20 focus:bg-white focus:ring-4 focus:ring-[#B9FF66]/30"
                     />
                   </div>
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-3 rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-lg font-bold text-white shadow-[4px_4px_0px_#B9FF66] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer"
+                    className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#191A23] px-7 py-3.5 text-[14px] font-medium text-white transition hover:bg-[#191A23]/90 active:scale-[0.99]"
                   >
                     <span>Enviar Mensagem</span>
-                    <Send className="h-5 w-5 text-[#B9FF66]" />
+                    <Send className="h-4 w-4 text-[#B9FF66]" />
                   </button>
-
                 </form>
               )}
             </div>
 
-            {/* Positivus Graphic Card Column */}
-            <div className="lg:col-span-5 hidden lg:flex justify-center">
-              <div className="w-full max-w-sm rounded-3xl border border-[#191A23]/10 bg-[#191A23] p-8 text-white shadow-[6px_6px_0px_#B9FF66] space-y-6">
-                <div className="rounded-2xl border-2 border-[#B9FF66] bg-[#B9FF66] p-4 text-[#191A23]">
-                  <p className="text-xs font-black uppercase tracking-wider">Atendimento Prioritário</p>
-                  <p className="text-lg font-black mt-1">Resposta rápida por e-mail ou WhatsApp</p>
+            <div className="hidden lg:col-span-5 lg:block">
+              <div className="rounded-[26px] bg-[#191A23] p-7 text-white">
+                <div className="rounded-2xl bg-[#B9FF66] p-4 text-[#191A23]">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em]">
+                    Atendimento Prioritário
+                  </p>
+                  <p className="mt-1 text-[15px] font-semibold leading-snug">
+                    Resposta rápida por e-mail ou WhatsApp
+                  </p>
                 </div>
 
-                <div className="space-y-3 text-sm font-medium text-white/80">
-                  <p>✔ Migração gratuita de outros players</p>
-                  <p>✔ Suporte para integração no Elementor</p>
-                  <p>✔ Teste de carga e tráfego massivo</p>
-                  <p>✔ Acompanhamento de Pitch Delay</p>
-                </div>
+                <ul className="mt-6 space-y-3 text-[13px] text-white/70">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#B9FF66]" />
+                    Migração gratuita de outros players
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#B9FF66]" />
+                    Suporte para integração no Elementor
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#B9FF66]" />
+                    Teste de carga e tráfego massivo
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#B9FF66]" />
+                    Acompanhamento de Pitch Delay
+                  </li>
+                </ul>
 
-                <div className="pt-4 border-t border-white/20">
-                  <p className="text-xs font-mono text-[#B9FF66]">
+                <div className="mt-6 border-t border-white/10 pt-5">
+                  <p className="text-[11px] font-mono text-[#B9FF66]">
                     prisma_vsl_support_active // online
                   </p>
                 </div>
               </div>
             </div>
-
           </div>
-
         </div>
-
       </div>
     </section>
   );

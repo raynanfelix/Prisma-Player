@@ -11,22 +11,19 @@ export default function LogosBar() {
   ];
 
   return (
-    <section className="bg-white py-10 border-y-2 border-[#191A23]/10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-center text-xs font-bold uppercase tracking-widest text-[#191A23]/60 mb-6">
+    <section className="border-y border-[#191A23]/[0.06] bg-white py-12">
+      <div className="mx-auto max-w-5xl px-6">
+        <p className="text-center text-[11px] font-medium uppercase tracking-[0.18em] text-[#191A23]/35">
           Funciona com as principais plataformas e construtores do mercado digital
         </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
           {platforms.map((p) => (
-            <div
-              key={p.name}
-              className="flex flex-col items-center justify-center rounded-2xl border border-[#191A23]/10 bg-white p-4 text-center shadow-[3px_3px_0px_#191A23] hover:bg-[#B9FF66]/40 transition-colors group cursor-default"
-            >
-              <span className="text-base font-black text-[#191A23] tracking-tight">
+            <div key={p.name} className="group flex flex-col items-center gap-0.5">
+              <span className="text-[15px] font-semibold tracking-tight text-[#191A23]/45 transition-colors group-hover:text-[#191A23]/80">
                 {p.name}
               </span>
-              <span className="mt-1 text-[9px] font-bold tracking-wider text-[#191A23]/70 uppercase group-hover:text-[#191A23]">
+              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#191A23]/25">
                 {p.tag}
               </span>
             </div>

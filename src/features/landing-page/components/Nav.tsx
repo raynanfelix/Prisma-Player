@@ -50,104 +50,98 @@ export default function Nav({ account }: NavProps) {
 
   return (
     <header
-      className={`sticky top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 transition-all duration-300 ease-out will-change-transform ${
+      className={`sticky top-3 z-50 mx-auto -mb-[52px] w-full max-w-5xl px-4 sm:px-6 transition duration-300 ease-out will-change-transform ${
         hidden
           ? "-translate-y-[130%] opacity-0 pointer-events-none"
           : "translate-y-0 opacity-100"
       }`}
     >
-      {/* Floating Pill Container */}
+      {/* Pill flutuante translúcida sobre o céu do hero */}
       <div
-        className={`rounded-full border border-[#191A23]/10 bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between transition-all duration-300 ${
-          scrolled ? "py-2 shadow-[2px_2px_0px_#191A23]" : "py-2.5 shadow-[4px_4px_0px_#191A23]"
+        className={`flex items-center justify-between rounded-full border border-white/70 bg-white/75 px-2.5 py-2 backdrop-blur-xl transition duration-300 ${
+          scrolled
+            ? "shadow-[0_8px_30px_-16px_rgba(25,26,35,0.35)]"
+            : "shadow-[0_10px_40px_-20px_rgba(25,26,35,0.3)]"
         }`}
       >
-
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#191A23] text-[#B9FF66] shadow-[2px_2px_0px_#191A23] group-hover:scale-105 transition-transform">
-            <Play className="h-4 w-4 fill-[#B9FF66] ml-0.5" />
-          </div>
-          <span className="text-lg font-black tracking-tight text-[#191A23]">
-            Prisma<span className="font-light">Player</span>
+        <Link href="/" className="group flex items-center gap-2.5 pl-1.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#191A23] text-[#B9FF66] transition-transform duration-300 group-hover:scale-105">
+            <Play className="ml-0.5 h-3.5 w-3.5 fill-[#B9FF66]" />
+          </span>
+          <span className="text-[15px] font-semibold tracking-tight text-[#191A23]">
+            Prisma<span className="font-light text-[#191A23]/70">Player</span>
           </span>
         </Link>
 
-        {/* Center Desktop Links */}
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Principal">
           {navLinks.map((link) => (
             <a
               key={link.name}
               href={link.href}
-              className="text-xs sm:text-sm font-bold text-[#191A23]/80 hover:text-[#191A23] hover:bg-[#B9FF66] px-3 py-1.5 rounded-full transition-colors"
+              className="rounded-full px-3.5 py-2 text-[13px] font-medium text-[#191A23]/70 transition-colors hover:bg-[#191A23]/[0.04] hover:text-[#191A23]"
             >
               {link.name}
             </a>
           ))}
         </nav>
 
-        {/* Right Action CTAs */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden items-center gap-1.5 md:flex">
           {account ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] px-5 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+              className="inline-flex items-center justify-center rounded-full bg-[#191A23] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#191A23]/90"
             >
               Painel ({account.firstName})
             </Link>
           ) : (
             <>
               <Link
-                href="/signup"
-                className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] px-5 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
-              >
-                Testar Grátis
-              </Link>
-
-              <span className="text-[#191A23]/30 font-light">|</span>
-
-              <Link
                 href="/login"
-                className="text-xs font-bold text-[#191A23] hover:underline underline-offset-4 px-2"
+                className="rounded-full px-3.5 py-2 text-[13px] font-medium text-[#191A23]/70 transition-colors hover:bg-[#191A23]/[0.04] hover:text-[#191A23]"
               >
                 Entrar
+              </Link>
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center rounded-full bg-[#191A23] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-[#191A23]/90 active:scale-[0.98]"
+              >
+                Testar Grátis
               </Link>
             </>
           )}
         </div>
 
-        {/* Mobile Toggle Button */}
         <div className="flex lg:hidden">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-white p-2 text-[#191A23] shadow-[2px_2px_0px_#191A23]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#191A23] transition-colors hover:bg-[#191A23]/[0.05]"
             aria-label="Menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-
       </div>
 
-      {/* Mobile Menu Drawer */}
+      {/* Drawer mobile */}
       {mobileMenuOpen && (
-        <div className="mt-3 lg:hidden rounded-3xl border border-[#191A23]/10 bg-white p-5 shadow-[6px_6px_0px_#191A23] space-y-2">
+        <div className="mt-3 space-y-1 rounded-[28px] border border-white/70 bg-white/90 p-3 shadow-[0_24px_60px_-30px_rgba(25,26,35,0.45)] backdrop-blur-xl lg:hidden">
           {navLinks.map((link) => (
             <a
               key={link.name}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block rounded-2xl border border-[#191A23]/10 bg-white px-4 py-2.5 text-sm font-bold text-[#191A23]"
+              className="block rounded-2xl px-4 py-2.5 text-sm font-medium text-[#191A23]/80 transition-colors hover:bg-[#191A23]/[0.04] hover:text-[#191A23]"
             >
               {link.name}
             </a>
           ))}
-          <div className="pt-2 space-y-2">
+          <div className="space-y-2 pt-2">
             {account ? (
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] py-3 text-sm font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]"
+                className="flex w-full items-center justify-center rounded-full bg-[#191A23] py-3 text-sm font-medium text-white"
               >
                 Acessar Painel ({account.firstName})
               </Link>
@@ -156,14 +150,14 @@ export default function Nav({ account }: NavProps) {
                 <Link
                   href="/signup"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-[#B9FF66] py-3 text-sm font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]"
+                  className="flex w-full items-center justify-center rounded-full bg-[#191A23] py-3 text-sm font-medium text-white"
                 >
                   Testar 14 Dias Grátis
                 </Link>
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-white py-2.5 text-sm font-bold text-[#191A23] shadow-[2px_2px_0px_#191A23]"
+                  className="flex w-full items-center justify-center rounded-full border border-[#191A23]/10 bg-white py-3 text-sm font-medium text-[#191A23]"
                 >
                   Fazer Login
                 </Link>

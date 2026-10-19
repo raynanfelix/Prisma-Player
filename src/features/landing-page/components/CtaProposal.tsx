@@ -5,74 +5,75 @@ import { Sparkles, Play, CheckCircle2 } from "lucide-react";
 
 export default function CtaProposal() {
   return (
-    <section className="bg-white py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-[45px] border border-[#191A23]/10 bg-white p-8 sm:p-14 shadow-[4px_4px_0px_#191A23]">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-1.5 text-xs font-black uppercase text-[#191A23] shadow-[2px_2px_0px_#191A23]">
-                <Sparkles className="h-4 w-4" />
-                Sem necessidade de cartão de crédito
-              </div>
+    <section className="bg-white px-4 pb-20 sm:px-6 md:pb-28">
+      <div className="mx-auto max-w-5xl">
+        <div className="relative overflow-hidden rounded-[32px] border border-[#191A23]/[0.07] bg-[linear-gradient(135deg,#F6FFEF_0%,#FFFFFF_55%,#F4FAFF_100%)] p-8 sm:p-12">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#B9FF66]/25 blur-3xl"
+          />
 
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#191A23] tracking-tight leading-tight">
+          <div className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-12">
+            <div className="space-y-5 lg:col-span-7">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#191A23]/[0.07] bg-white/70 px-3 py-1 text-[11px] font-medium text-[#191A23]/60 backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" />
+                Sem necessidade de cartão de crédito
+              </span>
+
+              <h2 className="text-balance text-3xl font-semibold leading-[1.12] tracking-[-0.02em] text-[#191A23] sm:text-[40px]">
                 Pronto para mais retenção e mais vendas nas suas VSLs?
               </h2>
 
-              <p className="text-base sm:text-lg text-[#191A23]/80 font-medium leading-relaxed">
-                Configure seu primeiro vídeo em menos de 2 minutos. Importação simples por link ou upload direto, rápido pela CDN inclusa.
+              <p className="max-w-xl text-[15px] leading-relaxed text-[#191A23]/55">
+                Configure seu primeiro vídeo em menos de 2 minutos. Importação simples por link ou
+                upload direto, rápido pela CDN inclusa.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
                 <Link
                   href="/signup"
-                  className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] px-8 py-4 text-lg font-extrabold text-white shadow-[2px_2px_0px_#B9FF66] hover:bg-[#191A23]/90 hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-center"
+                  className="inline-flex items-center justify-center rounded-full bg-[#191A23] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#191A23]/90 active:scale-[0.99]"
                 >
                   Criar Conta Grátis por 14 Dias
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-2xl border border-[#191A23]/10 bg-white px-6 py-4 text-base font-bold text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-center"
+                  className="inline-flex items-center justify-center rounded-full border border-[#191A23]/10 bg-white/70 px-6 py-3 text-sm font-medium text-[#191A23] transition-colors hover:bg-white"
                 >
                   Já tenho conta
                 </Link>
               </div>
 
-              <div className="pt-2 flex flex-wrap gap-4 text-xs font-bold text-[#191A23]">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[#191A23] fill-[#B9FF66]" />
-                  <span>Setup instantâneo em 2 min</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[#191A23] fill-[#B9FF66]" />
-                  <span>Suporte prioritário via WhatsApp</span>
-                </div>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 pt-1 text-[12px] font-medium text-[#191A23]/50">
+                <span className="inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#191A23]/70" />
+                  Setup instantâneo em 2 min
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#191A23]/70" />
+                  Suporte prioritário via WhatsApp
+                </span>
               </div>
             </div>
 
-            {/* Right Graphic Positivus style */}
-            <div className="lg:col-span-5 relative flex justify-center">
-              <div className="w-full max-w-sm rounded-3xl border border-[#191A23]/10 bg-[#B9FF66] p-8 shadow-[3px_3px_0px_#191A23] text-center space-y-4">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#191A23] shadow-[3px_3px_0px_#191A23]">
-                  <Play className="h-8 w-8 text-[#B9FF66] fill-[#B9FF66] ml-1" />
-                </div>
-                <h3 className="text-xl font-black text-[#191A23]">
+            <div className="lg:col-span-5">
+              <div className="rounded-[26px] border border-[#191A23]/[0.07] bg-white/80 p-7 text-center shadow-[0_30px_60px_-45px_rgba(25,26,35,0.4)] backdrop-blur">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#191A23]">
+                  <Play className="ml-0.5 h-5 w-5 fill-[#B9FF66] text-[#B9FF66]" />
+                </span>
+                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-[#191A23]">
                   Feito para quem faz lançamento
                 </h3>
-                <p className="text-xs font-bold text-[#191A23]/80 leading-relaxed">
-                  A mesma tecnologia que você usa no dia a dia, na operação que roda VSL todos os dias.
+                <p className="mt-2 text-[12.5px] leading-relaxed text-[#191A23]/50">
+                  A mesma tecnologia que você usa no dia a dia, na operação que roda VSL todos os
+                  dias.
                 </p>
-                <div className="pt-2">
-                  <span className="inline-block rounded-xl border border-[#191A23] bg-white px-4 py-2 text-xs font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
-                    100% Compatível com WordPress & Elementor
-                  </span>
-                </div>
+                <span className="mt-5 inline-flex items-center rounded-full bg-[#B9FF66]/35 px-3.5 py-1.5 text-[11px] font-medium text-[#191A23]/80">
+                  100% Compatível com WordPress &amp; Elementor
+                </span>
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </section>

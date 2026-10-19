@@ -22,55 +22,46 @@ export default function CaseStudies() {
   ];
 
   return (
-    <section id="casos-de-uso" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
-            Casos de Uso & Resultados
-          </div>
-          <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
-            Veja como grandes operações de infoprodutos e afiliados usam o Prisma Player para escalar suas ofertas.
-          </p>
+    <section id="casos-de-uso" className="scroll-mt-28 bg-[#FAFAFB] py-20 md:py-28">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#191A23]/50 ring-1 ring-[#191A23]/[0.06]">
+            Casos de Uso &amp; Resultados
+          </span>
+          <h2 className="mt-5 text-balance text-[22px] font-medium leading-snug tracking-tight text-[#191A23] sm:text-[26px]">
+            Veja como grandes operações de infoprodutos e afiliados usam o Prisma Player para
+            escalar suas ofertas.
+          </h2>
         </div>
 
-        {/* Case Studies Dark Container */}
-        <div className="rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 sm:p-12 shadow-[4px_4px_0px_#191A23]">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-white/20">
-            {cases.map((item, idx) => (
-              <div
-                key={idx}
-                className={`flex flex-col justify-between space-y-6 ${
-                  idx > 0 ? "pt-8 lg:pt-0 lg:pl-8" : ""
-                }`}
-              >
-                <div className="space-y-4">
-                  <span className="inline-block rounded-lg bg-[#B9FF66] px-3 py-1 text-xs font-black text-[#191A23]">
-                    {item.metric}
-                  </span>
-                  <h3 className="text-xl font-black text-white leading-snug">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm font-normal text-white/80 leading-relaxed">
-                    {item.text}
-                  </p>
-                </div>
-
-                <div>
-                  <a
-                    href="/signup"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-[#B9FF66] hover:underline underline-offset-4"
-                  >
-                    <span>Ver como aplicar no seu funil</span>
-                    <ArrowUpRight className="h-4 w-4 text-[#B9FF66]" />
-                  </a>
-                </div>
+        <div className="mt-14 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {cases.map((item, idx) => (
+            <article
+              key={idx}
+              className="flex flex-col justify-between rounded-[26px] border border-[#191A23]/[0.07] bg-white p-7 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_60px_-40px_rgba(25,26,35,0.35)]"
+            >
+              <div>
+                <span className="inline-flex rounded-full bg-[#B9FF66]/35 px-3 py-1 text-[11px] font-semibold text-[#191A23]">
+                  {item.metric}
+                </span>
+                <h3 className="mt-5 text-[17px] font-semibold leading-snug tracking-tight text-[#191A23]">
+                  {item.title}
+                </h3>
+                <p className="mt-2.5 text-[13.5px] leading-relaxed text-[#191A23]/55">
+                  {item.text}
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
 
+              <a
+                href="/signup"
+                className="mt-6 inline-flex items-center gap-1.5 border-t border-[#191A23]/[0.06] pt-4 text-[13px] font-medium text-[#191A23]/80 transition-colors hover:text-[#191A23]"
+              >
+                Ver como aplicar no seu funil
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );

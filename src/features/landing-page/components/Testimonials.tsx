@@ -42,88 +42,73 @@ export default function Testimonials() {
   };
 
   return (
-    <section id="depoimentos" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
+    <section id="depoimentos" className="scroll-mt-28 bg-white py-20 md:py-28">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center rounded-full bg-[#B9FF66]/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#191A23]/70">
             Depoimentos
-          </div>
-          <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
+          </span>
+          <h2 className="mt-5 text-balance text-[22px] font-medium leading-snug tracking-tight text-[#191A23] sm:text-[26px]">
             O que dizem os grandes produtores e afiliados que utilizam o Prisma Player diariamente.
-          </p>
+          </h2>
         </div>
 
-        {/* Testimonials Dark Container */}
-        <div className="rounded-[45px] border border-[#191A23]/10 bg-[#191A23] p-8 sm:p-14 shadow-[4px_4px_0px_#191A23] text-white">
-          
-          <div className="mx-auto max-w-3xl">
-            {/* Speech Bubble Box */}
-            <div className="relative rounded-3xl border-2 border-[#B9FF66] bg-[#191A23] p-8 sm:p-10 shadow-[4px_4px_0px_#B9FF66]">
-              {/* Star Ratings */}
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-[#B9FF66] text-[#B9FF66]" />
-                ))}
+        <div className="mx-auto mt-14 max-w-3xl">
+          <div className="rounded-[28px] border border-[#191A23]/[0.07] bg-[#FAFAFB] p-8 sm:p-10">
+            <div className="flex items-center gap-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-[#B9FF66] text-[#B9FF66]" />
+              ))}
+            </div>
+
+            <blockquote className="mt-5 text-[19px] font-normal leading-relaxed tracking-[-0.01em] text-[#191A23] sm:text-[22px]">
+              &ldquo;{testimonials[currentIndex].quote}&rdquo;
+            </blockquote>
+
+            <div className="mt-6 flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#191A23] text-[12px] font-semibold text-[#B9FF66]">
+                {testimonials[currentIndex].name.charAt(0)}
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-[#191A23]">
+                  {testimonials[currentIndex].name}
+                </p>
+                <p className="text-[11.5px] text-[#191A23]/45">{testimonials[currentIndex].role}</p>
               </div>
-
-              <p className="text-lg sm:text-xl font-normal text-white leading-relaxed italic">
-                &quot;{testimonials[currentIndex].quote}&quot;
-              </p>
-
-              {/* Bubble Arrow Tail */}
-              <div className="absolute -bottom-4 left-12 h-6 w-6 rotate-45 border-r-2 border-b-2 border-[#B9FF66] bg-[#191A23]" />
             </div>
-
-            {/* Author Info */}
-            <div className="mt-8 pl-6 space-y-1">
-              <h4 className="text-xl font-black text-[#B9FF66]">
-                {testimonials[currentIndex].name}
-              </h4>
-              <p className="text-sm font-semibold text-white/70">
-                {testimonials[currentIndex].role}
-              </p>
-            </div>
-
-            {/* Controls & Pagination Dots */}
-            <div className="mt-10 flex items-center justify-between pt-6 border-t border-white/10">
-              <button
-                onClick={prevSlide}
-                className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-[#191A23] text-white hover:border-[#B9FF66] hover:text-[#B9FF66] transition-colors"
-                aria-label="Anterior"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-
-              <div className="flex items-center gap-2">
-                {testimonials.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`h-3 rounded-full transition-all ${
-                      idx === currentIndex
-                        ? "w-8 bg-[#B9FF66]"
-                        : "w-3 bg-white/40 hover:bg-white"
-                    }`}
-                    aria-label={`Ir para depoimento ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
-              <button
-                onClick={nextSlide}
-                className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-[#191A23] text-white hover:border-[#B9FF66] hover:text-[#B9FF66] transition-colors"
-                aria-label="Próximo"
-              >
-                <ArrowRight className="h-5 w-5" />
-              </button>
-            </div>
-
           </div>
 
-        </div>
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              onClick={prevSlide}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#191A23]/[0.08] bg-white text-[#191A23]/60 transition-colors hover:text-[#191A23]"
+              aria-label="Anterior"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
 
+            <div className="flex items-center gap-1.5">
+              {testimonials.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`h-1.5 rounded-full transition-[width,background-color] ${
+                    idx === currentIndex ? "w-6 bg-[#191A23]" : "w-1.5 bg-[#191A23]/20 hover:bg-[#191A23]/40"
+                  }`}
+                  aria-label={`Ir para depoimento ${idx + 1}`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={nextSlide}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#191A23]/[0.08] bg-white text-[#191A23]/60 transition-colors hover:text-[#191A23]"
+              aria-label="Próximo"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );

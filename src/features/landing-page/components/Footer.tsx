@@ -14,110 +14,97 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-white pt-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Main Footer Container (Dark Positivus) */}
-        <div className="rounded-t-[45px] border-2 border-b-0 border-[#191A23] bg-[#191A23] p-8 sm:p-14 text-white shadow-[8px_-4px_0px_#191A23]">
-          
-          {/* Top Row: Logo & Nav Links */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-12 border-b border-white/20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#B9FF66] text-[#191A23]">
-                <Play className="h-5 w-5 fill-[#191A23] ml-0.5" />
-              </div>
-              <span className="text-2xl font-black tracking-tight text-white">
-                Prisma<span className="text-[#B9FF66] font-light">Player</span>
-              </span>
+    <footer className="bg-white px-4 pb-8 pt-4 sm:px-6">
+      <div className="mx-auto max-w-5xl overflow-hidden rounded-[32px] bg-[#191A23] p-8 text-white sm:p-12">
+        <div className="flex flex-col justify-between gap-8 border-b border-white/10 pb-10 md:flex-row md:items-center">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B9FF66]">
+              <Play className="ml-0.5 h-3.5 w-3.5 fill-[#191A23]" />
+            </span>
+            <span className="text-[17px] font-semibold tracking-tight text-white">
+              Prisma<span className="font-light text-white/60">Player</span>
+            </span>
+          </Link>
+
+          <nav className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px] font-medium text-white/60">
+            <Link href="/services" className="transition-colors hover:text-[#B9FF66]">
+              Serviços
             </Link>
-
-            {/* Nav Links */}
-            <div className="flex flex-wrap items-center gap-6 text-sm font-bold">
-              <Link href="/services" className="hover:text-[#B9FF66] transition-colors">
-                Serviços
-              </Link>
-              <Link href="/about" className="hover:text-[#B9FF66] transition-colors">
-                Sobre Nós
-              </Link>
-              <Link href="/pricing" className="hover:text-[#B9FF66] transition-colors">
-                Preços
-              </Link>
-              <Link href="/#casos-de-uso" className="hover:text-[#B9FF66] transition-colors">
-                Casos de Uso
-              </Link>
-              <Link href="/#processo" className="hover:text-[#B9FF66] transition-colors">
-                Como Funciona
-              </Link>
-            </div>
-          </div>
-
-          {/* Middle Row: Contact Info & Newsletter Form */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 py-12 border-b border-white/20 items-center">
-            
-            {/* Contact Info Box */}
-            <div className="lg:col-span-6 space-y-4">
-              <span className="inline-block rounded-lg bg-[#B9FF66] px-3 py-1 text-xs font-black text-[#191A23]">
-                Contato & Suporte
-              </span>
-              <p className="text-sm font-medium text-white/80 leading-relaxed">
-                E-mail: suporte@prismaplayer.com.br
-              </p>
-              <p className="text-sm font-medium text-white/80 leading-relaxed">
-                WhatsApp: +55 (11) 98765-4321
-              </p>
-              <p className="text-sm font-medium text-white/80 leading-relaxed">
-                Atendimento de Segunda a Domingo com Suporte Técnico 24/7
-              </p>
-            </div>
-
-            {/* Newsletter Box */}
-            <div className="lg:col-span-6 rounded-3xl border-2 border-white/20 bg-[#292A32] p-6 sm:p-8">
-              {subscribed ? (
-                <div className="flex items-center gap-3 text-[#B9FF66] font-bold text-sm">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>Cadastrado com sucesso! Enviaremos as melhores dicas de retenção.</span>
-                </div>
-              ) : (
-                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-stretch gap-3">
-                  <input
-                    type="email"
-                    required
-                    placeholder="Digite seu melhor e-mail..."
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-sm font-medium text-white placeholder-white/50 focus:outline-none focus:border-[#B9FF66]"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-6 py-3 text-sm font-black text-[#191A23] shadow-[2px_2px_0px_#191A23] hover:bg-[#B9FF66]/90 transition-colors whitespace-nowrap cursor-pointer"
-                  >
-                    Inscrever-se
-                  </button>
-                </form>
-              )}
-            </div>
-
-          </div>
-
-          {/* Bottom Row: Copyright & Legal */}
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-white/60">
-            <p>© {new Date().getFullYear()} Prisma Player. Todos os direitos reservados.</p>
-            <div className="flex items-center gap-6">
-              <Link href="/privacy" className="hover:text-white transition-colors">
-                Política de Privacidade
-              </Link>
-              <Link href="/terms" className="hover:text-white transition-colors">
-                Termos de Uso
-              </Link>
-              <Link href="/cookies" className="hover:text-white transition-colors">
-                Cookies
-              </Link>
-            </div>
-          </div>
-
+            <Link href="/about" className="transition-colors hover:text-[#B9FF66]">
+              Sobre Nós
+            </Link>
+            <Link href="/pricing" className="transition-colors hover:text-[#B9FF66]">
+              Preços
+            </Link>
+            <Link href="/#casos-de-uso" className="transition-colors hover:text-[#B9FF66]">
+              Casos de Uso
+            </Link>
+            <Link href="/#processo" className="transition-colors hover:text-[#B9FF66]">
+              Como Funciona
+            </Link>
+          </nav>
         </div>
 
+        <div className="grid grid-cols-1 items-center gap-8 py-10 lg:grid-cols-12">
+          <div className="space-y-2 lg:col-span-6">
+            <span className="inline-flex rounded-full bg-[#B9FF66] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#191A23]">
+              Contato &amp; Suporte
+            </span>
+            <p className="text-[13px] text-white/60">E-mail: suporte@prismaplayer.com.br</p>
+            <p className="text-[13px] text-white/60">WhatsApp: +55 (11) 98765-4321</p>
+            <p className="text-[13px] text-white/60">
+              Atendimento de Segunda a Domingo com Suporte Técnico 24/7
+            </p>
+          </div>
+
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 lg:col-span-6">
+            {subscribed ? (
+              <div className="flex items-center gap-2.5 text-[13px] font-medium text-[#B9FF66]">
+                <CheckCircle2 className="h-5 w-5 shrink-0" />
+                <span>Cadastrado com sucesso! Enviaremos as melhores dicas de retenção.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex flex-col items-stretch gap-2.5 sm:flex-row">
+                <label htmlFor="footer-email" className="sr-only">
+                  Seu e-mail
+                </label>
+                <input
+                  id="footer-email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  spellCheck={false}
+                  required
+                  placeholder="Digite seu melhor e-mail…"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-[13px] text-white outline-none transition placeholder:text-white/35 focus:border-[#B9FF66]/50 focus:bg-white/[0.1]"
+                />
+                <button
+                  type="submit"
+                  className="cursor-pointer whitespace-nowrap rounded-full bg-[#B9FF66] px-5 py-3 text-[13px] font-medium text-[#191A23] transition-colors hover:bg-[#a8f052]"
+                >
+                  Inscrever-se
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-[11.5px] text-white/40 sm:flex-row">
+          <p>© {new Date().getFullYear()} Prisma Player. Todos os direitos reservados.</p>
+          <div className="flex items-center gap-6">
+            <Link href="/privacy" className="transition-colors hover:text-white">
+              Política de Privacidade
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-white">
+              Termos de Uso
+            </Link>
+            <Link href="/cookies" className="transition-colors hover:text-white">
+              Cookies
+            </Link>
+          </div>
+        </div>
       </div>
     </footer>
   );

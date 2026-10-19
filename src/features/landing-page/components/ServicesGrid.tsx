@@ -8,153 +8,107 @@ export default function ServicesGrid() {
       id: "01",
       badgeTitle: "Pitch Delay",
       fullTitle: "Revele a oferta no segundo exato do seu pitch",
-      description: "Exiba o botão de compra, preço e checkout sincronizados ao tempo da sua VSL, inclusive se o lead pausar ou avançar o vídeo.",
-      bg: "bg-white",
-      badgeBg: "bg-[#B9FF66]",
-      badgeText: "text-[#191A23]",
-      textColor: "text-[#191A23]",
-      btnBg: "bg-[#191A23]",
-      btnIcon: "text-[#B9FF66]",
+      description:
+        "Exiba o botão de compra, preço e checkout sincronizados ao tempo da sua VSL, inclusive se o lead pausar ou avançar o vídeo.",
       icon: Clock,
     },
     {
       id: "02",
       badgeTitle: "CDN Instantânea",
       fullTitle: "Carregamento rápido, sem buffer",
-      description: "Infraestrutura global otimizada para o mercado brasileiro, para suas VSLs começarem a tocar rápido também em conexões 3G e 4G.",
-      bg: "bg-white",
-      badgeBg: "bg-[#B9FF66]",
-      badgeText: "text-[#191A23]",
-      textColor: "text-[#191A23]",
-      btnBg: "bg-[#191A23]",
-      btnIcon: "text-[#B9FF66]",
+      description:
+        "Infraestrutura global otimizada para o mercado brasileiro, para suas VSLs começarem a tocar rápido também em conexões 3G e 4G.",
       icon: Zap,
     },
     {
       id: "03",
       badgeTitle: "Proteção Anti-Download",
       fullTitle: "Sua VSL protegida contra downloads",
-      description: "Domínios permitidos, watermark dinâmico e recursos anti-download para ajudar a impedir a clonagem e o roubo da sua oferta.",
-      bg: "bg-[#191A23]",
-      badgeBg: "bg-[#B9FF66]",
-      badgeText: "text-[#191A23]",
-      textColor: "text-white",
-      btnBg: "bg-white",
-      btnIcon: "text-[#191A23]",
+      description:
+        "Domínios permitidos, watermark dinâmico e recursos anti-download para ajudar a impedir a clonagem e o roubo da sua oferta.",
       icon: Shield,
     },
     {
       id: "04",
       badgeTitle: "Autoplay com Som",
       fullTitle: "Mais atenção nos primeiros segundos",
-      description: "Reprodução automática inteligente com convite para ativar o som, para que o lead escute a mensagem desde o início.",
-      bg: "bg-white",
-      badgeBg: "bg-[#B9FF66]",
-      badgeText: "text-[#191A23]",
-      textColor: "text-[#191A23]",
-      btnBg: "bg-[#191A23]",
-      btnIcon: "text-[#B9FF66]",
+      description:
+        "Reprodução automática inteligente com convite para ativar o som, para que o lead escute a mensagem desde o início.",
       icon: Volume2,
     },
     {
       id: "05",
       badgeTitle: "Analytics de Retenção",
       fullTitle: "Gráfico segundo a segundo do comportamento",
-      description: "Saiba onde seus leads abandonam a VSL, quais partes geram mais re-assistidas e otimize sua copy com dados reais.",
-      bg: "bg-white",
-      badgeBg: "bg-[#B9FF66]",
-      badgeText: "text-[#191A23]",
-      textColor: "text-[#191A23]",
-      btnBg: "bg-[#191A23]",
-      btnIcon: "text-[#B9FF66]",
+      description:
+        "Saiba onde seus leads abandonam a VSL, quais partes geram mais re-assistidas e otimize sua copy com dados reais.",
       icon: LineChart,
     },
     {
       id: "06",
       badgeTitle: "Teste A/B Integrado",
       fullTitle: "Compare 2 VSLs ou thumbs no mesmo link",
-      description: "Descubra qual variação de copy ou início de vídeo converte mais, sem precisar alterar a página ou configurar ferramentas externas.",
-      bg: "bg-[#191A23]",
-      badgeBg: "bg-white",
-      badgeText: "text-[#191A23]",
-      textColor: "text-white",
-      btnBg: "bg-[#B9FF66]",
-      btnIcon: "text-[#191A23]",
+      description:
+        "Descubra qual variação de copy ou início de vídeo converte mais, sem precisar alterar a página ou configurar ferramentas externas.",
       icon: Split,
     },
   ];
 
   return (
-    <section id="recursos" className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
+    <section id="recursos" className="scroll-mt-28 bg-white py-20 md:py-28">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#B9FF66]/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#191A23]/70">
             Recursos da VSL
-          </div>
-          <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
+          </span>
+          <h2 className="mt-5 text-balance text-[22px] font-medium leading-snug tracking-tight text-[#191A23] sm:text-[26px]">
             Tecnologia feita para retenção e conversão do seu funil de vendas.
-          </p>
+          </h2>
         </div>
 
-        {/* 2-Column Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2">
           {services.map((item) => {
             const IconComponent = item.icon;
             return (
-              <div
+              <article
                 key={item.id}
-                className={`relative rounded-3xl border border-[#191A23]/10 ${item.bg} p-8 sm:p-10 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform`}
+                className="group relative flex flex-col rounded-[26px] border border-[#191A23]/[0.07] bg-white p-7 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_60px_-40px_rgba(25,26,35,0.45)]"
               >
-                <div>
-                  {/* Badge Header */}
-                  <div className="flex items-center justify-between gap-4 mb-6">
-                    <span
-                      className={`inline-block rounded-xl border border-[#191A23]/10 ${item.badgeBg} ${item.badgeText} px-4 py-1.5 text-base font-black shadow-[1px_1px_0px_#191A23]`}
-                    >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#B9FF66]/35 text-[#191A23]">
+                      <IconComponent className="h-4 w-4" />
+                    </span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#191A23]/40">
                       {item.badgeTitle}
                     </span>
-                    <span className={`text-2xl font-black ${item.textColor} opacity-40 font-mono`}>
-                      {item.id}
-                    </span>
                   </div>
-
-                  {/* Title & Description */}
-                  <h3 className={`text-2xl sm:text-3xl font-black ${item.textColor} tracking-tight leading-tight mb-4`}>
-                    {item.fullTitle}
-                  </h3>
-
-                  <p className={`text-base font-medium ${item.textColor} opacity-90 leading-relaxed`}>
-                    {item.description}
-                  </p>
+                  <span className="text-[11px] font-medium tabular-nums text-[#191A23]/20">
+                    {item.id}
+                  </span>
                 </div>
 
-                {/* Footer Action Button & Graphic Icon */}
-                <div className="mt-8 pt-6 border-t border-[#191A23]/15 flex items-center justify-between">
+                <h3 className="mt-6 text-[19px] font-semibold leading-snug tracking-tight text-[#191A23]">
+                  {item.fullTitle}
+                </h3>
+
+                <p className="mt-2.5 text-[14px] leading-relaxed text-[#191A23]/55">
+                  {item.description}
+                </p>
+
+                <div className="mt-6 flex items-center justify-between border-t border-[#191A23]/[0.06] pt-4">
                   <a
                     href="/signup"
-                    className="flex items-center gap-3 font-bold text-base hover:opacity-80 transition-opacity"
+                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#191A23] transition-opacity hover:opacity-70"
                   >
-                    <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border border-[#191A23]/10 ${item.btnBg} shadow-[1px_1px_0px_#191A23]`}
-                    >
-                      <ArrowUpRight className={`h-6 w-6 ${item.btnIcon}`} />
-                    </div>
-                    <span className={`${item.textColor} underline underline-offset-4 decoration-2`}>
-                      Ativar no seu funil
-                    </span>
+                    Ativar no seu funil
+                    <ArrowUpRight className="h-3.5 w-3.5" />
                   </a>
-
-                  <div className={`p-3 rounded-2xl border border-[#191A23]/10 ${item.badgeBg} shadow-[1px_1px_0px_#191A23]`}>
-                    <IconComponent className="h-7 w-7 text-[#191A23]" />
-                  </div>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
-
       </div>
     </section>
   );

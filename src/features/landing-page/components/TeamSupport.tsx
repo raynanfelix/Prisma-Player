@@ -1,88 +1,78 @@
 "use client";
 
-import { Share2, ShieldCheck, Headphones, Code, LineChart } from "lucide-react";
+import { ShieldCheck, Headphones, Code, LineChart } from "lucide-react";
 
 export default function TeamSupport() {
   const team = [
     {
       name: "Engenharia de CDN",
       role: "Infraestrutura & Velocidade",
-      experience: "Servidores distribuídos globalmente com cache em borda para garantir streaming sem travamentos no Brasil.",
+      experience:
+        "Servidores distribuídos globalmente com cache em borda para garantir streaming sem travamentos no Brasil.",
       icon: Code,
     },
     {
       name: "Especialistas em VSL",
       role: "Otimização de Retenção & Copy",
-      experience: "Equipe focada em ajudar você a ajustar o pitch delay, autoplay e gatilhos visuais para melhorar conversões.",
+      experience:
+        "Equipe focada em ajudar você a ajustar o pitch delay, autoplay e gatilhos visuais para melhorar conversões.",
       icon: LineChart,
     },
     {
       name: "Proteção & Controle de Domínio",
       role: "Segurança de Conteúdo",
-      experience: "Domínios permitidos, watermark dinâmico e recursos anti-download para o seu conteúdo.",
+      experience:
+        "Domínios permitidos, watermark dinâmico e recursos anti-download para o seu conteúdo.",
       icon: ShieldCheck,
     },
     {
       name: "Suporte VIP 24/7",
       role: "Atendimento Dedicado via WhatsApp",
-      experience: "Acompanhamento direto para sanar dúvidas de integração, domínios e configurações de funil a qualquer hora.",
+      experience:
+        "Acompanhamento direto para sanar dúvidas de integração, domínios e configurações de funil a qualquer hora.",
       icon: Headphones,
     },
   ];
 
   return (
-    <section className="bg-white py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-6 mb-16">
-          <div className="inline-flex items-center rounded-xl border border-[#191A23]/10 bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[3px_3px_0px_#191A23]">
-            Tecnologia & Suporte Especializado
-          </div>
-          <p className="max-w-xl text-lg text-[#191A23]/80 font-medium">
-            Time técnico especializado em manter a sua operação de VSL rodando 100% do tempo sem interrupções.
-          </p>
+    <section className="bg-[#FAFAFB] py-20 md:py-28">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#191A23]/50 ring-1 ring-[#191A23]/[0.06]">
+            Tecnologia &amp; Suporte Especializado
+          </span>
+          <h2 className="mt-5 text-balance text-[22px] font-medium leading-snug tracking-tight text-[#191A23] sm:text-[26px]">
+            Time técnico especializado em manter a sua operação de VSL rodando 100% do tempo sem
+            interrupções.
+          </h2>
         </div>
 
-        {/* 4 Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {team.map((member, idx) => {
             const IconComp = member.icon;
             return (
-              <div
+              <article
                 key={idx}
-                className="relative rounded-3xl border border-[#191A23]/10 bg-white p-6 shadow-[3px_3px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-transform"
+                className="flex flex-col rounded-[24px] border border-[#191A23]/[0.07] bg-white p-6 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_60px_-42px_rgba(25,26,35,0.35)]"
               >
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b-2 border-[#191A23]">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#191A23]/10 bg-[#B9FF66] shadow-[2px_2px_0px_#191A23]">
-                      <IconComp className="h-6 w-6 text-[#191A23]" />
-                    </div>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#191A23] bg-[#191A23] text-[#B9FF66]">
-                      <Share2 className="h-4 w-4" />
-                    </div>
-                  </div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#B9FF66]/35 text-[#191A23]">
+                  <IconComp className="h-4 w-4" />
+                </span>
 
-                  <div className="mt-4">
-                    <h3 className="text-xl font-black text-[#191A23] leading-snug">
-                      {member.name}
-                    </h3>
-                    <p className="text-xs font-bold text-[#191A23]/70 uppercase tracking-wider mt-1">
-                      {member.role}
-                    </p>
-                  </div>
-                </div>
+                <h3 className="mt-5 text-[16px] font-semibold leading-snug tracking-tight text-[#191A23]">
+                  {member.name}
+                </h3>
+                <p className="mt-1 text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#191A23]/35">
+                  {member.role}
+                </p>
 
-                <div className="mt-6 pt-4 border-t border-[#191A23]/15">
-                  <p className="text-xs font-medium text-[#191A23]/80 leading-relaxed">
-                    {member.experience}
-                  </p>
-                </div>
-              </div>
+                <p className="mt-4 border-t border-[#191A23]/[0.06] pt-4 text-[12.5px] leading-relaxed text-[#191A23]/55">
+                  {member.experience}
+                </p>
+              </article>
             );
           })}
         </div>
-
       </div>
     </section>
   );
