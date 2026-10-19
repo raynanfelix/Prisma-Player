@@ -116,17 +116,15 @@ export default function PricingSection() {
   ];
 
   return (
-    <section id="precos" className="bg-[#F3F3F3] py-20 border-t-2 border-[#191A23]/10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-20">
+    <section id="precos" className="bg-white py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-16">
 
-        {/* Section Header */}
+        {/* Section Header — estilo AbacatePay: título grande direto */}
         <div>
-          <div className="flex flex-col md:flex-row md:items-center gap-6 mb-6">
-            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
-              Preços & Planos
-            </div>
-          </div>
-          <p className="max-w-2xl text-lg text-[#191A23]/80 font-medium">
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#191A23]">
+            Preços & Planos
+          </h2>
+          <p className="mt-4 max-w-2xl text-base sm:text-lg font-medium text-[#191A23]/60">
             Preços transparentes para impulsionar a retenção e as vendas da sua VSL. A cobrança anual economiza 34%, e é a opção que mais clientes escolhem.
           </p>
         </div>
@@ -136,16 +134,16 @@ export default function PricingSection() {
           <div
             role="group"
             aria-label="Ciclo de cobrança"
-            className="inline-flex flex-wrap items-center justify-center gap-1 rounded-2xl border-2 border-[#191A23] bg-white p-1.5 shadow-[2px_2px_0px_#191A23]"
+            className="inline-flex flex-wrap items-center justify-center gap-1 rounded-full border border-[#191A23]/10 bg-white p-1.5 shadow-sm"
           >
             <button
               type="button"
               onClick={() => setIsAnnual(false)}
               aria-pressed={!isAnnual}
-              className={`rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
+              className={`rounded-full px-5 py-2.5 text-sm font-bold text-[#191A23] transition-all ${
                 !isAnnual
-                  ? "border-[#191A23] bg-[#191A23] text-white shadow-[1px_1px_0px_#191A23]"
-                  : "hover:bg-[#F3F3F3]"
+                  ? "bg-[#B9FF66] font-extrabold shadow-sm"
+                  : "text-[#191A23]/60 hover:text-[#191A23]"
               }`}
             >
               Cobrança Mensal
@@ -154,10 +152,10 @@ export default function PricingSection() {
               type="button"
               onClick={() => setIsAnnual(true)}
               aria-pressed={isAnnual}
-              className={`inline-flex items-center gap-2 rounded-xl border-2 border-transparent px-5 py-2.5 text-sm font-black text-[#191A23] transition-all sm:rounded-full ${
+              className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-[#191A23] transition-all ${
                 isAnnual
-                  ? "border-[#191A23] bg-[#B9FF66] shadow-[1px_1px_0px_#191A23]"
-                  : "hover:bg-[#F3F3F3]"
+                  ? "bg-[#B9FF66] font-extrabold shadow-sm"
+                  : "text-[#191A23]/60 hover:text-[#191A23]"
               }`}
             >
               Cobrança Anual
@@ -168,141 +166,138 @@ export default function PricingSection() {
           </div>
         </div>
 
-        {/* 3 Pricing Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-          {plans.map((plan, idx) => {
-            const isDark = plan.bg === "bg-[#191A23]";
-            return (
-              <div
-                key={idx}
-                className={`relative rounded-[35px] border-2 border-[#191A23] ${plan.bg} p-8 sm:p-10 shadow-[4px_4px_0px_#191A23] flex flex-col justify-between hover:-translate-y-1 transition-all ${
-                  plan.isFeatured ? "ring-4 ring-[#191A23]" : ""
-                }`}
-              >
-                {/* Featured Badge */}
-                {plan.isFeatured && (
-                  <span className="absolute top-6 right-6 rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-1 text-xs font-black text-[#191A23] uppercase tracking-wider shadow-[1px_1px_0px_#191A23]">
-                    {plan.badge}
+        {/* 3 Pricing Cards — estilo AbacatePay: card limpo, badge no topo, preço grande */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
+          {plans.map((plan, idx) => (
+            <div
+              key={idx}
+              className={`relative flex flex-col rounded-3xl bg-white p-8 sm:p-9 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 ${
+                plan.isFeatured
+                  ? "border-2 border-[#B9FF66] shadow-lg shadow-[#B9FF66]/20"
+                  : "border border-[#191A23]/10 shadow-sm"
+              }`}
+            >
+              {/* Featured Badge — pill no topo centralizado */}
+              {plan.isFeatured && (
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[#B9FF66] px-4 py-1 text-[10px] font-black text-[#191A23] uppercase tracking-widest shadow-sm">
+                  {plan.badge}
+                </span>
+              )}
+
+              <div className="flex flex-1 flex-col">
+                {/* Plan Name & Price */}
+                <h3 className="text-sm font-bold uppercase tracking-wide text-[#191A23]/50">{plan.name}</h3>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-5xl sm:text-6xl font-extrabold tracking-tight text-[#191A23]">
+                    R$ {isAnnual ? plan.priceAnnual : plan.priceMonthly}
                   </span>
-                )}
-
-                <div>
-                  {/* Plan Name & Price */}
-                  <h3 className={`text-2xl font-black ${plan.textColor}`}>{plan.name}</h3>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className={`text-4xl sm:text-5xl font-black ${plan.textColor} tracking-tight font-mono`}>
-                      R$ {isAnnual ? plan.priceAnnual : plan.priceMonthly}
-                    </span>
-                    <span className={`text-sm font-bold ${plan.textColor} opacity-70`}>
-                      /mês
-                    </span>
-                  </div>
-                  <p className={`mt-1 text-xs font-medium ${plan.textColor} opacity-70`}>
-                    {isAnnual
-                      ? `no plano anual, cobrado ${plan.annualTotal} à vista`
-                      : "na cobrança mensal, sem fidelidade"}
-                  </p>
-
-                  <p className={`mt-4 text-xs font-medium ${plan.textColor} opacity-80 min-h-10 leading-relaxed`}>
-                    {plan.description}
-                  </p>
-
-                  {/* CTAs Inside Card */}
-                  <div className="mt-6 space-y-3">
-                    <Link
-                      href="/signup"
-                      className={`w-full inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] ${plan.btnPrimaryBg} ${plan.btnPrimaryText} px-6 py-3.5 text-sm font-extrabold shadow-[2px_2px_0px_#191A23] hover:opacity-90 transition-all text-center`}
-                    >
-                      Testar 14 Dias Grátis
-                    </Link>
-
-                    <a
-                      href="#contato"
-                      className={`w-full inline-flex items-center justify-center rounded-2xl border-2 border-[#191A23] ${plan.btnSecondaryBg} ${plan.btnSecondaryText} px-6 py-3.5 text-sm font-bold hover:bg-[#B9FF66]/20 transition-all text-center`}
-                    >
-                      Falar com Vendas
-                    </a>
-                  </div>
-
-                  {/* Capacity Badges */}
-                  <div className="mt-6 pt-6 border-t border-[#191A23]/20 space-y-2">
-                    <div className={`rounded-xl border border-[#191A23]/20 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-2.5 text-xs font-bold ${plan.textColor} flex items-center gap-2`}>
-                      <Zap className="h-4 w-4 shrink-0 text-[#B9FF66]" />
-                      <span>{plan.plays}</span>
-                    </div>
-                    <div className={`rounded-xl border border-[#191A23]/20 ${isDark ? "bg-white/10" : "bg-[#F3F3F3]"} p-2.5 text-xs font-bold ${plan.textColor} flex items-center gap-2`}>
-                      <Package className="h-4 w-4 shrink-0 text-[#B9FF66]" />
-                      <span>R$ 0,02 por play adicional</span>
-                    </div>
-                  </div>
-
-                  {/* Feature Checkmarks List */}
-                  <div className="mt-6 space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#B9FF66] border border-[#191A23]">
-                          <Check className="h-3.5 w-3.5 text-[#191A23]" />
-                        </div>
-                        <span className={`text-xs font-semibold ${plan.textColor} opacity-90`}>
-                          {feature}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <span className="text-sm font-semibold text-[#191A23]/50">/mês</span>
                 </div>
+                <p className="mt-1 text-xs font-medium text-[#191A23]/50">
+                  {isAnnual
+                    ? `no plano anual, cobrado ${plan.annualTotal} à vista`
+                    : "na cobrança mensal, sem fidelidade"}
+                </p>
 
-                {/* Footer Link */}
-                <div className="mt-8 pt-4 border-t border-[#191A23]/15">
+                <p className="mt-4 text-sm font-medium text-[#191A23]/70 leading-relaxed">
+                  {plan.description}
+                </p>
+
+                {/* CTAs Inside Card — featured sólido verde, demais outline */}
+                <div className="mt-6 space-y-2.5">
                   <Link
                     href="/signup"
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${plan.textColor} underline underline-offset-4`}
+                    className={`w-full inline-flex items-center justify-center rounded-full px-6 py-3.5 text-sm font-bold transition-all text-center ${
+                      plan.isFeatured
+                        ? "bg-[#B9FF66] text-[#191A23] font-extrabold hover:bg-[#a8f052] shadow-sm"
+                        : "bg-[#191A23] text-white hover:bg-[#191A23]/90"
+                    }`}
                   >
-                    <span>Ver todos os limites técnicos</span>
-                    <ArrowUpRight className="h-4 w-4" />
+                    Testar 14 Dias Grátis
                   </Link>
+
+                  <a
+                    href="#contato"
+                    className="w-full inline-flex items-center justify-center rounded-full border border-[#191A23]/15 px-6 py-3.5 text-sm font-bold text-[#191A23]/70 transition-all text-center hover:border-[#191A23]/30 hover:text-[#191A23]"
+                  >
+                    Falar com Vendas
+                  </a>
+                </div>
+
+                {/* Capacity Badges — pill simples */}
+                <div className="mt-6 space-y-2">
+                  <div className="flex items-center gap-2 rounded-full bg-[#B9FF66]/10 px-3.5 py-2 text-xs font-bold text-[#191A23]">
+                    <Zap className="h-4 w-4 shrink-0 text-[#191A23]" />
+                    <span>{plan.plays}</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full bg-[#191A23]/5 px-3.5 py-2 text-xs font-bold text-[#191A23]/70">
+                    <Package className="h-4 w-4 shrink-0" />
+                    <span>R$ 0,02 por play adicional</span>
+                  </div>
+                </div>
+
+                {/* Feature Checkmarks List — check verde simples */}
+                <div className="mt-6 space-y-2.5 border-t border-[#191A23]/8 pt-6">
+                  {plan.features.map((feature, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <Check className="h-4 w-4 shrink-0 text-[#191A23]" strokeWidth={3} />
+                      <span className="text-xs font-semibold text-[#191A23]/80">
+                        {feature}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            );
-          })}
+
+              {/* Footer Link */}
+              <div className="mt-8">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#191A23]/50 transition-colors hover:text-[#191A23]"
+                >
+                  <span>Ver todos os limites técnicos</span>
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* FAQ Section */}
-        <div className="pt-12 space-y-10">
-          <div className="flex items-center gap-4">
-            <div className="inline-flex items-center rounded-xl border-2 border-[#191A23] bg-[#B9FF66] px-4 py-2 text-2xl font-black text-[#191A23] shadow-[2px_2px_0px_#191A23]">
-              Perguntas Frequentes (FAQ)
-            </div>
-          </div>
+        {/* FAQ Section — estilo AbacatePay: card limpo com divisória suave */}
+        <div className="pt-14 space-y-8">
+          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#191A23]">
+            Perguntas Frequentes (FAQ)
+          </h3>
 
-          <div className="space-y-5">
+          <div className="space-y-3">
             {faqs.map((faq, idx) => {
               const isOpen = openFaq === idx;
               return (
                 <div
                   key={idx}
-                  className={`rounded-[30px] border-2 border-[#191A23] transition-all duration-300 ${
+                  className={`rounded-2xl border transition-all duration-300 cursor-pointer ${
                     isOpen
-                      ? "bg-white shadow-[3px_3px_0px_#B9FF66]"
-                      : "bg-[#F3F3F3] shadow-[2px_2px_0px_#191A23] hover:bg-white"
-                  } p-6 sm:p-8 cursor-pointer`}
+                      ? "border-[#191A23]/15 bg-white shadow-sm"
+                      : "border-[#191A23]/8 bg-[#191A23]/[0.03] hover:bg-white"
+                  } p-6 sm:p-7`}
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-lg sm:text-xl font-black text-[#191A23]">
+                    <h4 className="text-base sm:text-lg font-bold text-[#191A23]">
                       {faq.q}
-                    </h3>
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[#191A23] bg-white shadow-[1px_1px_0px_#191A23]">
+                    </h4>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#B9FF66]/15">
                       {isOpen ? (
-                        <Minus className="h-5 w-5 text-[#191A23]" />
+                        <Minus className="h-4 w-4 text-[#191A23]" />
                       ) : (
-                        <Plus className="h-5 w-5 text-[#191A23]" />
+                        <Plus className="h-4 w-4 text-[#191A23]" />
                       )}
                     </div>
                   </div>
 
                   {isOpen && (
-                    <div className="mt-4 pt-4 border-t-2 border-[#191A23]">
-                      <p className="text-base font-medium text-[#191A23] leading-relaxed">
+                    <div className="mt-4 pt-4 border-t border-[#191A23]/8">
+                      <p className="text-sm font-medium text-[#191A23]/70 leading-relaxed">
                         {faq.a}
                       </p>
                     </div>
