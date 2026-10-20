@@ -868,6 +868,34 @@ export const paymentWebhookEvents = pgTable(
   ],
 );
 
+/**
+ * Pesquisa de churn (spec Billing Completo, item 4): motivo do cancelamento
+ * coletado ANTES de o cliente abrir o portal — a pesquisa nunca bloqueia o
+ * cancelamento; é registro honesto para aprendizado de churn.
+ *
+ * `feedback` junta o detalhe do motivo e a sugestão de melhoria (labels)
+ * quando os dois vêm preenchidos: um único campo de texto legível por
+ * humano (cada campo do client é limitado a 500 chars).
+ */
+export const billingChurnSurveys = pgTable(
+  "billing_churn_surveys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    reason: text("reason").notNull(),
+    feedback: text("feedback"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "billing_churn_surveys_reason_check",
+      sql`${t.reason} in ('preco', 'nao_uso', 'problemas_tecnicos', 'migrei_ferramenta', 'outro')`,
+    ),
+    check("billing_churn_surveys_feedback_check", sql`${t.feedback} is null or char_length(${t.feedback}) <= 1100`),
+    index("billing_churn_surveys_user_created_idx").on(t.userId, t.createdAt.desc()),
+  ],
+);
+
 /* ------------------------------------------------------------------ */
 /* Acesso, onboarding e inbox.                                         */
 /* ------------------------------------------------------------------ */

@@ -21,7 +21,7 @@ const tabs = [
   { id: "profile", label: "Perfil" },
   { id: "password", label: "Senha" },
   { id: "team", label: "Equipe" },
-  { id: "billing", label: "Faturamento & Planos" },
+  { id: "billing", label: "Faturamento" },
   { id: "preferences", label: "Preferências & Notificações" },
   { id: "security", label: "Segurança" },
 ];
@@ -77,7 +77,7 @@ function SettingsContent() {
 
       {activeTab === "team" && <TeamPanel notify={notify} />}
 
-      {activeTab === "billing" && <BillingSettingsTab />}
+      {activeTab === "billing" && <BillingSettingsTab overview={overview} notify={notify} />}
 
       {activeTab === "preferences" && <PreferencesSettingsTab />}
 

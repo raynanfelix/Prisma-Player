@@ -231,6 +231,16 @@ CREATE TABLE IF NOT EXISTS "billing_checkouts" (
 	CONSTRAINT "billing_checkouts_status_check" CHECK ("billing_checkouts"."status" in ('creating', 'pending', 'paid', 'expired', 'failed', 'refunded', 'disputed', 'cancelled'))
 );
 
+CREATE TABLE IF NOT EXISTS "billing_churn_surveys" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" text NOT NULL,
+	"reason" text NOT NULL,
+	"feedback" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "billing_churn_surveys_reason_check" CHECK ("billing_churn_surveys"."reason" in ('preco', 'nao_uso', 'problemas_tecnicos', 'migrei_ferramenta', 'outro')),
+	CONSTRAINT "billing_churn_surveys_feedback_check" CHECK ("billing_churn_surveys"."feedback" is null or char_length("billing_churn_surveys"."feedback") <= 1100)
+);
+
 CREATE TABLE IF NOT EXISTS "billing_customers" (
 	"user_id" text PRIMARY KEY NOT NULL,
 	"provider" text DEFAULT 'abacatepay' NOT NULL,
@@ -807,6 +817,7 @@ CREATE INDEX IF NOT EXISTS "billing_checkouts_user_created_idx" ON "billing_chec
 CREATE INDEX IF NOT EXISTS "billing_checkouts_status_created_idx" ON "billing_checkouts" USING btree ("status","created_at");
 CREATE INDEX IF NOT EXISTS "billing_checkouts_plan_id_idx" ON "billing_checkouts" USING btree ("plan_id");
 CREATE INDEX IF NOT EXISTS "billing_checkouts_previous_subscription_idx" ON "billing_checkouts" USING btree ("previous_provider_subscription_id") WHERE "billing_checkouts"."previous_provider_subscription_id" is not null;
+CREATE INDEX IF NOT EXISTS "billing_churn_surveys_user_created_idx" ON "billing_churn_surveys" USING btree ("user_id","created_at" DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS "element_experiments_video_idx" ON "element_experiments" USING btree ("user_id","video_id","status");
 CREATE INDEX IF NOT EXISTS "embed_monitors_due_idx" ON "embed_monitors" USING btree ("enabled","last_checked_at") WHERE "embed_monitors"."enabled";
 CREATE INDEX IF NOT EXISTS "payment_webhook_events_status_received_idx" ON "payment_webhook_events" USING btree ("status","received_at");
@@ -869,6 +880,29 @@ ALTER TABLE "payment_webhook_events" ADD CONSTRAINT "payment_webhook_events_prov
 -- Razão do ledger para compras de créditos via Stripe Checkout.
 ALTER TABLE "ai_credit_ledger" DROP CONSTRAINT IF EXISTS "ai_credit_ledger_reason_check";
 ALTER TABLE "ai_credit_ledger" ADD CONSTRAINT "ai_credit_ledger_reason_check" CHECK ("ai_credit_ledger"."reason" in ('purchase', 'plan_grant', 'usage', 'refund', 'adjustment', 'stripe_checkout'));
+
+-- ============================================================================
+-- MIGRAÇÃO INCREMENTAL (idempotente) — pesquisa de churn (drizzle 0003)
+-- ============================================================================
+-- Tabela da pesquisa de cancelamento (spec Billing Completo, item 4). O
+-- CREATE TABLE IF NOT EXISTS acima já cobre bancos novos; este bloco é o
+-- mesmo DDL isolado para bancos existentes — pode colar e executar direto:
+
+CREATE TABLE IF NOT EXISTS "billing_churn_surveys" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" text NOT NULL,
+	"reason" text NOT NULL,
+	"feedback" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "billing_churn_surveys_reason_check" CHECK ("billing_churn_surveys"."reason" in ('preco', 'nao_uso', 'problemas_tecnicos', 'migrei_ferramenta', 'outro')),
+	CONSTRAINT "billing_churn_surveys_feedback_check" CHECK ("billing_churn_surveys"."feedback" is null or char_length("billing_churn_surveys"."feedback") <= 1100)
+);
+CREATE INDEX IF NOT EXISTS "billing_churn_surveys_user_created_idx" ON "billing_churn_surveys" USING btree ("user_id","created_at" DESC NULLS LAST);
+ALTER TABLE public."billing_churn_surveys" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "billing_churn_surveys_select" ON public."billing_churn_surveys";
+CREATE POLICY "billing_churn_surveys_select" ON public."billing_churn_surveys" FOR SELECT TO authenticated USING ("user_id" = auth.user_id());
+DROP POLICY IF EXISTS "billing_churn_surveys_insert" ON public."billing_churn_surveys";
+CREATE POLICY "billing_churn_surveys_insert" ON public."billing_churn_surveys" FOR INSERT TO authenticated WITH CHECK ("user_id" = auth.user_id());
 
 -- ============================================================================
 -- ROW LEVEL SECURITY — habilita e restringe por proprietário (auth.user_id())
@@ -1071,6 +1105,14 @@ DROP POLICY IF EXISTS "ai_credit_ledger_update" ON public."ai_credit_ledger";
 CREATE POLICY "ai_credit_ledger_update" ON public."ai_credit_ledger" FOR UPDATE TO authenticated USING ("user_id" = auth.user_id()) WITH CHECK ("user_id" = auth.user_id());
 DROP POLICY IF EXISTS "ai_credit_ledger_delete" ON public."ai_credit_ledger";
 CREATE POLICY "ai_credit_ledger_delete" ON public."ai_credit_ledger" FOR DELETE TO authenticated USING ("user_id" = auth.user_id());
+
+-- billing_churn_surveys (dono: user_id; append-only — sem policy de
+-- update/delete, a role authenticated não altera pesquisa registrada)
+ALTER TABLE public."billing_churn_surveys" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "billing_churn_surveys_select" ON public."billing_churn_surveys";
+CREATE POLICY "billing_churn_surveys_select" ON public."billing_churn_surveys" FOR SELECT TO authenticated USING ("user_id" = auth.user_id());
+DROP POLICY IF EXISTS "billing_churn_surveys_insert" ON public."billing_churn_surveys";
+CREATE POLICY "billing_churn_surveys_insert" ON public."billing_churn_surveys" FOR INSERT TO authenticated WITH CHECK ("user_id" = auth.user_id());
 
 -- billing_customers (dono: user_id)
 ALTER TABLE public."billing_customers" ENABLE ROW LEVEL SECURITY;

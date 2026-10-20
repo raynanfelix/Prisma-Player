@@ -112,6 +112,22 @@ Se encontrar algo, **NÃO commite**. Remova o valor e use variável de ambiente.
   `.eq("user_id", ...)` esquecido é vazamento. Revisar com
   `tests/server-boundary.test.ts` + testes de IDOR.
 
+## Isolamento verificado (auditoria de respostas de API — 20/10/2026)
+
+Pass de dados cross-user da spec Billing Completo (item 6): grep das rotas
+que devolvem `config`/dados por conta — resultado por rota auditada. Sem
+alteração de código: todas já seguem o padrão dono-da-sessão.
+
+| Rota | O que devolve | Verificado |
+| --- | --- | --- |
+| `GET /api/integrations` | `config` **mascarado** (`maskIntegrationConfig`): tokens e webhook URLs saem como `""` com flags `hasToken`/`hasWebhookUrl`; queries por `accountOwnerId` | ✅ segredo nunca chega ao cliente |
+| `GET /api/player-configs` | `config` do próprio dono — filtro `(videoId, accountOwnerId)`; sem tokens na resposta (pixels são IDs públicos) | ✅ sem segredo, sem cross-user |
+| `PUT/POST /api/player-configs` | `config` normalizado; `assets` restringidos a caminhos da própria conta (`ownedAssetPaths`) | ✅ não assina arquivo alheio |
+| `GET /api/account/export` | dump LGPD do **próprio usuário** (`getCurrentUserId()`); toda query `.where(eq(..., userId))`; sem eventos de espectadores | ✅ só dono, só dados próprios |
+| `GET /api/videos/[id]`, `GET /api/player-pixels/diagnostics` | `player_configs.config` lido com filtro `(videoId, accountOwnerId)`; `capiToken` usado só no servidor (resposta devolve boolean, nunca o token) | ✅ sem cross-user, sem token |
+| `/api/embed/[id]`(+`/manifest`) | `config` **publicado** do player (dado público por design) atrás de token HMAC de origem + nonce | ✅ por design, com binding de origem |
+| `/api/billing/*` (checkout, portal, invoices, payment-method) | `stripe_customer_id` NUNCA sai na resposta — só `{url}`/`{invoices}`/`{card}`; queries por `accountOwnerId`; guard `manage` | ✅ sem vazamento de identificador de customer |
+
 ## Padrão obrigatório para novas rotas
 
 ```ts

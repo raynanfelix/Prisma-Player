@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { BillingPlan } from "@/lib/billing/catalog";
-import { formatBRL, formatPlayOverage, getPlanBenefits } from "@/lib/billing/catalog";
-import { PlanCheckoutButton } from "@/features/account/components/BillingCheckoutButtons";
+import { formatBRL, formatPlayOverage, getPlanBenefits, TRIAL_PLAN_SLUG } from "@/lib/billing/catalog";
+import { PlanCheckoutButton, PlanSwitchButton } from "@/features/account/components/BillingCheckoutButtons";
 
 type BillingCycle = "monthly" | "annual";
 
@@ -18,17 +19,26 @@ type BillingCycle = "monthly" | "annual";
  * Pill do ciclo segue o toggle da casa (bg-selected: tinta no claro, lima no
  * escuro) com o selo "Economize 34%" em verde-lima nos dois temas — mesmo
  * padrão do PricingSection da landing.
+ *
+ * Marcação de plano atual (spec Billing Completo, itens 1 e 2):
+ * - Assinatura vigente → card do plano com badge "Seu plano atual" e sem
+ *   botão; demais cards abrem o Customer Portal ("Mudar para este plano").
+ * - Trial vigente (sem assinatura) → card do Escala (nível do teste) com
+ *   badge "Seu plano atual (teste)" e botão desabilitado; demais cards
+ *   seguem com checkout normal — upgrade continua disponível sempre.
  */
 export function BillingPlansShowcase({
   plans,
   currentPlanSlug,
   showPortal,
   hasPlan,
+  trialActive = false,
 }: {
   plans: BillingPlan[];
   currentPlanSlug: string | null;
   showPortal: boolean;
   hasPlan: boolean;
+  trialActive?: boolean;
 }) {
   const [cycle, setCycle] = useState<BillingCycle>("annual");
 
@@ -82,6 +92,9 @@ export function BillingPlansShowcase({
       <div className="grid items-stretch gap-5 xl:grid-cols-3">
         {plans.map((item) => {
           const isCurrentPlan = currentPlanSlug === item.slug;
+          // Trial = ALL_CAPABILITIES = nível Escala; a assinatura real (se
+          // houver) sempre vence a marcação do teste.
+          const isTrialPlan = trialActive && !isCurrentPlan && !showPortal && item.slug === TRIAL_PLAN_SLUG;
           const priceCents = cycle === "annual" ? item.annual_monthly_equivalent : item.amount_cents;
           return (
             <article
@@ -93,6 +106,11 @@ export function BillingPlansShowcase({
               )}
               <p className="pr-14 text-sm font-bold text-[#191A23] dark:text-white">{item.name}</p>
               <p className="mt-1 text-[11px] font-medium leading-4 text-slate-500 dark:text-zinc-400">{item.description}</p>
+              {isTrialPlan && (
+                <span className="mt-3 w-fit rounded-full bg-[#B9FF66] px-3 py-0.5 text-[10px] font-bold text-[#191A23]">
+                  Seu plano atual (teste)
+                </span>
+              )}
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#191A23] dark:text-white">
                 {formatBRL(priceCents)}
                 <span className="ml-1 text-xs font-medium text-slate-400 dark:text-zinc-500">/mês</span>
@@ -116,10 +134,12 @@ export function BillingPlansShowcase({
                 <span className="mt-5 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold bg-[#B9FF66] text-[#191A23]">
                   Seu plano atual
                 </span>
+              ) : isTrialPlan ? (
+                <Button type="button" className="mt-5 w-full text-xs" disabled>
+                  Incluído no seu teste
+                </Button>
               ) : showPortal ? (
-                <span className="mt-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-transparent px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-zinc-400">
-                  Gerencie pelo portal
-                </span>
+                <PlanSwitchButton />
               ) : (
                 <PlanCheckoutButton
                   planSlug={item.slug}

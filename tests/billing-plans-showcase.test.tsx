@@ -112,3 +112,69 @@ describe("BillingPlansShowcase — toggle mensal/anual", () => {
     expect(norm(cards[0]!.textContent ?? "")).toContain("Mudar para este plano");
   });
 });
+
+describe("BillingPlansShowcase — trial marca o plano atual (spec Billing Completo, item 1)", () => {
+  it("trial vigente: card Escala com badge 'Seu plano atual (teste)' e botão desabilitado 'Incluído no seu teste'", () => {
+    renderShowcase({ trialActive: true });
+
+    const cards = Array.from(document.querySelectorAll("article"));
+    const escala = norm(cards[2]!.textContent ?? "");
+    expect(escala).toContain("Seu plano atual (teste)");
+    expect(escala).toContain("Incluído no seu teste");
+
+    const buttons = checkoutButtons();
+    expect(buttons).toHaveLength(3);
+    expect(buttons[2]!.disabled).toBe(true);
+  });
+
+  it("trial vigente: os outros planos seguem com checkout normal (upgrade disponível sempre)", () => {
+    renderShowcase({ trialActive: true });
+
+    const buttons = checkoutButtons();
+    expect(buttons[0]!.disabled).toBe(false);
+    expect(buttons[1]!.disabled).toBe(false);
+    expect(norm(buttons[0]!.textContent ?? "")).toContain("Assinar este plano");
+    expect(norm(buttons[1]!.textContent ?? "")).toContain("Assinar este plano");
+  });
+
+  it("sem trial: nenhum badge de teste e nenhum botão desabilitado", () => {
+    renderShowcase();
+
+    expect(norm(document.body.textContent ?? "")).not.toContain("Seu plano atual (teste)");
+    expect(checkoutButtons().every((button) => !button.disabled)).toBe(true);
+  });
+
+  it("assinatura real vence o trial: com showPortal, cards ≠ atual ganham portal (não o botão do teste)", () => {
+    renderShowcase({ currentPlanSlug: "pro", showPortal: true, hasPlan: true, trialActive: true });
+
+    const cards = Array.from(document.querySelectorAll("article"));
+    expect(norm(cards[2]!.textContent ?? "")).not.toContain("Incluído no seu teste");
+    expect(norm(cards[2]!.textContent ?? "")).toContain("Mudar para este plano");
+  });
+});
+
+describe("BillingPlansShowcase — troca de plano via portal (spec Billing Completo, item 2)", () => {
+  it("assinatura ativa: card do plano atual com badge e sem botão; demais cards chamam /api/billing/portal", async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ message: "sem customer" }), { status: 409 }));
+    renderShowcase({ currentPlanSlug: "pro", showPortal: true, hasPlan: true });
+
+    const cards = Array.from(document.querySelectorAll("article"));
+    expect(norm(cards[1]!.textContent ?? "")).toContain("Seu plano atual");
+    expect(cards[1]!.querySelector('[data-slot="button"]')).toBeNull();
+
+    const buttons = checkoutButtons();
+    expect(buttons).toHaveLength(2);
+    expect(buttons.map((button) => norm(button.textContent ?? ""))).toEqual(["Mudar para este plano", "Mudar para este plano"]);
+
+    await act(async () => {
+      buttons[0]!.click();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/billing/portal");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body))).toEqual({});
+
+    // 409 do portal vira mensagem honesta inline (nenhum redirect).
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("sem customer");
+  });
+});

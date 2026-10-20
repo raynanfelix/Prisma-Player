@@ -58,6 +58,7 @@ export async function GET() {
       status: subscriptions.status,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
       billingMethod: subscriptions.billingMethod,
+      provider: subscriptions.provider,
       planName: billingPlans.name,
       planIncludedPlays: billingPlans.includedPlays,
       planStorageGb: billingPlans.storageGb,
@@ -115,7 +116,7 @@ export async function GET() {
   const series90 = summarizeSessionsByDay({ sessions: recentSessions, videos: videoMetaList, fromDate: ninetyDaysAgo.toISOString().slice(0, 10), toDate: todayDate });
   return NextResponse.json({
     access,
-    subscription: subscription ? { status: subscription.status, currentPeriodEnd: subscription.currentPeriodEnd ? subscription.currentPeriodEnd.toISOString() : null, billingMethod: subscription.billingMethod } : null,
+    subscription: subscription ? { status: subscription.status, currentPeriodEnd: subscription.currentPeriodEnd ? subscription.currentPeriodEnd.toISOString() : null, billingMethod: subscription.billingMethod, provider: subscription.provider } : null,
     plan,
     usage: {
       plays: uniquePlays,

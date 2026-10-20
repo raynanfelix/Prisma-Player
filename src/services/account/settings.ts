@@ -4,6 +4,8 @@ import type {
   AccountOverview,
   AccountProfile,
   AccountTeam,
+  BillingCard,
+  BillingInvoice,
 } from "@/features/account/model/types";
 import { apiRequest } from "@/services/http/client";
 
@@ -76,6 +78,38 @@ export const accountSettingsService = {
     return apiRequest<Record<string, never>>("/api/account/password", {
       method: "PATCH",
       body: { currentPassword, password, otp },
+    });
+  },
+  /** Tela Faturamento (spec Billing Completo, item 3). */
+  getInvoices() {
+    return apiRequest<{ invoices: BillingInvoice[] }>("/api/billing/invoices", {
+      cache: "no-store",
+    });
+  },
+  getPaymentMethod() {
+    return apiRequest<{ card: BillingCard | null }>("/api/billing/payment-method", {
+      cache: "no-store",
+    });
+  },
+  /**
+   * Sessão do Customer Portal (troca de plano/cartão e cancelamento —
+   * o Stripe é o caminho canônico; o app nunca reescreve o que ele dá
+   * pronto). Devolve `{ url }` para redirecionar.
+   */
+  openBillingPortal() {
+    return apiRequest<{ url: string }>("/api/billing/portal", {
+      method: "POST",
+      body: {},
+    });
+  },
+  /**
+   * Pesquisa de churn (spec Billing Completo, item 4): registra o motivo do
+   * cancelamento antes de abrir o portal. NUNCA bloqueia o cancelamento.
+   */
+  submitChurnSurvey(input: { reason: string; feedback?: string; improvement?: string }) {
+    return apiRequest<{ ok?: boolean }>("/api/billing/churn-survey", {
+      method: "POST",
+      body: input,
     });
   },
 };

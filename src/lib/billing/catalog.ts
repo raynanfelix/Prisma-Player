@@ -119,6 +119,13 @@ export const CATALOG_CREDIT_PACKAGES: CreditPackage[] = [
   { id: "catalog-credits-escala", slug: "credits-escala", name: "Créditos IA — Escala", credits: 2000, bonus_credits: 500, amount_cents: 32990 },
 ];
 
+/**
+ * Plano que o trial libera (ALL_CAPABILITIES = nível Escala — factual na
+ * mensagem de ativação e na tela de billing). A vitrine usa isto para marcar
+ * o card do teste como "plano atual" enquanto o trial estiver vigente.
+ */
+export const TRIAL_PLAN_SLUG = "escala";
+
 const sharedFeatures = [
   "Todas as funcionalidades de personalização e conversão",
   "Analytics completo, retenção e funil da VSL",

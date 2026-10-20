@@ -25,10 +25,14 @@ async function requestCheckoutUrl(endpoint: string, body: Record<string, unknown
     });
     const result = (await response.json().catch(() => null)) as { url?: string; message?: string } | null;
     if (response.ok && typeof result?.url === "string") return { ok: true, url: result.url };
-    if (response.status === 429) return { ok: false, message: "Muitas tentativas seguidas — aguarde um minuto e tente de novo." };
+    // Diagnóstico REAL (spec Billing Completo, item 0): as rotas de billing
+    // devolvem `message` detalhada (price_not_found, stripe_unavailable,
+    // sem_stripe_customer…) — ela SEMPRE vence o genérico; o texto padrão
+    // só sobrevive quando o backend não mandou nada.
+    if (response.status === 429) return { ok: false, message: result?.message ?? "Muitas tentativas seguidas — aguarde um minuto e tente de novo." };
     if (response.status === 409) return { ok: false, message: result?.message ?? "Nenhuma compra via Stripe nesta conta ainda." };
-    if (response.status === 503) return { ok: false, message: "Pagamentos temporariamente indisponíveis — configure o Stripe no ambiente." };
-    if (response.status === 502) return { ok: false, message: "Catálogo de preços ainda não sincronizado — rode o seed do Stripe." };
+    if (response.status === 503) return { ok: false, message: result?.message ?? "Pagamentos temporariamente indisponíveis — configure o Stripe no ambiente." };
+    if (response.status === 502) return { ok: false, message: result?.message ?? "Catálogo de preços ainda não sincronizado — rode o seed do Stripe." };
     return { ok: false, message: result?.message ?? "Não foi possível iniciar agora — tente novamente." };
   } catch {
     return { ok: false, message: "Não foi possível iniciar agora — verifique sua conexão." };
@@ -128,6 +132,43 @@ export function ManageSubscriptionButton() {
       <Button type="button" className="h-9 rounded-xl text-xs" disabled={loading} onClick={() => void start()}>
         {loading ? <Spinner /> : null}
         {loading ? "Abrindo…" : "Gerenciar assinatura"}
+      </Button>
+      {error ? <CheckoutError message={error} /> : null}
+    </>
+  );
+}
+
+/**
+ * Troca de plano por card (spec Billing Completo, item 2): assinatura ativa
+ * do Stripe → cada card ≠ atual abre o Customer Portal, que é o caminho
+ * canônico de upgrade/downgrade (nunca reescrever o que o Stripe dá pronto).
+ *
+ * Pendência do dono: a config do portal com `subscription_update` exige o
+ * claim do sandbox no Dashboard — o botão já nasce pronto; até lá o portal
+ * abre com faturas/cancelamento/cartão.
+ */
+export function PlanSwitchButton() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function start() {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    const result = await requestCheckoutUrl("/api/billing/portal", {});
+    if (result.ok) {
+      window.location.assign(result.url);
+      return;
+    }
+    setError(result.message);
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <Button type="button" className="mt-5 w-full text-xs" disabled={loading} onClick={() => void start()}>
+        {loading ? <Spinner /> : null}
+        {loading ? "Abrindo portal…" : "Mudar para este plano"}
       </Button>
       {error ? <CheckoutError message={error} /> : null}
     </>

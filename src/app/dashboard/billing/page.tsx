@@ -138,6 +138,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           currentPlanSlug={subActive ? (plan?.slug ?? null) : null}
           showPortal={showPortal}
           hasPlan={Boolean(subscription?.plan)}
+          trialActive={access.trialActive}
         />
       </Reveal>
 

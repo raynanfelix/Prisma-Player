@@ -28,6 +28,7 @@ export interface AccountOverview {
     status: string;
     currentPeriodEnd: string | null;
     billingMethod: string;
+    provider: string;
   } | null;
   plan: {
     name: string;
@@ -91,4 +92,23 @@ export interface MfaFactor {
   id: string;
   friendly_name?: string;
   status: string;
+}
+
+/** Fatura do Stripe na tela Faturamento (GET /api/billing/invoices). */
+export interface BillingInvoice {
+  id: string;
+  number: string | null;
+  created_at: string;
+  total_cents: number;
+  currency: string;
+  status: string;
+  hosted_invoice_url: string | null;
+}
+
+/** Cartão padrão do customer (GET /api/billing/payment-method). */
+export interface BillingCard {
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
 }

@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   skipTrailingSlashRedirect: true,
+  // O CSS do Tailwind entra inline no HTML: elimina o request que bloqueava a
+  // primeira renderização (Lighthouse apontava ~120 ms de economia). O custo é
+  // o CSS não ser cacheado separadamente, aceitável para páginas de venda.
+  experimental: {
+    inlineCss: true,
+  },
   async rewrites() {
     return [
       {

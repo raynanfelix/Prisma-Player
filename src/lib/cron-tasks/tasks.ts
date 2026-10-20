@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID, timingSafeEqual } from "node:crypto";
-import { and, count, eq, gte, inArray, lt, or } from "drizzle-orm";
+import { and, count, eq, gt, gte, inArray, lt, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { isoOrNull } from "@/lib/datetime";
@@ -10,7 +10,7 @@ import { deliverWebhook } from "@/lib/webhooks/delivery";
 import { sendOperationalReport } from "@/lib/email/operational-report";
 import { reconcileSubscriptions } from "@/lib/billing/stripe/reconcile";
 
-const { videoLiveSessions, subscriptions, videoEvents, intelligenceControls, videos, userInbox, accountTeamInvites } = schema;
+const { videoLiveSessions, subscriptions, videoEvents, intelligenceControls, videos, userInbox, accountTeamInvites, accountAccess } = schema;
 
 /** Orçamento de tempo: o cron precisa terminar a limpeza mesmo com muitas contas. */
 const TIME_BUDGET_MS = 240_000;
@@ -30,6 +30,8 @@ export type CronMaintenanceResult = {
   reconcileChecked: number;
   /** Divergências NOVAS registradas no dia (idempotente por event_id diário). */
   reconcileDivergences: number;
+  /** Avisos de "seu teste termina em breve" criados nesta passada (spec Billing Completo, item 5). */
+  trialReminders: number;
   timedOut: boolean;
   errors: string[];
 };
@@ -102,15 +104,15 @@ async function counts(videoIds: string[], from: Date, to?: Date): Promise<Period
 }
 
 /**
- * Executa a manutenção completa do cron: limpeza de sessões live, expiração de
- * assinaturas, reconciliação Stripe↔banco, rollup diário, purges de retenção
- * (SÓ com env explícita), sweep de convites e o laço de relatórios/alertas
- * por conta.
+ * Executa a manutenção completa do cron: limpeza de sessões live, expiração
+ * de assinaturas, expiração de trials + aviso de fim próximo, reconciliação
+ * Stripe↔banco, rollup diário, purges de retenção (SÓ com env explícita),
+ * sweep de convites e o laço de relatórios/alertas por conta.
  */
 export async function runCronMaintenance(): Promise<CronMaintenanceOutcome> {
   const now = new Date();
   const ctx: MaintenanceContext = {
-    result: { reports: 0, emails: 0, alerts: 0, webhooks: 0, skipped: 0, processed: 0, reconcileChecked: 0, reconcileDivergences: 0, timedOut: false, errors: [] },
+    result: { reports: 0, emails: 0, alerts: 0, webhooks: 0, skipped: 0, processed: 0, reconcileChecked: 0, reconcileDivergences: 0, trialReminders: 0, timedOut: false, errors: [] },
     startedAt: Date.now(),
     now,
     currentFrom: new Date(now.getTime() - 24 * 3_600_000),
@@ -118,6 +120,8 @@ export async function runCronMaintenance(): Promise<CronMaintenanceOutcome> {
   };
   await cleanupLiveSessions(ctx);
   await expireOutdatedSubscriptions(ctx);
+  await expireOutdatedTrials(ctx);
+  await notifyTrialsEndingSoon(ctx);
   await runSubscriptionReconcile(ctx);
   await runDailyStatsRollup(ctx);
   await runRetentionPurges(ctx);
@@ -146,6 +150,62 @@ async function expireOutdatedSubscriptions(ctx: MaintenanceContext): Promise<voi
     await db.update(subscriptions).set({ status: "expired", updatedAt: ctx.now }).where(and(eq(subscriptions.status, "active"), lt(subscriptions.currentPeriodEnd, ctx.now)));
   } catch (error) {
     ctx.result.errors.push(`subscriptions_expiry: ${errorMessageOf(error)}`);
+  }
+}
+
+/**
+ * Trial 100% (spec Billing Completo, item 5): marca `expired` nos trials
+ * vencidos. O ACESSO já cai no `accessFrom` (trialActive exige trialEndsAt
+ * futuro) — este update é a verdade do STATUS: sem ele a linha ficava
+ * `active` para sempre e os painéis admin (finance/growth) contavam trial
+ * vencido como ativo. Idempotente: linhas já expired não casam no filtro.
+ */
+export async function expireOutdatedTrials(ctx: MaintenanceContext): Promise<void> {
+  try {
+    await db.update(accountAccess).set({ trialStatus: "expired", updatedAt: ctx.now }).where(and(eq(accountAccess.trialStatus, "active"), lt(accountAccess.trialEndsAt, ctx.now)));
+  } catch (error) {
+    ctx.result.errors.push(`trials_expiry: ${errorMessageOf(error)}`);
+  }
+}
+
+/** Janela do aviso de fim de trial: últimos 3 dias do teste. */
+const TRIAL_ENDING_SOON_DAYS = 3;
+
+/**
+ * Trial 100% (spec Billing Completo, item 5): inbox não tinha aviso de fim
+ * próximo — o usuário descobria o fim só quando o acesso caía. Insere um
+ * recado único por trial (idempotente: actionUrl do aviso é exclusivo dele —
+ * a mensagem de ativação não tem actionUrl) com o CTA para os planos.
+ */
+export async function notifyTrialsEndingSoon(ctx: MaintenanceContext): Promise<void> {
+  try {
+    const soon = new Date(ctx.now.getTime() + TRIAL_ENDING_SOON_DAYS * 86_400_000);
+    const rows = await db
+      .select({ userId: accountAccess.userId, trialEndsAt: accountAccess.trialEndsAt })
+      .from(accountAccess)
+      .where(and(eq(accountAccess.trialStatus, "active"), gt(accountAccess.trialEndsAt, ctx.now), lt(accountAccess.trialEndsAt, soon)))
+      .limit(500);
+    for (const row of rows) {
+      if (!row.trialEndsAt) continue;
+      const existing = await db
+        .select({ id: userInbox.id })
+        .from(userInbox)
+        .where(and(eq(userInbox.userId, row.userId), eq(userInbox.kind, "trial"), eq(userInbox.actionUrl, "/dashboard/billing")))
+        .limit(1);
+      if (existing.length) continue;
+      const days = Math.max(1, Math.ceil((row.trialEndsAt.getTime() - ctx.now.getTime()) / 86_400_000));
+      await db.insert(userInbox).values({
+        userId: row.userId,
+        kind: "trial",
+        title: "Seu teste termina em breve",
+        message: `Seu teste gratuito termina em ${days} dia${days === 1 ? "" : "s"} — nenhum cartão foi cobrado e nada é cobrado automaticamente. Para manter o acesso completo, escolha um plano quando quiser.`,
+        actionLabel: "Ver planos",
+        actionUrl: "/dashboard/billing",
+      });
+      ctx.result.trialReminders += 1;
+    }
+  } catch (error) {
+    ctx.result.errors.push(`trial_reminders: ${errorMessageOf(error)}`);
   }
 }
 
