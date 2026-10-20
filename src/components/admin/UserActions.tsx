@@ -76,9 +76,15 @@ export default function UserActions({ userId, email, plans, subStatus }: { userI
         <button type="button" onClick={() => { setReason(""); setPending({ kind: "plan" }); }} className="h-9 shrink-0 rounded-xl bg-selected px-3 text-[12px] font-bold text-selected-foreground">Trocar plano</button>
       </div>
       <div className="flex flex-wrap gap-2">
-        {subStatus !== "suspended"
-          ? <button type="button" onClick={() => { setReason(""); setPending({ kind: "suspend" }); }} className="h-8 rounded-lg border border-red-300 px-2.5 text-[11px] font-semibold text-red-600 dark:border-red-900">Suspender</button>
-          : <button type="button" onClick={() => { setReason(""); setPending({ kind: "reactivate" }); }} className="h-8 rounded-lg border border-emerald-300 px-2.5 text-[11px] font-semibold text-emerald-600 dark:border-emerald-900">Reativar</button>}
+        {subStatus === null ? (
+          // Sem linha de assinatura (trial ou nunca assinou): suspender
+          // falharia com subscription_not_found. Estado honesto no lugar.
+          <span title="Sem assinatura ativa" className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-2.5 text-[11px] font-semibold themeable-text-ink-muted-48 dark:border-zinc-800">Trial / sem assinatura</span>
+        ) : subStatus !== "suspended" ? (
+          <button type="button" onClick={() => { setReason(""); setPending({ kind: "suspend" }); }} className="h-8 rounded-lg border border-red-300 px-2.5 text-[11px] font-semibold text-red-600 dark:border-red-900">Suspender</button>
+        ) : (
+          <button type="button" onClick={() => { setReason(""); setPending({ kind: "reactivate" }); }} className="h-8 rounded-lg border border-emerald-300 px-2.5 text-[11px] font-semibold text-emerald-600 dark:border-emerald-900">Reativar</button>
+        )}
         <button type="button" onClick={() => { setReason(""); setPending({ kind: "trial_extend" }); }} className="h-8 rounded-lg border border-slate-200 px-2.5 text-[11px] font-semibold dark:border-zinc-800">Trial +14d</button>
         <button type="button" onClick={() => { setReason(""); setPending({ kind: "trial_reset" }); }} className="h-8 rounded-lg border border-slate-200 px-2.5 text-[11px] font-semibold dark:border-zinc-800">Reset trial</button>
       </div>

@@ -115,7 +115,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <span className="rounded-full bg-[#B9FF66] px-3 py-0.5 text-xs font-bold text-[#191A23]">
               TESTE 14 DIAS ATIVO
             </span>
-            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">Acesso completo liberado</h2>
+            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">Acesso completo liberado — nível Escala durante o teste</h2>
             <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
               Seu teste termina em {access.trialEndsAt ? new Date(access.trialEndsAt).toLocaleDateString("pt-BR") : "14 dias"}. Nenhuma cobrança automática.
             </p>

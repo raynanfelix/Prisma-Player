@@ -20,13 +20,20 @@ type Props = {
 /** Confirmação acessível p/ ações sensíveis. Sem window.confirm. */
 export default function AdminConfirm({ open, title, lines, consequence, confirmLabel, danger, busy, reasonRequired, reason = "", onReason, onConfirm, onClose }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  // `onClose` vive em um ref: todos os chamadores passam arrow inline
+  // (identidade nova a cada render do pai). Se o efeito de foco dependesse de
+  // `onClose`, cada tecla no motivo re-renderizava o pai, o efeito re-rodava e
+  // `dialogRef.focus()` roubava o foco do input — digitação interrompida.
+  // O ref mantém o Escape chamando sempre o callback mais recente.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => {
     if (!open) return;
     dialogRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onCloseRef.current(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   const reasonOk = !reasonRequired || reason.trim().length > 0;
   return (
