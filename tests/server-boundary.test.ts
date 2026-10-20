@@ -38,6 +38,7 @@ const PRIVILEGED = [
   "lib/billing/ai-credits.ts",
   "lib/billing/stripe/client.ts",
   "lib/billing/stripe/webhook.ts",
+  "lib/billing/stripe/reconcile.ts",
   "lib/cron-tasks/tasks.ts",
   "lib/ai/nvidia.ts",
   "lib/api/guard.ts",
@@ -50,7 +51,12 @@ const PRIVILEGED = [
 ];
 
 const PRIVILEGED_IMPORT = new RegExp(
-  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|auth-events|self-origins|neon-webhook|alert-webhook)|storage/|webhooks|email/|cache/|posthog-server|billing|ai/nvidia|api/(guard|request)|player/assets|integrations/verify-pixels)|services/ads/server-events)`,
+  // `billing/(service|ai-credits|stripe)` em vez de `billing` largo: o
+  // catálogo (lib/billing/catalog.ts) é dado PURO de vitrine (sem server-only,
+  // sem db, sem segredo) e as telas de plano no client precisam dele — o ban
+  // continua cobrindo 100% dos módulos privilegiados do billing (lista
+  // PRIVILEGED acima não mudou).
+  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|auth-events|self-origins|neon-webhook|alert-webhook)|storage/|webhooks|email/|cache/|posthog-server|billing/(service|ai-credits|stripe)|ai/nvidia|api/(guard|request)|player/assets|integrations/verify-pixels)|services/ads/server-events)`,
 );
 
 function allFiles(dir: string): string[] {

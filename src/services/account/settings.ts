@@ -34,9 +34,16 @@ export const accountSettingsService = {
     return apiRequest<AccountTeam>("/api/account/team", { cache: "no-store" });
   },
   inviteMember(email: string, role: string) {
-    return apiRequest<{ joined?: boolean }>("/api/account/team", {
+    return apiRequest<{ invited?: boolean }>("/api/account/team", {
       method: "POST",
       body: { email, role },
+    });
+  },
+  /** Aceita um convite endereçado ao usuário logado (POST action=accept). */
+  acceptInvitation(inviteId: string) {
+    return apiRequest<{ accepted?: boolean }>("/api/account/team", {
+      method: "POST",
+      body: { action: "accept", inviteId },
     });
   },
   updateMemberRole(memberId: string, role: string) {

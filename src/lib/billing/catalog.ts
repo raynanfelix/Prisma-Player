@@ -4,6 +4,13 @@ export type BillingPlan = {
   name: string;
   description: string;
   amount_cents: number;
+  /**
+   * Preço anual à vista (cobrança 1×/ano): lookup `plano_<slug>_anual` no
+   * Stripe. Espelha os valores da landing (mesma vitrine, mesmo desconto).
+   */
+  annual_amount_cents: number;
+  /** Equivalente mensal do anual (annual_amount_cents / 12) — o preço grande da vitrine em modo anual. */
+  annual_monthly_equivalent: number;
   currency: "BRL";
   included_plays: number;
   /** Storage não é mais cobrado nem limitado — campo legado da tabela. */
@@ -47,6 +54,8 @@ export const CATALOG_PLANS: BillingPlan[] = [
     name: "Plano Iniciante",
     description: "Para produtores e afiliados testando e validando suas primeiras VSLs.",
     amount_cents: 6790,
+    annual_amount_cents: 53880,
+    annual_monthly_equivalent: 4490,
     currency: "BRL",
     included_plays: 10_000,
     prisma_ai_analyses: 10,
@@ -62,6 +71,8 @@ export const CATALOG_PLANS: BillingPlan[] = [
     name: "Plano Pro",
     description: "Para ofertas validadas com tráfego pago constante e trabalho recorrente de retenção.",
     amount_cents: 14790,
+    annual_amount_cents: 117480,
+    annual_monthly_equivalent: 9790,
     currency: "BRL",
     included_plays: 50_000,
     prisma_ai_analyses: 50,
@@ -79,6 +90,8 @@ export const CATALOG_PLANS: BillingPlan[] = [
     name: "Plano Escala",
     description: "Para agências, coprodutores e lançamentos de alto volume que precisam de suporte próximo.",
     amount_cents: 34790,
+    annual_amount_cents: 275880,
+    annual_monthly_equivalent: 22990,
     currency: "BRL",
     included_plays: 200_000,
     prisma_ai_analyses: 200,

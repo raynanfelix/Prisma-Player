@@ -48,7 +48,7 @@ function Spinner() {
 }
 
 /** Botão de plano: cria a Checkout Session (subscription) e redireciona. */
-export function PlanCheckoutButton({ planSlug, label }: { planSlug: string; label: string }) {
+export function PlanCheckoutButton({ planSlug, label, billing = "monthly" }: { planSlug: string; label: string; billing?: "monthly" | "annual" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,7 +56,7 @@ export function PlanCheckoutButton({ planSlug, label }: { planSlug: string; labe
     if (loading) return;
     setLoading(true);
     setError(null);
-    const result = await requestCheckoutUrl("/api/billing/checkout", { planSlug, billing: "monthly" });
+    const result = await requestCheckoutUrl("/api/billing/checkout", { planSlug, billing });
     if (result.ok) {
       window.location.assign(result.url);
       return; // segue loading até o redirect sair da página

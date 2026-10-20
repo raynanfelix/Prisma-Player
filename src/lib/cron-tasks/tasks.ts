@@ -8,6 +8,7 @@ import { isoOrNull } from "@/lib/datetime";
 import { getAccountPlan } from "@/lib/access/service";
 import { deliverWebhook } from "@/lib/webhooks/delivery";
 import { sendOperationalReport } from "@/lib/email/operational-report";
+import { reconcileSubscriptions } from "@/lib/billing/stripe/reconcile";
 
 const { videoLiveSessions, subscriptions, videoEvents, intelligenceControls, videos, userInbox, accountTeamInvites } = schema;
 
@@ -25,6 +26,10 @@ export type CronMaintenanceResult = {
   webhooks: number;
   skipped: number;
   processed: number;
+  /** Assinaturas conferidas pelo reconcile Stripe↔banco (spec Impecável, item 2). */
+  reconcileChecked: number;
+  /** Divergências NOVAS registradas no dia (idempotente por event_id diário). */
+  reconcileDivergences: number;
   timedOut: boolean;
   errors: string[];
 };
@@ -98,13 +103,14 @@ async function counts(videoIds: string[], from: Date, to?: Date): Promise<Period
 
 /**
  * Executa a manutenção completa do cron: limpeza de sessões live, expiração de
- * assinaturas, rollup diário, purges de retenção (SÓ com env explícita), sweep
- * de convites e o laço de relatórios/alertas por conta.
+ * assinaturas, reconciliação Stripe↔banco, rollup diário, purges de retenção
+ * (SÓ com env explícita), sweep de convites e o laço de relatórios/alertas
+ * por conta.
  */
 export async function runCronMaintenance(): Promise<CronMaintenanceOutcome> {
   const now = new Date();
   const ctx: MaintenanceContext = {
-    result: { reports: 0, emails: 0, alerts: 0, webhooks: 0, skipped: 0, processed: 0, timedOut: false, errors: [] },
+    result: { reports: 0, emails: 0, alerts: 0, webhooks: 0, skipped: 0, processed: 0, reconcileChecked: 0, reconcileDivergences: 0, timedOut: false, errors: [] },
     startedAt: Date.now(),
     now,
     currentFrom: new Date(now.getTime() - 24 * 3_600_000),
@@ -112,6 +118,7 @@ export async function runCronMaintenance(): Promise<CronMaintenanceOutcome> {
   };
   await cleanupLiveSessions(ctx);
   await expireOutdatedSubscriptions(ctx);
+  await runSubscriptionReconcile(ctx);
   await runDailyStatsRollup(ctx);
   await runRetentionPurges(ctx);
   await expireTeamInvites(ctx);
@@ -139,6 +146,27 @@ async function expireOutdatedSubscriptions(ctx: MaintenanceContext): Promise<voi
     await db.update(subscriptions).set({ status: "expired", updatedAt: ctx.now }).where(and(eq(subscriptions.status, "active"), lt(subscriptions.currentPeriodEnd, ctx.now)));
   } catch (error) {
     ctx.result.errors.push(`subscriptions_expiry: ${errorMessageOf(error)}`);
+  }
+}
+
+/**
+ * Reconciliação Stripe↔banco (spec Impecável, item 2): confere as linhas
+ * locais contra o provedor e REGISTRA divergências para decisão humana —
+ * nunca corrige sozinho. Roda DEPOIS da expiração: linha active com período
+ * vencido já virou expired, então o reconcile compara estados estáveis e o
+ * caso "renovação perdida" aparece como divergência de status clara. Sem
+ * Stripe configurado a passada é skip silencioso (nada a conferir).
+ */
+async function runSubscriptionReconcile(ctx: MaintenanceContext): Promise<void> {
+  try {
+    const reconcile = await reconcileSubscriptions(ctx.now);
+    if (reconcile.kind === "completed") {
+      ctx.result.reconcileChecked = reconcile.checked;
+      ctx.result.reconcileDivergences = reconcile.divergences;
+    }
+    ctx.result.errors.push(...reconcile.errors);
+  } catch (error) {
+    ctx.result.errors.push(`stripe_reconcile: ${errorMessageOf(error)}`);
   }
 }
 

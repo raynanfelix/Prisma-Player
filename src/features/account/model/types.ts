@@ -57,6 +57,7 @@ export interface AccountOverview {
 export interface TeamMember {
   id: string;
   role: string;
+  status: string;
   user_id: string;
   profile: { email: string; full_name: string | null } | null;
 }
@@ -65,7 +66,16 @@ export interface TeamInvite {
   id: string;
   email: string;
   role: string;
+  status: string;
   expires_at: string;
+}
+
+/** Convite pendente endereçado a ESTE usuário (aceite via POST action=accept). */
+export interface TeamInvitation {
+  id: string;
+  role: string;
+  expires_at: string | null;
+  team: { name: string };
 }
 
 export interface AccountTeam {
@@ -74,6 +84,7 @@ export interface AccountTeam {
   seats: number;
   members: TeamMember[];
   invites: TeamInvite[];
+  invitations?: TeamInvitation[];
 }
 
 export interface MfaFactor {

@@ -1,12 +1,13 @@
 import Image from "next/image";
-import { CheckCircle2, CreditCard, QrCode } from "lucide-react";
+import { CreditCard, QrCode } from "lucide-react";
 import { eq } from "drizzle-orm";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Reveal from "@/components/motion/reveal";
 import { requireUser } from "@/lib/auth/server";
 import { getAccountAccess, isSubscriptionEffective } from "@/lib/access/service";
-import { CATALOG_CREDIT_PACKAGES, CATALOG_PLANS, formatBRL, formatPlayOverage, getPlanBenefits } from "@/lib/billing/catalog";
-import { CreditsCheckoutButton, ManageSubscriptionButton, PlanCheckoutButton } from "@/features/account/components/BillingCheckoutButtons";
+import { CATALOG_CREDIT_PACKAGES, CATALOG_PLANS, formatBRL } from "@/lib/billing/catalog";
+import { CreditsCheckoutButton, ManageSubscriptionButton } from "@/features/account/components/BillingCheckoutButtons";
+import { BillingPlansShowcase } from "@/features/account/components/BillingPlansShowcase";
 import { db, schema } from "@/lib/db";
 
 const { aiCreditWallets, billingPlans, subscriptions } = schema;
@@ -132,61 +133,12 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </Reveal>
 
       <Reveal delay={0.08}>
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Planos Prisma Player</h2>
-              <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                Escolha o plano ideal para a sua operação — assinatura recorrente com checkout Stripe.
-              </p>
-            </div>
-          </div>
-          <div className="grid items-stretch gap-5 xl:grid-cols-3">
-            {CATALOG_PLANS.map((item) => {
-              const isCurrentPlan = subActive && plan?.slug === item.slug;
-              return (
-                <article
-                  key={item.id}
-                  className={`relative flex min-h-full flex-col rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs ${item.is_featured ? "ring-2 ring-[#B9FF66]" : ""}`}
-                >
-                  {item.is_featured && (
-                    <span className="absolute right-5 top-5 rounded-full bg-[#B9FF66] px-3 py-0.5 text-[10px] font-bold text-[#191A23]">POPULAR</span>
-                  )}
-                  <p className="pr-14 text-sm font-bold text-[#191A23] dark:text-white">{item.name}</p>
-                  <p className="mt-1 text-[11px] font-medium leading-4 text-slate-500 dark:text-zinc-400">{item.description}</p>
-                  <p className="mt-3 text-3xl font-bold tracking-tight text-[#191A23] dark:text-white">
-                    {formatBRL(item.amount_cents)}
-                    <span className="ml-1 text-xs font-medium text-slate-400 dark:text-zinc-500">/mês</span>
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold text-[#0066cc] dark:text-[#B9FF66]">
-                    {item.included_plays.toLocaleString("pt-BR")} plays inclusos · excedente {formatPlayOverage(item.play_overage_millicents)}
-                  </p>
-                  <ul className="mt-4 flex-1 space-y-1.5">
-                    {getPlanBenefits(item).slice(4, 10).map((benefit) => (
-                      <li key={benefit} className="flex items-start gap-2 text-[11px] font-medium text-slate-600 dark:text-zinc-300">
-                        <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-[#B9FF66]" aria-hidden /> {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                  {isCurrentPlan ? (
-                    <span className="mt-5 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-xs font-bold bg-[#B9FF66] text-[#191A23]">
-                      Seu plano atual
-                    </span>
-                  ) : showPortal ? (
-                    <span className="mt-5 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-transparent px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-zinc-400">
-                      Gerencie pelo portal
-                    </span>
-                  ) : (
-                    <PlanCheckoutButton
-                      planSlug={item.slug}
-                      label={subscription?.plan ? "Mudar para este plano" : "Assinar este plano"}
-                    />
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
+        <BillingPlansShowcase
+          plans={CATALOG_PLANS}
+          currentPlanSlug={subActive ? (plan?.slug ?? null) : null}
+          showPortal={showPortal}
+          hasPlan={Boolean(subscription?.plan)}
+        />
       </Reveal>
 
       <Reveal delay={0.16}>
