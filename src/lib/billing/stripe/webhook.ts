@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 
 import { CATALOG_CREDIT_PACKAGES, CATALOG_PLANS } from "@/lib/billing/catalog";
 import { getStripe } from "@/lib/billing/stripe/client";
+import { alertOperations } from "@/lib/security/alert-webhook";
 import { db, schema } from "@/lib/db";
 import { safeLog } from "@/lib/utils/log";
 
@@ -20,8 +21,8 @@ const { aiCreditLedger, aiCreditWallets, billingPlans, profiles, subscriptions }
  * - OwnerId via `client_reference_id` (campo oficial); metadata é fallback.
  * - Objeto `plan` (deprecated) nunca: plano vem do lookup_key do Price.
  * - `invoice.payment_failed` → past_due (dunning é do Stripe, não cancela).
- * - Risk-side (dispute/refund/fraud): fase 1 = log estruturado + evento na
- *   payment_webhook_events — NÃO suspende automaticamente (decisão da spec).
+ * - Risk-side (dispute/refund/fraud): alerta operacional (item 5) + disputa
+ *   suspende a assinatura ativa em past_due (item 6); refund/Radar só alertam.
  *
  * Object graph da API 2026-09-30.endive: o período vive no SubscriptionItem
  * (items.data[0].current_period_*), o Invoice referencia a subscription via
@@ -323,9 +324,9 @@ async function markSubscriptionPastDue(invoice: Stripe.Invoice): Promise<StripeE
 }
 
 /**
- * Risk-side (dispute/refund/fraud warning): fase 1 = LOG ESTRUTURADO +
- * evento registrado na payment_webhook_events — sem suspensão automática
- * (decisão da spec; o dono age manualmente).
+ * Risk-side (dispute/refund/fraud warning): alerta operacional (item 5) +
+ * disputa SUSPENDE a assinatura ativa em past_due (item 6); refund e Radar
+ * ficam SÓ no alerta — reativação é decisão manual do dono.
  * Resolução pelo ownership boundary real: charge → Customer →
  * profiles.stripe_customer_id → conta local (e a subscription stripe dela,
  * se existir). Sem customer no charge (raríssimo), o log segue com o que houver.
@@ -379,5 +380,38 @@ async function handleRiskEvent(event: Stripe.Event): Promise<StripeEventOutcome>
   }
 
   safeLog("stripe_risk_event", { type: event.type, eventId: event.id, chargeId, subscriptionId, ownerId });
+
+  // Item 6 do hardening: disputa aberta suspende a assinatura ATIVA do dono
+  // (past_due — o acesso cai no getAccountPlan). Reativação é sempre manual:
+  // ganhar a disputa não devolve o acesso sozinho (o dono decide). Refund e
+  // Radar ficam SÓ no alerta.
+  let suspended = false;
+  if (event.type === "charge.dispute.created" && ownerId) {
+    const rows = await db
+      .update(subscriptions)
+      .set({ status: "past_due", updatedAt: new Date() })
+      .where(and(
+        eq(subscriptions.userId, ownerId),
+        eq(subscriptions.provider, "stripe"),
+        eq(subscriptions.status, "active"),
+      ))
+      .returning({ id: subscriptions.providerSubscriptionId });
+    suspended = rows.length > 0;
+    if (!suspended) safeLog("stripe_dispute_sem_subscription_ativa", { ownerId, chargeId });
+  }
+
+  // Alerta operacional (hardening item 5): disputa/estorno/aviso de fraude
+  // ficavam só no log — o dono precisa saber na hora para agir manualmente.
+  const riskTitle =
+    event.type === "charge.dispute.created"
+      ? "Disputa (chargeback) aberta no Stripe"
+      : event.type === "charge.refunded"
+        ? "Estorno (refund) confirmado no Stripe"
+        : "Aviso de fraude do Radar (Stripe)";
+  await alertOperations({
+    title: riskTitle,
+    detail: `Evento ${event.type} (${event.id})${chargeId ? ` — charge ${chargeId}` : ""}${ownerId ? `, owner ${ownerId}` : ", owner não resolvido"}${subscriptionId ? `, subscription ${subscriptionId}` : ""}${suspended ? " — assinatura suspensa (past_due)" : ""}`,
+    kind: `stripe_risk:${event.type}`,
+  });
   return "processed";
 }

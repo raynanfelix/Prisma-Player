@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Estado compartilhado com as factories de mock (hoisted: as factories rodam
 // antes dos imports do módulo sob teste).
-const { gateState, dbState, stripeState, rateLimitCalls } = vi.hoisted(() => ({
+const { gateState, dbState, stripeState, rateLimitCalls, alertCalls } = vi.hoisted(() => ({
   gateState: { ok: true as boolean, denyResponse: null as Response | null },
   dbState: { selectRows: {} as Record<string, unknown[]> },
   stripeState: {
@@ -13,6 +13,13 @@ const { gateState, dbState, stripeState, rateLimitCalls } = vi.hoisted(() => ({
     envMissing: false,
   },
   rateLimitCalls: [] as Array<{ scope: string; options: Record<string, unknown> }>,
+  alertCalls: [] as Array<{ title?: string; detail?: string; kind?: string }>,
+}));
+
+vi.mock("@/lib/security/alert-webhook", () => ({
+  alertOperations: vi.fn(async (input: { title?: string; detail?: string; kind?: string }) => {
+    alertCalls.push(input);
+  }),
 }));
 
 vi.mock("@/lib/api/guard", () => ({
@@ -133,6 +140,7 @@ beforeEach(() => {
   stripeState.portalCreateArgs = [];
   stripeState.envMissing = false;
   rateLimitCalls.length = 0;
+  alertCalls.length = 0;
   process.env.STRIPE_SECRET_KEY = "rk_test_fake_key";
 });
 
@@ -201,7 +209,7 @@ describe("POST /api/billing/checkout (plano)", () => {
     expect(stripeState.sessionCreateArgs).toEqual([]);
   });
 
-  it("sem STRIPE_SECRET_KEY → 503 com clear_error", async () => {
+  it("sem STRIPE_SECRET_KEY → 503 com clear_error + alerta operacional (item 5)", async () => {
     delete process.env.STRIPE_SECRET_KEY;
     stripeState.envMissing = true;
 
@@ -211,6 +219,8 @@ describe("POST /api/billing/checkout (plano)", () => {
     expect(response.status).toBe(503);
     expect(body.error).toBe("stripe_unavailable");
     expect(body.message).toContain("STRIPE_SECRET_KEY");
+    expect(alertCalls[0]).toMatchObject({ kind: "billing_checkout_failed" });
+    expect(alertCalls[0]!.detail).toContain("owner-1");
   });
 
   it("sem sessão (guard nega) → repassa 401", async () => {
@@ -247,6 +257,7 @@ describe("POST /api/billing/ai-credits/checkout (créditos)", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "invalid_package" });
     expect(stripeState.sessionCreateArgs).toEqual([]);
+    expect(alertCalls).toEqual([]);
   });
 
   it("rate limit excedido → 429 repassado e sem criar session", async () => {
@@ -257,6 +268,16 @@ describe("POST /api/billing/ai-credits/checkout (créditos)", () => {
 
     expect(response.status).toBe(429);
     expect(stripeState.sessionCreateArgs).toEqual([]);
+  });
+
+  it("Stripe fora do ar nos créditos → 503 + alerta operacional (item 5)", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    stripeState.envMissing = true;
+
+    const response = await post("/api/billing/ai-credits/checkout", { packageSlug: "credits-start" });
+
+    expect(response.status).toBe(503);
+    expect(alertCalls[0]).toMatchObject({ kind: "billing_credits_checkout_failed" });
   });
 });
 
@@ -283,5 +304,17 @@ describe("POST /api/billing/portal", () => {
     expect(stripeState.portalCreateArgs).toEqual([
       { customer: "cus_portal_1", return_url: "https://prisma.test/dashboard/billing" },
     ]);
+    expect(alertCalls).toEqual([]);
+  });
+
+  it("Stripe fora do ar no portal → 503 + alerta operacional (item 5)", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    stripeState.envMissing = true;
+    dbState.selectRows = { profiles: [{ stripeCustomerId: "cus_portal_1" }] };
+
+    const response = await post("/api/billing/portal", {});
+
+    expect(response.status).toBe(503);
+    expect(alertCalls[0]).toMatchObject({ kind: "billing_portal_failed" });
   });
 });

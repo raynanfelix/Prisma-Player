@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-import type { IntegrationItem, ProviderApp, VslOption } from "./store-data";
+import type { IntegrationItem, ProviderApp, ProviderField, VslOption } from "./store-data";
 import { AppMark } from "./store-mark";
 import PixelVerifyPanel, { type PixelVerifyResultDto } from "./PixelVerifyPanel";
 import { shortRelativeTime } from "./relative-time";
@@ -19,6 +19,17 @@ interface Props {
   instances: IntegrationItem[];
   vsls: VslOption[];
   onBack: () => void;
+}
+
+/**
+ * Placeholder do campo secreto: o valor salvo NUNCA volta preenchido (GET e
+ * page mascaram com "" + hasToken/hasWebhookUrl). Quando a instância já tem o
+ * segredo, o placeholder avisa que campo vazio no submit MANTÉM o valor.
+ */
+function secretPlaceholder(field: ProviderField, item: IntegrationItem | null): string {
+  if (!field.secret || !item) return field.placeholder;
+  const saved = field.key === "webhookUrl" ? item.hasWebhookUrl : item.hasToken;
+  return saved ? "•••• preenchido — cole para trocar" : field.placeholder;
 }
 
 /**
@@ -239,7 +250,7 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
                   value={draft[field.key] ?? ""}
                   onChange={(event) => setDraft((current) => ({ ...current, [field.key]: event.target.value }))}
                   onBlur={field.key === "botToken" ? () => void verifyToken() : undefined}
-                  placeholder={field.placeholder}
+                  placeholder={secretPlaceholder(field, typeof editing === "object" ? editing : null)}
                   readOnly={field.readOnly}
                   autoComplete="off"
                   spellCheck={false}

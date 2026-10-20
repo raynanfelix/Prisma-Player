@@ -1,0 +1,55 @@
+name: Verify
+
+# Hardening pós-audit (docs/SECURITY_HARDENING_SPEC.md, item 1): pipeline de
+# verificação em push/PR para a main. SEM build — a Vercel buildia todo push
+# de qualquer forma; o CI fica rápido e roda o que a Vercel não roda
+# (tsc, lint, testes, quality gates e audit de dependências).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela execuções antigas do mesmo branch: um PR com vários pushes não
+# precisa manter runners ocupados com commits já superados.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências (npm ci)
+        run: npm ci
+
+      - name: Tipos (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes (vitest)
+        run: npm test
+
+      - name: Regras de qualidade (eslint-rules quality/*)
+        run: node scripts/verify-quality-rules.mjs
+
+      # Falha somente em vulnerabilidade high/critical. Em 19/10/2026 o audit
+      # ainda acusa 2 cadeias de DEV-TOOLS sem correção dentro do range atual
+      # (tinypool via vitest 3 — correção é vitest 5, breaking; braces via
+      # shadcn CLI/eslint — sem versão corrigida publicada). Dependências de
+      # produção estão limpas após `npm audit fix`. Ver pendências em
+      # docs/SECURITY_HARDENING_SPEC.md.
+      - name: Audit de dependências (falha só em high/critical)
+        run: npm audit --audit-level=high

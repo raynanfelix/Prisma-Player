@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { billingOrigin, getStripe } from "@/lib/billing/stripe/client";
 import { guard } from "@/lib/api/guard";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { alertOperations } from "@/lib/security/alert-webhook";
 import { db, schema } from "@/lib/db";
 import { safeLog } from "@/lib/utils/log";
 
@@ -45,6 +46,13 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ url: session.url }, { headers: NO_STORE });
   } catch (error) {
+    // Alerta operacional (hardening item 5): portal fora = cliente sem como
+    // cancelar/trocar cartão — situação que vira chargeback.
+    await alertOperations({
+      title: "Portal de cobrança falhou",
+      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      kind: "billing_portal_failed",
+    });
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
         { error: "stripe_unavailable", message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },

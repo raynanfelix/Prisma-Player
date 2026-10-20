@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authState, teamState, planState } = vi.hoisted(() => ({
+const { authState, teamState, planState, rateLimitState, rateLimitCalls } = vi.hoisted(() => ({
   authState: { userId: "user-a" as string | null },
   teamState: { accountOwnerId: "user-a", role: "owner", canEditContent: true, canManageAccount: true },
   planState: { hasAccess: true, trialStatus: "active" },
+  rateLimitState: { limited: null as Response | null },
+  rateLimitCalls: [] as Array<{ scope: string; options: Record<string, unknown> }>,
 }));
 
 vi.mock("@/lib/auth/server", () => ({
   getCurrentUserId: vi.fn(async () => authState.userId),
+}));
+
+vi.mock("@/lib/security/rate-limit", () => ({
+  rateLimit: vi.fn(async (request: Request, scope: string, options: Record<string, unknown>) => {
+    void request;
+    rateLimitCalls.push({ scope, options });
+    return rateLimitState.limited;
+  }),
 }));
 
 vi.mock("@/lib/access/team-context", () => ({
@@ -44,6 +54,8 @@ describe("matriz IDOR/paywall (guard canônico)", () => {
     teamState.canManageAccount = true;
     planState.hasAccess = true;
     planState.trialStatus = "active";
+    rateLimitState.limited = null;
+    rateLimitCalls.length = 0;
   });
 
   it("A lê próprio recurso: permite", async () => {
@@ -86,5 +98,48 @@ describe("matriz IDOR/paywall (guard canônico)", () => {
     const r = await guard(req(), {});
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.account.accountOwnerId).toBe("user-a");
+  });
+});
+
+describe("rate limit default no guard (hardening item 4)", () => {
+  beforeEach(() => {
+    authState.userId = "user-a";
+    teamState.accountOwnerId = "user-a";
+    teamState.role = "owner";
+    teamState.canEditContent = true;
+    teamState.canManageAccount = true;
+    planState.hasAccess = true;
+    planState.trialStatus = "active";
+    rateLimitState.limited = null;
+    rateLimitCalls.length = 0;
+  });
+
+  it("gate ok consome o teto default: 60/min por dono, fail-open (sem failClosed)", async () => {
+    const r = await guard(req(), {});
+    expect(r.ok).toBe(true);
+    expect(rateLimitCalls).toEqual([
+      { scope: "guard:user-a", options: { max: 60, windowMs: 60_000 } },
+    ]);
+  });
+
+  it("limitado → guard devolve exatamente a 429 do rate limit", async () => {
+    rateLimitState.limited = new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "retry-after": "42" } });
+
+    const r = await guard(req(), {});
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.response.status).toBe(429);
+      expect(r.response.headers.get("retry-after")).toBe("42");
+    }
+  });
+
+  it("gate fechado NÃO consome o teto: 401/402/403 saem antes do rate limit", async () => {
+    authState.userId = null;
+    await guard(req(), { paid: true });
+    planState.hasAccess = false;
+    authState.userId = "user-a";
+    await guard(req(), { paid: true });
+    expect(rateLimitCalls).toEqual([]);
   });
 });

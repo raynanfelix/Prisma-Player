@@ -9,6 +9,7 @@ import {
   deleteIntegration,
   isIntegrationProvider,
   listIntegrations,
+  maskIntegrationConfig,
   sanitizeInstanceId,
   sanitizeIntegrationConfig,
   sanitizeInstanceName,
@@ -25,10 +26,13 @@ function noStore(body: unknown, status = 200) {
 
 /**
  * Integrações por CONTA (App Store em /dashboard/integracoes).
- * GET: lista as integrações do dono. PUT: instala/atualiza uma (provider +
- * config validado por provider + vslIds conferidos contra as VSLs do dono).
- * DELETE: remove uma. Tokens/chaves ficam server-side (a rota é do próprio
- * dono, mas a resposta nunca circula fora daqui — no-store).
+ * GET: lista as integrações do dono — campos secretos (tokens, api secrets e
+ * URLs de webhook) saem MASCARADOS como "" com flags hasToken/hasWebhookUrl;
+ * o valor cru nunca chega ao cliente. PUT: instala/atualiza uma (provider +
+ * config validado por provider + vslIds conferidos contra as VSLs do dono;
+ * campo secreto vazio preserva o valor salvo). DELETE: remove uma.
+ * Tokens/chaves ficam server-side (a rota é do próprio dono, mas a resposta
+ * nunca circula fora daqui — no-store).
  */
 export async function GET(request: Request) {
   const gate = await guard(request);
@@ -38,15 +42,20 @@ export async function GET(request: Request) {
   if (limited) return limited;
   const items = await listIntegrations(ownerId);
   return noStore({
-    integrations: items.map((item) => ({
-      provider: item.provider,
-      instanceId: item.instanceId,
-      name: item.name,
-      config: item.config,
-      vslIds: item.vslIds,
-      enabled: item.enabled,
-      updatedAt: item.updatedAt.toISOString(),
-    })),
+    integrations: items.map((item) => {
+      const masked = maskIntegrationConfig(item.provider, item.config);
+      return {
+        provider: item.provider,
+        instanceId: item.instanceId,
+        name: item.name,
+        config: masked.config,
+        vslIds: item.vslIds,
+        enabled: item.enabled,
+        updatedAt: item.updatedAt.toISOString(),
+        hasToken: masked.hasToken,
+        hasWebhookUrl: masked.hasWebhookUrl,
+      };
+    }),
   });
 }
 

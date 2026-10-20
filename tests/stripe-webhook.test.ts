@@ -8,7 +8,7 @@ import { createHmac, randomUUID } from "node:crypto";
  * efeitos do fulfillment (subscriptions, profiles, wallet/ledger, eventos).
  */
 
-const { dbState, stripeState, consoleSpy } = vi.hoisted(() => ({
+const { dbState, stripeState, consoleSpy, alertCalls } = vi.hoisted(() => ({
   dbState: {
     events: new Map<string, { status: string; processingError: string | null }>(),
     lastEventId: null as string | null,
@@ -32,10 +32,17 @@ const { dbState, stripeState, consoleSpy } = vi.hoisted(() => ({
     paymentIntentsRetrieve: null as null | ((id: string) => Promise<unknown>),
   },
   consoleSpy: { error: null as null | ReturnType<typeof vi.spyOn> },
+  alertCalls: [] as Array<{ title?: string; detail?: string; kind?: string }>,
 }));
 
 vi.mock("@/lib/security/rate-limit", () => ({
   rateLimit: vi.fn(async () => null),
+}));
+
+vi.mock("@/lib/security/alert-webhook", () => ({
+  alertOperations: vi.fn(async (input: { title?: string; detail?: string; kind?: string }) => {
+    alertCalls.push(input);
+  }),
 }));
 
 vi.mock("@/lib/db", async () => {
@@ -223,6 +230,7 @@ function resetDbState(): void {
   stripeState.sessionsRetrieve = null;
   stripeState.chargesRetrieve = null;
   stripeState.paymentIntentsRetrieve = null;
+  alertCalls.length = 0;
 }
 
 beforeEach(() => {
@@ -368,7 +376,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(dbState.subscriptionUpdates[0]!["cancelledAt"]).toBeInstanceOf(Date);
   });
 
-  it("charge.dispute.created → log estruturado + evento processed, sem suspender a assinatura (fase 1)", async () => {
+  it("charge.dispute.created → ALERTA + assinatura ativa suspensa em past_due (item 6)", async () => {
     dbState.profilesRows = [{ id: "owner-1" }];
     dbState.subscriptionsRows = [{ id: "sub_001" }];
     stripeState.chargesRetrieve = async () => ({ id: "ch_001", customer: "cus_001", payment_intent: null });
@@ -379,7 +387,42 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(dbState.events.get(event.eventId)?.status).toBe("processed");
     expect(consoleSpy.error).toHaveBeenCalledWith("stripe_risk_event", expect.stringContaining("ch_001"));
+    // Item 6: disputa suspende a assinatura ATIVA (reativação é manual).
+    expect(dbState.subscriptionUpdates[0]).toMatchObject({ status: "past_due" });
+    // Item 5: disputa ganha alerta operacional com o contexto resolvido.
+    expect(alertCalls[0]).toMatchObject({ kind: "stripe_risk:charge.dispute.created", title: "Disputa (chargeback) aberta no Stripe" });
+    expect(alertCalls[0]!.detail).toContain("ch_001");
+    expect(alertCalls[0]!.detail).toContain("owner-1");
+    expect(alertCalls[0]!.detail).toContain("past_due");
+  });
+
+  it("charge.refunded → SÓ alerta (sem suspensão — reativação é decisão manual do dono)", async () => {
+    dbState.profilesRows = [{ id: "owner-1" }];
+    dbState.subscriptionsRows = [{ id: "sub_001" }];
+    stripeState.chargesRetrieve = async () => ({ id: "ch_002", customer: "cus_001", payment_intent: null });
+    const event = webhookEvent("charge.refunded", { id: "re_001", charge: "ch_002" });
+
+    const response = await postWebhook(event);
+
+    expect(response.status).toBe(200);
+    expect(dbState.events.get(event.eventId)?.status).toBe("processed");
     expect(dbState.subscriptionUpdates).toEqual([]);
+    expect(alertCalls[0]).toMatchObject({ kind: "stripe_risk:charge.refunded", title: "Estorno (refund) confirmado no Stripe" });
+    expect(alertCalls[0]!.detail).not.toContain("suspensa");
+  });
+
+  it("radar.early_fraud_warning.created → alerta de fraude sem suspensão", async () => {
+    dbState.profilesRows = [{ id: "owner-1" }];
+    dbState.subscriptionsRows = [{ id: "sub_001" }];
+    stripeState.chargesRetrieve = async () => ({ id: "ch_003", customer: "cus_001", payment_intent: null });
+    const event = webhookEvent("radar.early_fraud_warning.created", { id: "issfr_001", charge: "ch_003" });
+
+    const response = await postWebhook(event);
+
+    expect(response.status).toBe(200);
+    expect(dbState.events.get(event.eventId)?.status).toBe("processed");
+    expect(dbState.subscriptionUpdates).toEqual([]);
+    expect(alertCalls[0]).toMatchObject({ kind: "stripe_risk:radar.early_fraud_warning.created", title: "Aviso de fraude do Radar (Stripe)" });
   });
 
   it("evento desconhecido → 200 ignored", async () => {
@@ -404,6 +447,9 @@ describe("POST /api/webhooks/stripe", () => {
     const first = await postWebhook(event);
     expect(first.status).toBe(500);
     expect(dbState.events.get(event.eventId)?.status).toBe("failed");
+    // Item 5: evento failed gera alerta operacional ANTES do 500.
+    expect(alertCalls[0]).toMatchObject({ kind: "stripe_webhook_failed" });
+    expect(alertCalls[0]!.detail).toContain(event.eventId);
 
     // Stripe reentrega o MESMO evento: a linha failed permite reprocessar.
     stripeState.subscriptionsRetrieve = async () => ({

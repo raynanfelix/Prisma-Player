@@ -5,6 +5,7 @@ import { billingOrigin, getStripe, resolvePriceByLookupKey, STRIPE_INTEGRATION_I
 import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { alertOperations } from "@/lib/security/alert-webhook";
 import { safeLog } from "@/lib/utils/log";
 
 const NO_STORE = { "cache-control": "no-store" } as const;
@@ -64,6 +65,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url }, { headers: NO_STORE });
   } catch (error) {
+    // Alerta operacional (hardening item 5): mesma regra do checkout de plano.
+    await alertOperations({
+      title: "Checkout de créditos falhou",
+      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      kind: "billing_credits_checkout_failed",
+    });
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
         { error: "stripe_unavailable", message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },

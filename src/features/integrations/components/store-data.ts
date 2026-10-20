@@ -27,10 +27,15 @@ export interface IntegrationItem {
   provider: string;
   instanceId: string;
   name: string;
+  /** Config com os campos secretos MASCARADOS ("" no lugar do valor cru). */
   config: Record<string, unknown>;
   vslIds: string[];
   enabled: boolean;
   updatedAt: string;
+  /** Há token/secret salvo nesta instância (o valor nunca vem no config). */
+  hasToken?: boolean;
+  /** Há URL de webhook salva nesta instância (a URL nunca vem no config). */
+  hasWebhookUrl?: boolean;
 }
 
 export interface VslOption {
@@ -237,7 +242,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     description: "Receba eventos das suas VSLs em um canal do seu servidor Discord.",
     logo: discordLogo,
     showAvailableBadge: true,
-    fields: [{ key: "webhookUrl", label: "Webhook do Discord", placeholder: "https://discord.com/api/webhooks/…" }],
+    fields: [{ key: "webhookUrl", label: "Webhook do Discord", placeholder: "https://discord.com/api/webhooks/…", secret: true }],
     events: {
       title: "Eventos em tempo real",
       tag: "play · progress · cta_click · conversion · complete",

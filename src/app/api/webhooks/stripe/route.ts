@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/billing/stripe/client";
 import { processStripeEvent } from "@/lib/billing/stripe/webhook";
 import { rateLimit } from "@/lib/security/rate-limit";
+import { alertOperations } from "@/lib/security/alert-webhook";
 import { db, schema } from "@/lib/db";
 import { safeLog } from "@/lib/utils/log";
 
@@ -107,6 +108,13 @@ export async function POST(request: Request) {
     } catch {
       // O 500 abaixo já faz o Stripe reentregar; o status fica stale só até lá.
     }
+    // Alerta operacional (hardening item 5): evento failed não pode ser
+    // silencioso — o dono precisa saber que um pagamento pode estar pendente.
+    await alertOperations({
+      title: "Webhook do Stripe falhou",
+      detail: `Evento ${event.type} (${event.id}) marcado failed — o Stripe reentrega. Motivo: ${message}`,
+      kind: "stripe_webhook_failed",
+    });
     return NextResponse.json({ error: "processing_failed" }, { status: 500, headers: NO_STORE });
   }
 }

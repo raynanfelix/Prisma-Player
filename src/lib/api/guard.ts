@@ -4,6 +4,7 @@ import { getCurrentUserId } from "@/lib/auth/server";
 import { getTeamAccountContext, type TeamAccountContext } from "@/lib/access/team-context";
 import { getAccountPlan, type AccountPlan } from "@/lib/access/service";
 import { csrfGuard } from "@/lib/security/csrf";
+import { rateLimit } from "@/lib/security/rate-limit";
 
 export type GuardOptions = {
   /** Valida Origin/Referer. Obrigatório em qualquer método que escreve. */
@@ -37,9 +38,10 @@ function deny(error: string, status: number, message?: string): { ok: false; res
 }
 
 /**
- * Porta única de entrada das rotas autenticadas: CSRF, sessão, papel na equipe
- * e acesso pago. Centralizar evita a classe de bug mais cara deste código —
- * uma rota nova que esquece uma das quatro verificações.
+ * Porta única de entrada das rotas autenticadas: CSRF, sessão, papel na
+ * equipe, acesso pago e o teto de rate limit default (60/min por dono,
+ * fail-open). Centralizar evita a classe de bug mais cara deste código —
+ * uma rota nova que esquece uma das cinco verificações.
  *
  * Neon Auth (Managed Better Auth): `userId`/`accountOwnerId` são o id do
  * usuário do Neon Auth (TEXT) — nenhuma query pode presumir UUID. A resolução
@@ -72,6 +74,14 @@ export async function guard(request: Request, options: GuardOptions = {}): Promi
         : "Seu acesso expirou. Escolha um plano para continuar.",
     );
   }
+
+  // Teto default de TODA rota autenticada (hardening item 4): 60/min por
+  // DONO — nenhuma rota nova nasce sem limite. Fail-OPEN de propósito: uma
+  // falha do store de rate limit não pode travar usuário legítimo em pico;
+  // rotas críticas (login, checkout, webhooks, verify) mantêm seus próprios
+  // limites fail-closed por cima. Rotas públicas não passam pelo guard.
+  const limited = await rateLimit(request, `guard:${account.accountOwnerId}`, { max: 60, windowMs: 60_000 });
+  if (limited) return { ok: false, response: limited };
 
   return { ok: true, userId, account, plan };
 }

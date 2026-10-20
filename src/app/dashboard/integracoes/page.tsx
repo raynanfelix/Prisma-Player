@@ -9,7 +9,7 @@ import { requireUser } from "@/lib/auth/server";
 import { getAccountPlan } from "@/lib/access/service";
 import { db, schema } from "@/lib/db";
 import { loadAccountBenchmark } from "@/lib/intelligence/benchmark";
-import { listIntegrations } from "@/lib/integrations/server";
+import { listIntegrations, maskIntegrationConfig } from "@/lib/integrations/server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Marketplace de apps · Prisma Player" };
@@ -37,15 +37,23 @@ export default async function IntegracoesPage() {
     getAccountPlan(userId),
   ]);
 
-  const integrations: IntegrationItem[] = rows.map((item) => ({
-    provider: item.provider,
-    instanceId: item.instanceId,
-    name: item.name,
-    config: item.config,
-    vslIds: item.vslIds,
-    enabled: item.enabled,
-    updatedAt: item.updatedAt.toISOString(),
-  }));
+  // Contrato do item 2 do hardening: segredos NUNCA saem daqui com o valor
+  // cru — a page renderiza o mesmo payload mascarado do GET /api/integrations
+  // ("" + hasToken/hasWebhookUrl), que a UI usa para o placeholder "••••".
+  const integrations: IntegrationItem[] = rows.map((item) => {
+    const masked = maskIntegrationConfig(item.provider, item.config);
+    return {
+      provider: item.provider,
+      instanceId: item.instanceId,
+      name: item.name,
+      config: masked.config,
+      vslIds: item.vslIds,
+      enabled: item.enabled,
+      updatedAt: item.updatedAt.toISOString(),
+      hasToken: masked.hasToken,
+      hasWebhookUrl: masked.hasWebhookUrl,
+    };
+  });
 
   const vsls: VslOption[] = vslRows.map((row) => ({ id: row.id, title: row.title }));
   const benchmarkData = await loadAccountBenchmark(readyRows.map((row) => ({ id: row.id, title: row.title })));

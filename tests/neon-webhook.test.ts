@@ -11,13 +11,20 @@ import { generateKeyPairSync, randomUUID, sign as cryptoSign } from "node:crypto
  * Spec: https://neon.com/docs/auth/guides/webhooks.md
  */
 
-const { afterState } = vi.hoisted(() => ({
+const { afterState, alertCalls } = vi.hoisted(() => ({
   /** Tarefas passadas ao after() do Next — executadas manualmente no teste. */
   afterState: { tasks: [] as Array<() => unknown> },
+  alertCalls: [] as Array<{ title?: string; detail?: string; kind?: string }>,
 }));
 
 vi.mock("@/lib/security/rate-limit", () => ({
   rateLimit: vi.fn(async () => null),
+}));
+
+vi.mock("@/lib/security/alert-webhook", () => ({
+  alertOperations: vi.fn(async (input: { title?: string; detail?: string; kind?: string }) => {
+    alertCalls.push(input);
+  }),
 }));
 
 vi.mock("@/lib/access/bootstrap", () => ({
@@ -124,6 +131,7 @@ afterAll(() => {
 beforeEach(() => {
   resetNeonWebhookStateForTests();
   afterState.tasks.length = 0;
+  alertCalls.length = 0;
   vi.clearAllMocks();
   // A rota usa o fetch default (globalThis.fetch) — stub devolve o JWKS de teste.
   vi.stubGlobal("fetch", (async () => jwksResponse([testJwk])) as typeof fetch);
@@ -338,7 +346,7 @@ describe("POST /api/webhooks/neon-auth — rota", () => {
     expect(vi.mocked(ensureAccountBootstrap)).not.toHaveBeenCalled();
   });
 
-  it("(h) sem headers de assinatura → 401, nada processado", async () => {    const response = await POST(
+  it("(h) sem headers de assinatura → 401, nada processado + ALERTA de assinatura inválida (item 5)", async () => {    const response = await POST(
       new Request("https://prisma-player.vercel.app/api/webhooks/neon-auth", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -349,5 +357,18 @@ describe("POST /api/webhooks/neon-auth — rota", () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "invalid_webhook" });
     expect(afterState.tasks).toHaveLength(0);
+    // Item 5: assinatura inválida em produção = segredo/painel mal configurado
+    // ou forja — o dono precisa saber.
+    expect(alertCalls[0]).toMatchObject({ kind: "neon_auth_invalid_webhook" });
+  });
+
+  it("(e2) evento válido NÃO dispara alerta (silêncio é o caminho feliz)", async () => {
+    const body = userCreatedBody("evt-route-e2");
+    const signed = signWebhook({ body });
+
+    const response = await POST(webhookRequest(body, webhookHeaders(signed, { eventId: "evt-route-e2" })));
+
+    expect(response.status).toBe(200);
+    expect(alertCalls).toEqual([]);
   });
 });

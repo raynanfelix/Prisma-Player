@@ -34,6 +34,53 @@ export function isIntegrationProvider(value: unknown): value is IntegrationProvi
   return typeof value === "string" && (INTEGRATION_PROVIDERS as readonly string[]).includes(value);
 }
 
+/**
+ * Campos de config que NUNCA saem do servidor com o valor cru: tokens de API,
+ * API secrets e a URL de webhook (Discord/Telegram — quem tem a URL posta no
+ * canal/bot do dono, então ela é um segredo operacional). A UI marca os mesmos
+ * campos com `secret: true` no store-data; o teste de consistência em
+ * tests/integrations-route.test.ts trava as duas listas juntas.
+ */
+export const SECRET_CONFIG_KEYS: Record<IntegrationProvider, readonly string[]> = {
+  meta_pixel: ["accessToken"],
+  google_ads: ["apiSecret"],
+  tiktok: ["accessToken"],
+  utmify: [],
+  discord: ["webhookUrl"],
+  telegram: ["botToken", "webhookUrl"],
+};
+
+export type MaskedIntegrationConfig = {
+  config: Record<string, unknown>;
+  hasToken: boolean;
+  hasWebhookUrl: boolean;
+};
+
+/** Valor "preenchido" para fins de máscara: qualquer valor não-vazio (fail-safe com jsonb legado). */
+function isFilledValue(value: unknown): boolean {
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+/**
+ * Máscara para a fronteira cliente (GET /api/integrations e a page do
+ * Marketplace): todo campo secreto sai como `""`; a resposta ganha
+ * `hasToken`/`hasWebhookUrl` para a UI avisar "•••• preenchido — cole para
+ * trocar". O valor cru continua no banco (o embed/CAPI lê direto daqui de
+ * dentro) e volta para a instância via merge do upsert, nunca via resposta.
+ */
+export function maskIntegrationConfig(provider: IntegrationProvider, config: Record<string, unknown>): MaskedIntegrationConfig {
+  const masked = { ...config };
+  let hasToken = false;
+  let hasWebhookUrl = false;
+  for (const key of SECRET_CONFIG_KEYS[provider]) {
+    if (!isFilledValue(config[key])) continue;
+    masked[key] = "";
+    if (key === "webhookUrl") hasWebhookUrl = true;
+    else hasToken = true;
+  }
+  return { config: masked, hasToken, hasWebhookUrl };
+}
+
 /** Validação/sanitização do config por provider. Retorna null se inválido. */
 export function sanitizeIntegrationConfig(provider: IntegrationProvider, raw: unknown): Record<string, unknown> | null {
   const input = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
@@ -186,6 +233,38 @@ export async function getIntegration(ownerId: string, provider: IntegrationProvi
 }
 
 /**
+ * Merge dos campos secretos no upsert (mesmo modelo do withVerifyMeta, para
+ * valores): como o GET nunca devolve o valor cru, a edição chega com o campo
+ * vazio — campo vazio/ausente MANTÉM o valor salvo da instância; campo
+ * preenchido substitui. Sem instância existente não há o que preservar.
+ */
+async function mergeSecretConfig(
+  ownerId: string,
+  provider: IntegrationProvider,
+  instanceId: string,
+  config: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (SECRET_CONFIG_KEYS[provider].length === 0) return config;
+  const [existing] = await db
+    .select({ config: accountIntegrations.config })
+    .from(accountIntegrations)
+    .where(and(
+      eq(accountIntegrations.accountOwnerId, ownerId),
+      eq(accountIntegrations.provider, provider),
+      eq(accountIntegrations.instanceId, instanceId),
+    ))
+    .limit(1);
+  const current = (existing?.config && typeof existing.config === "object" ? existing.config : null) as Record<string, unknown> | null;
+  if (!current) return config;
+  const merged = { ...config };
+  for (const key of SECRET_CONFIG_KEYS[provider]) {
+    if (isFilledValue(merged[key])) continue;
+    if (isFilledValue(current[key])) merged[key] = current[key];
+  }
+  return merged;
+}
+
+/**
  * Cria/atualiza UMA instância. `instanceId` distingue múltiplas integrações do
  * mesmo provider (5 domínios, 5 Discords…). Conflito só na tríade
  * (owner, provider, instanceId).
@@ -196,6 +275,9 @@ export async function upsertIntegration(
   input: { config: Record<string, unknown>; vslIds: string[]; enabled: boolean; instanceId?: string; name?: string },
 ): Promise<void> {
   const instanceId = input.instanceId ?? "default";
+  // Segredo vazio no input preserva o valor salvo (a UI não recebe o token de
+  // volta para re-enviar). Sem isso, todo "Salvar alterações" apagaria o token.
+  const config = await mergeSecretConfig(ownerId, provider, instanceId, input.config);
   await db
     .insert(accountIntegrations)
     .values({
@@ -203,7 +285,7 @@ export async function upsertIntegration(
       provider,
       instanceId,
       name: input.name ?? "Principal",
-      config: input.config,
+      config,
       vslIds: input.vslIds,
       enabled: input.enabled,
     })
@@ -211,7 +293,7 @@ export async function upsertIntegration(
       target: [accountIntegrations.accountOwnerId, accountIntegrations.provider, accountIntegrations.instanceId],
       set: {
         name: input.name ?? "Principal",
-        config: input.config,
+        config,
         vslIds: input.vslIds,
         enabled: input.enabled,
         updatedAt: new Date(),
