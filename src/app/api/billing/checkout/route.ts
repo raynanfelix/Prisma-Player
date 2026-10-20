@@ -47,8 +47,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    // O catálogo do Stripe usa sufixos em português (plano_pro_mensal/anual,
+    // criados pelo seed e pelas PRICE_DEFINITIONS); o client envia monthly/annual.
+    const periodSuffix = billing === "annual" ? "anual" : "mensal";
     const [priceId, profileRows] = await Promise.all([
-      resolvePriceByLookupKey(`plano_${planSlug}_${billing}`),
+      resolvePriceByLookupKey(`plano_${planSlug}_${periodSuffix}`),
       db
         .select({ stripeCustomerId: profiles.stripeCustomerId })
         .from(profiles)
