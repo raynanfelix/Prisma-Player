@@ -6,7 +6,7 @@ import { bucket, client } from "@/lib/storage/r2";
 
 /**
  * Detecta faststart (moov atom no início do arquivo) de um MP4 no R2.
- * Best-effort: NUNCA lança — objeto ilegível, ausente ou sem as marcas de
+ * Best-effort: NUNCA lança - objeto ilegível, ausente ou sem as marcas de
  * átomo nos primeiros bytes devolvem null em vez de booleano.
  *
  * Lê só os primeiros 64 KiB (Range GET): o "moov" de um MP4 com faststart
@@ -32,7 +32,7 @@ export async function detectMp4Faststart(objectPath: string): Promise<boolean | 
 /**
  * Body do S3 SDK v3 varia por runtime (Readable no Node, ReadableStream/Blob
  * na web). Aceita qualquer forma e devolve Buffer, ou null quando não
- * conseguir ler — a detecção degrada para "indeterminado", nunca quebra.
+ * conseguir ler - a detecção degrada para "indeterminado", nunca quebra.
  */
 async function bodyBytes(body: unknown): Promise<Buffer | null> {
   try {

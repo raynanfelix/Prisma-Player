@@ -42,7 +42,7 @@ function resolveDataXExtent(
   return [new Date(minTime), new Date(maxTime)];
 }
 
-/** Brush track extent — optionally extends past the last data row (e.g. projections). */
+/** Brush track extent - optionally extends past the last data row (e.g. projections). */
 function resolveBrushTrackXExtent(
   data: Record<string, unknown>[],
   xAccessor: (d: Record<string, unknown>) => Date,

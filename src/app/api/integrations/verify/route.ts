@@ -13,7 +13,7 @@ function noStore(body: unknown, status = 200) {
 /**
  * "Testar conexão" das integrações de anúncio (docs/PIXEL_VERIFY_SPEC.md).
  * Body: { provider: meta_pixel|google_ads|tiktok, instanceId?, config }.
- * Teste PURO — não salva nada: dispara um evento de teste REAL na API oficial
+ * Teste PURO - não salva nada: dispara um evento de teste REAL na API oficial
  * da plataforma e devolve a resposta padronizada
  * { ok, platform, message, detail, receivedAt }. Tokens nunca são logados.
  */

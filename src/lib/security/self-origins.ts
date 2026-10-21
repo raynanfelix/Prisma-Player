@@ -10,7 +10,7 @@ import "server-only";
  * respondido (incluindo previews) e virava um vazamento lento de memória.
  *
  * Fonte única usada por csrf.ts (validação de mutações) e embed-origin.ts
- * (isenção de Origin/Referer self — nunca como autoridade de domínio de embed).
+ * (isenção de Origin/Referer self - nunca como autoridade de domínio de embed).
  */
 export function buildConfiguredSelfOrigins(): ReadonlySet<string> {
   const origins = new Set<string>();

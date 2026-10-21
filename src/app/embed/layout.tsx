@@ -6,7 +6,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false, noarc
  * Preconnect ao endpoint do R2: o DNS + TLS do storage custa ~100-300ms e
  * antes só começava DEPOIS de a config assinada chegar (o `source` é a
  * primeira URL do R2 que o navegador vê). Com o preconnect no <head>, a
- * conexão abre em paralelo com o fetch de config — quando o source chega,
+ * conexão abre em paralelo com o fetch de config - quando o source chega,
  * o handshake já foi pago. O endpoint é o mesmo de lib/storage/r2 (env
  * CLOUDFLARE_R2_ENDPOINT com prioridade, senão account id); aqui é
  * best-effort: sem env configurado o embed segue funcionando sem preconnect.

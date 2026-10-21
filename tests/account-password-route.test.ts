@@ -13,7 +13,7 @@ vi.mock("@/lib/security/auth-events", () => ({
 }));
 
 const { authState, authMocks } = vi.hoisted(() => {
-  /** Estado do getAuth() mockado — sessão e respostas dos métodos de OTP/senha. */
+  /** Estado do getAuth() mockado - sessão e respostas dos métodos de OTP/senha. */
   const authState = {
     sessionResult: {
       data: {
@@ -93,7 +93,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("POST /api/account/password — pedido de código (estágio 1)", () => {
+describe("POST /api/account/password - pedido de código (estágio 1)", () => {
   it("{ stage: 'request' } → 200 { ok: true } e envia OTP com type 'email-verification'", async () => {
     const response = await post({ stage: "request" });
     expect(response.status).toBe(200);
@@ -122,7 +122,7 @@ describe("POST /api/account/password — pedido de código (estágio 1)", () => 
   });
 });
 
-describe("PATCH /api/account/password — troca de senha (estágio 2)", () => {
+describe("PATCH /api/account/password - troca de senha (estágio 2)", () => {
   const validBody = { currentPassword: CURRENT, password: NEW, otp: OTP };
 
   it("[senha atual + otp] válidos → 200 { ok: true }; OTP antes, changePassword depois", async () => {

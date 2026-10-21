@@ -98,7 +98,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 
   // RM-02: o header `Referer`/`Origin` nunca é autoridade aqui. Sem um token de
-  // origem válido e não expirado, a requisição é rejeitada — quem não renderizou
+  // origem válido e não expirado, a requisição é rejeitada - quem não renderizou
   // a página não consegue forjar `Referer` e exfiltrar a URL assinada.
   const requestUrl = new URL(request.url);
   const originToken = requestUrl.searchParams.get("originToken");
@@ -123,7 +123,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   const config = playerConfig.config && typeof playerConfig.config === "object" ? { ...playerConfig.config } as Record<string, unknown> : {};
 
-  // DRM: "Exigir Token Assinado por Sessão" — quando o dono ativa, a config só
+  // DRM: "Exigir Token Assinado por Sessão" - quando o dono ativa, a config só
   // é entregue a requisições identificadas pelo player real (viewerId + sessionId
   // no query, como o EmbedPlayer sempre envia). Chamadas de API sem sessão são
   // rejeitadas. Legado (chave ausente) mantém o comportamento atual.
@@ -134,7 +134,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "session_required" }, { status: 403 });
     }
     // Review de segurança (MEDIUM): validar só o FORMATO dos ids não prova
-    // nada — viewerId/sessionId são gerados no cliente e forjáveis; quem tem
+    // nada - viewerId/sessionId são gerados no cliente e forjáveis; quem tem
     // originToken+cookie aprovava qualquer par de UUIDs no query. Com o toggle
     // ativo, a config exige também um sessionToken HMAC mintado pelo servidor
     // (POST /api/embed/:id/session), amarrado a ESTE player + viewer + sessão +
@@ -169,7 +169,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // Fluxos simultâneos por navegador: conta sessões vivas (heartbeat ≤75s)
   // deste viewer neste vídeo. Sem migration: usa video_live_sessions (a mesma
   // linha que o analytics atualiza; o cron poda o resto). Corrida de abas
-  // abertas no mesmo segundo pode passar — documentado, não bloqueante.
+  // abertas no mesmo segundo pode passar - documentado, não bloqueante.
   if (Boolean(config.limitConcurrentStreams)) {
     const maxStreams = Math.max(1, Math.min(50, Math.floor(Number(config.maxConcurrentStreams) || 1)));
     const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
@@ -230,7 +230,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const eventToken = createBoundEmbedEventTokenSafely({ videoId: video.id, host, sessionId: eventSessionId, nonce: verifiedOrigin.nonce });
   // IP real do espectador para a marca d'água "Endereço IP". Review de
   // segurança (LOW-2): o campo só sai na resposta quando o dono ativou a
-  // exibição de IP na marca d'água — sem isso era PII incondicional legível
+  // exibição de IP na marca d'água - sem isso era PII incondicional legível
   // por qualquer script da página hospedeira. Vazio quando o deploy não
   // repassa x-forwarded-for/x-real-ip.
   const viewerIp = Boolean(config.watermarkShowIp) ? clientIpFromHeaders(request.headers) : "";

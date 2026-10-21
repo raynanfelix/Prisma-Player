@@ -65,7 +65,7 @@ export default function SignupPage() {
 
   // Deep-link do login: /signup?verify=1&email=... entra direto no passo de
   // verificação com o e-mail preenchido (mesma leitura de window.location.search
-  // do handleSubmit do login — sem useSearchParams, sem exigir Suspense).
+  // do handleSubmit do login - sem useSearchParams, sem exigir Suspense).
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- deep-link /signup?verify=1 pré-preenche o e-mail e entra no passo de verificação antes do primeiro paint (evita mismatch de hidratação) */
     const params = new URLSearchParams(window.location.search);
@@ -154,7 +154,7 @@ export default function SignupPage() {
         router.refresh();
       } else if (data.emailVerificationRequired) {
         // "Verify at Sign-up" (códigos): Neon criou o usuário e enviou o
-        // código — troca para o form de verificação.
+        // código - troca para o form de verificação.
         startVerificationStep();
       } else {
         setSubmitted(true);
@@ -201,7 +201,7 @@ export default function SignupPage() {
     try {
       const result = await authService.verifyEmailWithCode(normalizedEmail, currentCode);
       if (result.verified && result.hasSession) {
-        // Auto-sign-in do Better Auth: sessão já está nos cookies — segue o
+        // Auto-sign-in do Better Auth: sessão já está nos cookies - segue o
         // mesmo fluxo pós-login do signup com sessão imediata.
         setNotice({ tone: "success", message: "E-mail verificado. Preparando seu espaço…" });
         router.replace("/welcome");

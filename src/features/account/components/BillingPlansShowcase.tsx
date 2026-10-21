@@ -13,11 +13,11 @@ type BillingCycle = "monthly" | "annual";
  * Vitrine de planos do app com o toggle mensal/anual (spec Impecável, item 3).
  * O ciclo é estado local do client: muda o preço exibido e o `billing` que o
  * botão envia ao /api/billing/checkout (a rota aceita monthly|annual). Padrão
- * ANUAL — a mesma oferta que a landing apresenta primeiro (34% de desconto),
+ * ANUAL - a mesma oferta que a landing apresenta primeiro (34% de desconto),
  * com o valor à vista sempre visível no card antes do clique.
  *
  * Pill do ciclo segue o toggle da casa (bg-selected: tinta no claro, lima no
- * escuro) com o selo "Economize 34%" em verde-lima nos dois temas — mesmo
+ * escuro) com o selo "Economize 34%" em verde-lima nos dois temas - mesmo
  * padrão do PricingSection da landing.
  *
  * Marcação de plano atual (spec Billing Completo, itens 1 e 2):
@@ -25,7 +25,7 @@ type BillingCycle = "monthly" | "annual";
  *   botão; demais cards abrem o Customer Portal ("Mudar para este plano").
  * - Trial vigente (sem assinatura) → card do Escala (nível do teste) com
  *   badge "Seu plano atual (teste)" e botão desabilitado; demais cards
- *   seguem com checkout normal — upgrade continua disponível sempre.
+ *   seguem com checkout normal - upgrade continua disponível sempre.
  */
 export function BillingPlansShowcase({
   plans,
@@ -48,7 +48,7 @@ export function BillingPlansShowcase({
         <div>
           <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Planos Prisma Player</h2>
           <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-            Escolha o plano ideal para a sua operação — assinatura recorrente com checkout Stripe.
+            Escolha o plano ideal para a sua operação - assinatura recorrente com checkout Stripe.
           </p>
         </div>
         <div
@@ -117,7 +117,7 @@ export function BillingPlansShowcase({
               </p>
               {cycle === "annual" && (
                 <p className="mt-1.5 w-fit rounded-full bg-[#B9FF66]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#191A23] dark:bg-[#B9FF66]/10 dark:text-[#B9FF66]">
-                  Cobrado {formatBRL(item.annual_amount_cents)} à vista/ano — economize 34%
+                  Cobrado {formatBRL(item.annual_amount_cents)} à vista/ano - economize 34%
                 </p>
               )}
               <p className="mt-1 text-[11px] font-semibold text-[#0066cc] dark:text-[#B9FF66]">

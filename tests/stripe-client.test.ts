@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Client Stripe (server-only): instância por key + cache de prices por
- * lookup_key com TTL de 10 min (miss NÃO cacheia — rodar o seed libera o
+ * lookup_key com TTL de 10 min (miss NÃO cacheia - rodar o seed libera o
  * checkout na hora). O pacote `stripe` é mockado: nenhum teste toca a rede.
  */
 

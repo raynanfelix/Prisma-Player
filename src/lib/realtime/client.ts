@@ -5,7 +5,7 @@ import { createRealtimeClient, type SealedLiveQuery } from "@neon/realtime/clien
 import { drizzleParsers } from "@neon/realtime-drizzle/client";
 
 /**
- * Cliente Realtime — uma conexão por app (subscriptions compartilham).
+ * Cliente Realtime - uma conexão por app (subscriptions compartilham).
  * Criado em useState (não module-level) para SSR-safe.
  */
 export function useRealtimeClient() {

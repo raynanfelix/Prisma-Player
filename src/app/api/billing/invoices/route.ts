@@ -12,7 +12,7 @@ const { profiles } = schema;
 
 const NO_STORE = { "cache-control": "no-store" } as const;
 
-/** Fatura enxuta da tela Faturamento — só o que a UI renderiza. */
+/** Fatura enxuta da tela Faturamento - só o que a UI renderiza. */
 type InvoiceSummary = {
   id: string;
   number: string | null;
@@ -24,11 +24,11 @@ type InvoiceSummary = {
 };
 
 /**
- * GET /api/billing/invoices — últimas faturas do customer do Stripe
+ * GET /api/billing/invoices - últimas faturas do customer do Stripe
  * (spec Billing Completo, item 3: tela Faturamento em Configurações).
  *
  * Sem `profiles.stripe_customer_id` (nunca comprou via Stripe) devolve
- * `{ invoices: [] }` — a tela mostra o estado vazio honesto, não um erro.
+ * `{ invoices: [] }` - a tela mostra o estado vazio honesto, não um erro.
  * O PDF/fatura hospedada abre direto no Stripe (`hosted_invoice_url`).
  */
 export async function GET(request: Request) {
@@ -66,12 +66,12 @@ export async function GET(request: Request) {
     // precisa saber se a tela de faturas está cega.
     await alertOperations({
       title: "Listagem de faturas falhou",
-      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      detail: `owner ${ownerId} - motivo: ${error instanceof Error ? error.message : "unknown"}`,
       kind: "billing_invoices_failed",
     });
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
-        { error: "stripe_unavailable", message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
+        { error: "stripe_unavailable", message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
         { status: 503, headers: NO_STORE },
       );
     }

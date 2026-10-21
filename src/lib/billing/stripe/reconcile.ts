@@ -11,25 +11,25 @@ import { safeLog } from "@/lib/utils/log";
 const { paymentWebhookEvents, subscriptions } = schema;
 
 /**
- * Reconciliação Stripe↔banco (spec Impecável, item 2) — o cinto de segurança
+ * Reconciliação Stripe↔banco (spec Impecável, item 2) - o cinto de segurança
  * de escala. Webhook se perde (reentrega esgota, endpoint cai, bug no
  * tratamento) e a linha local silenciosamente diverge do provedor que cobra
- * de verdade. Este job NUNCA corrige sozinho — cortar acesso de quem paga ou
+ * de verdade. Este job NUNCA corrige sozinho - cortar acesso de quem paga ou
  * devolver acesso de quem cancelou é decisão humana: ele REGISTRA a
  * divergência em payment_webhook_events (visível no admin, idempotente por
  * dia via event_id `reconcile:{data}:{sub}`) e alerta o dono.
  *
  * Divergências detectadas:
  * - Stripe active × linha local cortada (cancelled/expired): cliente
- *   PAGANDO sem acesso — renovação com webhook perdido e o expire do cron
+ *   PAGANDO sem acesso - renovação com webhook perdido e o expire do cron
  *   cortou a linha.
- * - Stripe canceled × linha local active: acesso aberto SEM cobrança —
+ * - Stripe canceled × linha local active: acesso aberto SEM cobrança -
  *   cancelamento imediato (chargeback/refund) com webhook perdido.
  * - period_end dessincronizado (>2 dias) com active×active: renovação que
  *   o Stripe aplicou e o banco nunca soube.
  *
  * Estados transitórios (pending/past_due/suspended) ficam FORA: são do
- * webhook/dunning — o reconcile não compete com eles nem duplica alerta.
+ * webhook/dunning - o reconcile não compete com eles nem duplica alerta.
  */
 
 /** Página do Stripe (máximo da API) e teto por listagem no reconcile. */
@@ -38,7 +38,7 @@ const RECONCILE_MAX_SUBSCRIPTIONS = 200;
 /** Stripe renova no segundo exato; acima de 2 dias é webhook perdido, não atraso. */
 const PERIOD_DRIFT_TOLERANCE_MS = 2 * 24 * 3_600_000;
 
-/** Status locais terminais: acesso cortado — divergem de um stripe active. */
+/** Status locais terminais: acesso cortado - divergem de um stripe active. */
 const LOCAL_ENDED_STATUSES = new Set(["cancelled", "expired"]);
 
 export type ReconcileResult = {
@@ -90,7 +90,7 @@ async function listUpTo(stripe: Stripe, status: "active" | "canceled"): Promise<
 /**
  * Compara uma assinatura do Stripe com a linha local e devolve o diff em
  * texto (null quando convergem). O diff é o `processing_error` do evento e
- * o corpo do alerta — curto e sem dado sensível.
+ * o corpo do alerta - curto e sem dado sensível.
  */
 function divergenceOf(stripeStatus: "active" | "canceled", stripePeriodEnd: Date | null, local: LocalSubscription): string | null {
   if (stripeStatus === "active") {
@@ -144,7 +144,7 @@ async function recordDivergence(
     })
     .onConflictDoNothing()
     .returning({ id: paymentWebhookEvents.id });
-  if (inserted.length === 0) return false; // já registrado hoje — idempotente
+  if (inserted.length === 0) return false; // já registrado hoje - idempotente
 
   await alertOperations({
     kind: "reconcile",
@@ -182,7 +182,7 @@ export async function reconcileSubscriptions(now: Date = new Date()): Promise<Re
         const local = await localSubscriptionOf(subscription.id);
         if (!local) {
           // Assinatura sem linha local: fulfillment perdido ou assinatura de
-          // outra operação na mesma conta Stripe — fica no log, não é
+          // outra operação na mesma conta Stripe - fica no log, não é
           // divergência de ESTADO (evita falso positivo).
           safeLog("reconcile_subscription_sem_linha_local", { subscriptionId: subscription.id, stripeStatus });
           continue;

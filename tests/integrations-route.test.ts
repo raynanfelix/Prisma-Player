@@ -81,7 +81,7 @@ beforeEach(() => {
   resetFakeDb(fake());
 });
 
-describe("GET /api/integrations — segredos mascarados", () => {
+describe("GET /api/integrations - segredos mascarados", () => {
   it("NUNCA contém o token cru: accessToken sai \"\" + hasToken true; não-secretos preservados", async () => {
     fake().state.selectRows["account_integrations"] = [integrationRow()];
 
@@ -139,7 +139,7 @@ describe("GET /api/integrations — segredos mascarados", () => {
   });
 });
 
-describe("PUT /api/integrations — merge preserva segredo vazio", () => {
+describe("PUT /api/integrations - merge preserva segredo vazio", () => {
   it("accessToken vazio no input MANTÉM o token salvo da instância", async () => {
     fake().state.selectRows["account_integrations"] = [integrationRow()];
 

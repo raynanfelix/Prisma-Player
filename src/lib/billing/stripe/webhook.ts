@@ -17,7 +17,7 @@ const { aiCreditLedger, aiCreditWallets, billingPlans, profiles, subscriptions }
  * GRAVA. Regras da spec/skills:
  *
  * - Fulfillment de `checkout.session.completed`/`async_payment_succeeded`
- *   SOMENTE com `payment_status !== "unpaid"` — nunca na página de sucesso.
+ *   SOMENTE com `payment_status !== "unpaid"` - nunca na página de sucesso.
  * - OwnerId via `client_reference_id` (campo oficial); metadata é fallback.
  * - Objeto `plan` (deprecated) nunca: plano vem do lookup_key do Price.
  * - `invoice.payment_failed` → past_due (dunning é do Stripe, não cancela).
@@ -75,7 +75,7 @@ function customerIdOf(customer: string | Stripe.Customer | Stripe.DeletedCustome
   return customer && "id" in customer ? customer.id : null;
 }
 
-/** Dispatcher principal — chamado pela rota após assinatura + idempotência. */
+/** Dispatcher principal - chamado pela rota após assinatura + idempotência. */
 export async function processStripeEvent(event: Stripe.Event): Promise<StripeEventOutcome> {
   switch (event.type) {
     case "checkout.session.completed":
@@ -111,7 +111,7 @@ async function fulfillCheckoutSession(session: Stripe.Checkout.Session): Promise
   const ownerId = sessionOwnerId(session);
   if (!ownerId) {
     // Session sem vínculo com conta (não deveria existir no fluxo do app):
-    // rastro alto para o dono resolver manualmente — retry não resolve.
+    // rastro alto para o dono resolver manualmente - retry não resolve.
     safeLog("stripe_checkout_orphan_session", { sessionId: session.id, mode: session.mode });
     return "ignored";
   }
@@ -121,7 +121,7 @@ async function fulfillCheckoutSession(session: Stripe.Checkout.Session): Promise
 }
 
 /**
- * Plano: resolve a Subscription (object graph oficial — não metadata) para
+ * Plano: resolve a Subscription (object graph oficial - não metadata) para
  * pegar o período (item) e o lookup_key do Price (`plano_<slug>_<mensal|anual>`),
  * garante a row do plano em billing_plans (catálogo local) e ativa.
  */
@@ -219,7 +219,7 @@ async function fulfillCreditsSession(session: Stripe.Checkout.Session, ownerId: 
 
   try {
     // Tudo numa transação: falha no ledger (session já creditada por outro
-    // evento) reverte o saldo — a UNIQUE do reference é a segunda idempotência.
+    // evento) reverte o saldo - a UNIQUE do reference é a segunda idempotência.
     await db.transaction(async (tx) => {
       await tx
         .insert(aiCreditWallets)
@@ -257,7 +257,7 @@ async function saveStripeCustomerId(ownerId: string, customer: string | Stripe.C
     .where(eq(profiles.id, ownerId));
 }
 
-/** Status local a partir do status do Stripe — fail-closed: desconhecido vira past_due (sem acesso). */
+/** Status local a partir do status do Stripe - fail-closed: desconhecido vira past_due (sem acesso). */
 function localStatusOf(stripeStatus: string): string {
   if (stripeStatus === "active" || stripeStatus === "trialing") return "active";
   if (stripeStatus === "canceled" || stripeStatus === "incomplete_expired") return "cancelled";
@@ -326,7 +326,7 @@ async function markSubscriptionPastDue(invoice: Stripe.Invoice): Promise<StripeE
 /**
  * Risk-side (dispute/refund/fraud warning): alerta operacional (item 5) +
  * disputa SUSPENDE a assinatura ativa em past_due (item 6); refund e Radar
- * ficam SÓ no alerta — reativação é decisão manual do dono.
+ * ficam SÓ no alerta - reativação é decisão manual do dono.
  * Resolução pelo ownership boundary real: charge → Customer →
  * profiles.stripe_customer_id → conta local (e a subscription stripe dela,
  * se existir). Sem customer no charge (raríssimo), o log segue com o que houver.
@@ -382,7 +382,7 @@ async function handleRiskEvent(event: Stripe.Event): Promise<StripeEventOutcome>
   safeLog("stripe_risk_event", { type: event.type, eventId: event.id, chargeId, subscriptionId, ownerId });
 
   // Item 6 do hardening: disputa aberta suspende a assinatura ATIVA do dono
-  // (past_due — o acesso cai no getAccountPlan). Reativação é sempre manual:
+  // (past_due - o acesso cai no getAccountPlan). Reativação é sempre manual:
   // ganhar a disputa não devolve o acesso sozinho (o dono decide). Refund e
   // Radar ficam SÓ no alerta.
   let suspended = false;
@@ -401,7 +401,7 @@ async function handleRiskEvent(event: Stripe.Event): Promise<StripeEventOutcome>
   }
 
   // Alerta operacional (hardening item 5): disputa/estorno/aviso de fraude
-  // ficavam só no log — o dono precisa saber na hora para agir manualmente.
+  // ficavam só no log - o dono precisa saber na hora para agir manualmente.
   const riskTitle =
     event.type === "charge.dispute.created"
       ? "Disputa (chargeback) aberta no Stripe"
@@ -410,7 +410,7 @@ async function handleRiskEvent(event: Stripe.Event): Promise<StripeEventOutcome>
         : "Aviso de fraude do Radar (Stripe)";
   await alertOperations({
     title: riskTitle,
-    detail: `Evento ${event.type} (${event.id})${chargeId ? ` — charge ${chargeId}` : ""}${ownerId ? `, owner ${ownerId}` : ", owner não resolvido"}${subscriptionId ? `, subscription ${subscriptionId}` : ""}${suspended ? " — assinatura suspensa (past_due)" : ""}`,
+    detail: `Evento ${event.type} (${event.id})${chargeId ? ` - charge ${chargeId}` : ""}${ownerId ? `, owner ${ownerId}` : ", owner não resolvido"}${subscriptionId ? `, subscription ${subscriptionId}` : ""}${suspended ? " - assinatura suspensa (past_due)" : ""}`,
     kind: `stripe_risk:${event.type}`,
   });
   return "processed";

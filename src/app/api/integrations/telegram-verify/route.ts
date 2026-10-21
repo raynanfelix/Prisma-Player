@@ -7,9 +7,9 @@ import { rateLimit } from "@/lib/security/rate-limit";
 
 /**
  * Verifica um token de bot do Telegram (getMe) e descobre o chat de entrega
- * (getUpdates — o dono manda /start para o bot). Retorna nome/username/chatId
+ * (getUpdates - o dono manda /start para o bot). Retorna nome/username/chatId
  * para a tela de integração preencher automaticamente. O token NUNCA é
- * logado nem persistido aqui — só usado na chamada oficial ao Telegram.
+ * logado nem persistido aqui - só usado na chamada oficial ao Telegram.
  */
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);

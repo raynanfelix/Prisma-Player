@@ -13,7 +13,7 @@ function tooLarge(maxBytes: number): { ok: false; response: NextResponse } {
  * Lê e valida o corpo JSON medindo os bytes reais.
  *
  * Confiar apenas no header `content-length` deixava passar qualquer cliente que
- * usasse `Transfer-Encoding: chunked`, que não envia esse header — o teto de
+ * usasse `Transfer-Encoding: chunked`, que não envia esse header - o teto de
  * payload era opcional para quem quisesse ignorá-lo.
  */
 export async function readJsonBody<T>(request: Request, maxBytes = DEFAULT_MAX_BODY_BYTES): Promise<ParsedBody<T>> {

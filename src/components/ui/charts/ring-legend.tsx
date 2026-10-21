@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Legend composável do RingChart — Prisma Player.
+ * Legend composável do RingChart - Prisma Player.
  *
  * Base: kokonutui "Ring Chart" (MIT, ecossistema kokonutui/21st.dev) com a
  * Legend decomposta na API aprovada pelo dono:

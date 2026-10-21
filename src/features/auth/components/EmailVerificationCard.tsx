@@ -24,7 +24,7 @@ interface EmailVerificationCardProps {
   title: string;
   code: string;
   onCodeChange: (value: string) => void;
-  /** Mensagem de erro do código (FieldError) — o InputOTP já foi limpo. */
+  /** Mensagem de erro do código (FieldError) - o InputOTP já foi limpo. */
   error: string | null;
   notice: AuthNoticeState | null;
   verifying: boolean;
@@ -41,7 +41,7 @@ interface EmailVerificationCardProps {
 /**
  * Card de verificação por código OTP no padrão aprovado (shadcn Card + Field +
  * InputOTP), com auto-submit ao completar os 6 dígitos. Cores só via tokens
- * (bg-card, ring, border-input) — claro intacto, escuro colapsa para preto.
+ * (bg-card, ring, border-input) - claro intacto, escuro colapsa para preto.
  */
 export function EmailVerificationCard({
   email,

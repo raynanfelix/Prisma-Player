@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { blockedIp } from "@/lib/webhooks/delivery";
 
-describe("blockedIp — SSRF IPv6 (SEC-05)", () => {
+describe("blockedIp - SSRF IPv6 (SEC-05)", () => {
   it("bloqueia loopback e unspecified IPv6", () => {
     expect(blockedIp("::1")).toBe(true);
     expect(blockedIp("::")).toBe(true);

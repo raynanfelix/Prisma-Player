@@ -86,8 +86,8 @@ export function useAnimatedSeriesPath({
 
     if (!shouldAnimate) {
       animatingRef.current = false;
-      // Reset postergado (microtask): o resultado é o mesmo — volta aos pontos
-      // alvo — sem setState síncrono no corpo do efeito.
+      // Reset postergado (microtask): o resultado é o mesmo - volta aos pontos
+      // alvo - sem setState síncrono no corpo do efeito.
       const reset = window.setTimeout(() => {
         setAnimatedPoints(null);
       }, 0);

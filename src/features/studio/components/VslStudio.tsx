@@ -187,9 +187,9 @@ const defaultCtaPresetCards: PresetCardItem[] = [
 ];
 
 const defaultHookPresetCards: PresetCardItem[] = [
-  { id: "hook-1", name: "Gancho 1", color: "#B9FF66", badge: "Ativo", data: { miniHookText: "Continue assistindo — a parte mais importante está chegando.", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom" } },
+  { id: "hook-1", name: "Gancho 1", color: "#B9FF66", badge: "Ativo", data: { miniHookText: "Continue assistindo - a parte mais importante está chegando.", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom" } },
   { id: "hook-2", name: "Gancho 2", color: "#0066cc", data: { miniHookText: "🔴 AO VIVO: Não perca o que vem a seguir!", miniHookStart: 60, miniHookDuration: 8, miniHookTextColor: "#ffffff", miniHookBackground: "#0066cc", miniHookCounterColor: "#B9FF66", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "left", miniHookType: "live_viewers" } },
-  { id: "hook-3", name: "Gancho 3", color: "#ef4444", data: { miniHookText: "⚡ VELOCIDADE 2x ATIVADA — Acelere seu aprendizado", miniHookStart: 120, miniHookDuration: 5, miniHookTextColor: "#ffffff", miniHookBackground: "#ef4444", miniHookCounterColor: "#ffffff", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "right", miniHookType: "fast_speed" } },
+  { id: "hook-3", name: "Gancho 3", color: "#ef4444", data: { miniHookText: "⚡ VELOCIDADE 2x ATIVADA - Acelere seu aprendizado", miniHookStart: 120, miniHookDuration: 5, miniHookTextColor: "#ffffff", miniHookBackground: "#ef4444", miniHookCounterColor: "#ffffff", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "right", miniHookType: "fast_speed" } },
 ];
 
 const defaultThumbnailPresetCards: PresetCardItem[] = [
@@ -216,7 +216,7 @@ const initialConfig: StudioConfig = {
   turboEnabled: true, turboMode: "manual", turboMin: 1, turboMax: 1.2, playbackRate: 1,
   headlineEnabled: true, headline: "Descubra a maneira mais simples de transformar atenção em vendas", headlineVariants: [], headlineFormat: "text", headlineDesktopName: "", headlineMobileName: "", headlineColor: "#1d1d1f", headlineBackground: "#ffffff", headlineSize: 30, headlineAlign: "center", headlineTagBadge: "🔥 EXCLUSIVO", headlineStart: 0, headlineDuration: 0,
   trafficEnabled: false, domains: [], browserLanguage: "Todos", allowedCountries: "Todos", allowedDevices: ["desktop", "mobile", "tablet"], blockVpn: true, urlKeyEnabled: false, accessToken: false,
-  miniHooksEnabled: false, miniHookText: "Continue assistindo — a parte mais importante está chegando.", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom",
+  miniHooksEnabled: false, miniHookText: "Continue assistindo - a parte mais importante está chegando.", miniHookStart: 30, miniHookDuration: 6, miniHookTextColor: "#ffffff", miniHookBackground: "#111111", miniHookCounterColor: "#ff3b30", miniHookSize: 16, miniHookRadius: 10, miniHookAlign: "center", miniHookType: "custom",
   ctaEnabled: false, ctaText: "Quero aproveitar agora", ctaSubtitle: "🔒 Compra 100% Segura • Entrega Imediata", ctaBadges: "7 Dias de Garantia • Pix em 12x", ctaUrl: "https://", ctaStart: 60, ctaEnd: 0, ctaNewTab: true, ctaPersist: true, ctaAutoScroll: false, ctaTextColor: "#191A23", ctaHoverTextColor: "#191A23", ctaBackground: "#B9FF66", ctaHoverBackground: "#a6ee50", ctaFontSize: 18, ctaRadius: 12, ctaPaddingY: 12, ctaPaddingX: 24, ctaPulse: false, ctaShadow: true, ctaPosition: "bottom",
   thumbnailEnabled: false, resumeEnabled: true, resumeMessage: "Você já começou a assistir este vídeo",
   thumbnailStartName: "", thumbnailPauseName: "", thumbnailEndName: "",
@@ -883,7 +883,7 @@ export default function VslStudio() {
                   rel="noreferrer"
                   className={`inline-flex flex-col items-center justify-center rounded-2xl transition-transform active:scale-95 font-extrabold cursor-pointer ${
                     // Mesmo pulso suave (scale 1→1.045, ease-in-out) do embed real
-                    // (globals.css) — sem salto brusco, deceleração exponencial.
+                    // (globals.css) - sem salto brusco, deceleração exponencial.
                     config.ctaPulse ? "studio-cta-pulse" : ""
                   }`}
                   style={{
@@ -2046,7 +2046,7 @@ function formatPlayerTime(value: number) { const seconds = Math.max(0, Math.floo
 
 /**
  * Detecta MP4 com `moov` depois do `mdat` (sem faststart): o navegador baixa o
- * arquivo inteiro antes do primeiro frame — a causa mais comum de VSL que
+ * arquivo inteiro antes do primeiro frame - a causa mais comum de VSL que
  * "demora para aparecer". Lê só o primeiro chunk (Range) e falha em silêncio.
  */
 async function probeMoovPosition(url: string): Promise<"late" | "early" | "unknown"> {

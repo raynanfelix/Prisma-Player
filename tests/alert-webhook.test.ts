@@ -10,7 +10,7 @@ import { alertOperations } from "@/lib/security/alert-webhook";
 
 const WEBHOOK = "https://discord.com/api/webhooks/123/abc";
 
-/** Chamada capturada do fetch: [url, init] — o mesmo modelo do pixel-verify. */
+/** Chamada capturada do fetch: [url, init] - o mesmo modelo do pixel-verify. */
 function callOf(mock: ReturnType<typeof vi.fn>, index: number): [string, RequestInit] {
   return mock.mock.calls[index] as [string, RequestInit];
 }
@@ -40,7 +40,7 @@ describe("alertOperations", () => {
     expect(init.cache).toBe("no-store");
     expect(init.signal).toBeInstanceOf(AbortSignal);
     const body = lastBody(fetchMock);
-    expect(body.content).toContain("🚨 [Prisma] Webhook do Stripe falhou — Evento charge.dispute.created (evt_1)");
+    expect(body.content).toContain("🚨 [Prisma] Webhook do Stripe falhou - Evento charge.dispute.created (evt_1)");
     expect(body.content).toContain("(stripe_risk:charge.dispute.created)");
   });
 
@@ -61,7 +61,7 @@ describe("alertOperations", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("REDACT: token/segredo no texto sai mascarado — valor cru nunca é postado", async () => {
+  it("REDACT: token/segredo no texto sai mascarado - valor cru nunca é postado", async () => {
     process.env.ALERT_WEBHOOK_URL = WEBHOOK;
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response("{}", { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -92,7 +92,7 @@ describe("alertOperations", () => {
     await alertOperations({ title: "t".repeat(500), detail: "d".repeat(500), kind: "k".repeat(500) });
 
     const body = lastBody(fetchMock);
-    // "🚨 [Prisma] " + title(≤300) + " — " + detail(≤300) + " (" + kind(≤300) + ")"
+    // "🚨 [Prisma] " + title(≤300) + " - " + detail(≤300) + " (" + kind(≤300) + ")"
     expect(body.content.length).toBeLessThanOrEqual(13 + 300 + 3 + 300 + 2 + 300 + 1);
   });
 });

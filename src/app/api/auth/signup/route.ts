@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   // Bootstrap das linhas de produto (profiles, access/trial, wallet, inbox,
-  // equipe) — equivalente aplicacional do trigger legado on_auth_user_created
+  // equipe) - equivalente aplicacional do trigger legado on_auth_user_created
   // do Supabase: o schema neon_auth é gerenciado pela Neon e não aceita
   // triggers. Best-effort: nunca derruba o signup (só o Auth era crítico no
   // contrato do trigger); leitores (guard/perfil/Nav) fazem self-heal.
@@ -53,11 +53,11 @@ export async function POST(request: Request) {
     });
   }
   // Não expor access_token, refresh_token ou objeto session completo no response
-  // (contrato { user, hasSession } — teste tests/auth-signup-shape.test.ts).
+  // (contrato { user, hasSession } - teste tests/auth-signup-shape.test.ts).
   // `hasSession` reflete se o Managed emitiu sessão imediata (null quando a
   // verificação de e-mail está habilitada no branch).
   // `emailVerificationRequired`: "Verify at Sign-up" ligado → usuário criado
-  // com emailVerified=false e sem sessão — a UI troca para o form de código.
+  // com emailVerified=false e sem sessão - a UI troca para o form de código.
   return NextResponse.json({
     user: data?.user
       ? { id: data.user.id, email: data.user.email, name: data.user.name, emailVerified: data.user.emailVerified }

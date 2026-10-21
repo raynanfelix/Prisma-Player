@@ -71,7 +71,7 @@ export const accountSettingsService = {
     });
   },
   /**
-   * Estágio 2 da troca de senha: exige [senha atual + OTP] — a rota valida o
+   * Estágio 2 da troca de senha: exige [senha atual + OTP] - a rota valida o
    * código (signIn.emailOtp) antes de trocar a senha (changePassword).
    */
   updatePassword(currentPassword: string, password: string, otp: string) {
@@ -92,7 +92,7 @@ export const accountSettingsService = {
     });
   },
   /**
-   * Sessão do Customer Portal (troca de plano/cartão e cancelamento —
+   * Sessão do Customer Portal (troca de plano/cartão e cancelamento -
    * o Stripe é o caminho canônico; o app nunca reescreve o que ele dá
    * pronto). Devolve `{ url }` para redirecionar.
    */

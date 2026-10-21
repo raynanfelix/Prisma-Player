@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Reconciliação Stripe↔banco (spec Impecável, item 2): fake stripe (list por
  * status com autoPagingToArray) + fake-db que AVALIA o where compilado (eq
- * por provider_subscription_id — padrão da suíte BOLA) e respeita o conflito
+ * por provider_subscription_id - padrão da suíte BOLA) e respeita o conflito
  * de provider_event_id (idempotência por dia). O job NUNCA corrige: os
- * testes travam exatamente isso — só evento + alerta, nenhum update.
+ * testes travam exatamente isso - só evento + alerta, nenhum update.
  */
 
 const { dbState, stripeState, alertCalls, consoleSpy } = vi.hoisted(() => ({
@@ -95,7 +95,7 @@ vi.mock("@/lib/db", async () => {
   };
 
   // Insert com o conflito REAL de provider_event_id: a idempotência por dia
-  // do reconcile é o ON CONFLICT DO NOTHING — o fake devolve [] no conflito.
+  // do reconcile é o ON CONFLICT DO NOTHING - o fake devolve [] no conflito.
   const insertChain = (table: string) => ({
     values: (values: Record<string, unknown>) => ({
       onConflictDoNothing: () => ({
@@ -244,7 +244,7 @@ describe("reconcileSubscriptions", () => {
     expect(String(dbState.eventInserts[0]!.processingError)).toContain("lado sem período");
   });
 
-  it("stripe canceled × local active → alerta (acesso sem cobrança — caso inverso)", async () => {
+  it("stripe canceled × local active → alerta (acesso sem cobrança - caso inverso)", async () => {
     stripeState.canceled = [stripeSub("sub_inv", "canceled")];
     dbState.subscriptionsRows = [localRow("sub_inv", "active", new Date("2026-12-01T12:00:00.000Z"))];
 

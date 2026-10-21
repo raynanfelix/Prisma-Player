@@ -6,7 +6,7 @@ import { getAuth } from "@/lib/auth/server";
  * /api/auth/callback/* (OAuth), etc.
  *
  * Rotas específicas em src/app/api/auth/{login,signup,logout,reset,...} têm
- * precedência sobre este catch-all — elas preservam os contratos que a UI já
+ * precedência sobre este catch-all - elas preservam os contratos que a UI já
  * consome e chamam o SDK server-side por cima deste mesmo `auth`.
  *
  * A resolução é lazy (por requisição) para o build não exigir NEON_AUTH_*.
@@ -15,7 +15,7 @@ import { getAuth } from "@/lib/auth/server";
  * `(await params).path.join("/")` em TODA request (dist/next/server/index.mjs
  * linha 69) para montar o caminho upstream. Como [...all] o params resolvia
  * { all: string[] } e `params.path` era undefined => TypeError "reading 'join'"
- * — bug latente que só apareceu no primeiro fluxo que atravessa o catch-all
+ * - bug latente que só apareceu no primeiro fluxo que atravessa o catch-all
  * (sign-in/social do botão Google; login/signup de e-mail usam rotas próprias).
  * [...path] é o mounting canônico da doc oficial do Neon.
  */

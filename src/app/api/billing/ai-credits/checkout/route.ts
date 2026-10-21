@@ -16,13 +16,13 @@ function lookupSuffixOf(packageSlug: string): string {
 }
 
 /**
- * POST /api/billing/ai-credits/checkout — Checkout Session one-time
+ * POST /api/billing/ai-credits/checkout - Checkout Session one-time
  * (mode payment) do pacote de créditos. Mesmas regras da rota de plano:
  * sem `payment_method_types`, sem `automatic_tax`, owner no
  * `client_reference_id`; a entrega dos créditos acontece SÓ no webhook.
  *
  * Body `{ packageSlug }`: aceita o slug do catálogo (`credits-start`) ou o
- * sufixo puro (`start`) — o lookup_key é sempre `creditos_ia_<sufixo>`.
+ * sufixo puro (`start`) - o lookup_key é sempre `creditos_ia_<sufixo>`.
  */
 export async function POST(request: Request) {
   const gate = await guard(request, { csrf: true, role: "manage" });
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "price_not_found",
-          message: `Preço creditos_ia_${lookupSuffixOf(pack.slug)} ainda não existe no Stripe — rode scripts/stripe-seed.mjs com a sua API key.`,
+          message: `Preço creditos_ia_${lookupSuffixOf(pack.slug)} ainda não existe no Stripe - rode scripts/stripe-seed.mjs com a sua API key.`,
         },
         { status: 502, headers: NO_STORE },
       );
@@ -68,12 +68,12 @@ export async function POST(request: Request) {
     // Alerta operacional (hardening item 5): mesma regra do checkout de plano.
     await alertOperations({
       title: "Checkout de créditos falhou",
-      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      detail: `owner ${ownerId} - motivo: ${error instanceof Error ? error.message : "unknown"}`,
       kind: "billing_credits_checkout_failed",
     });
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
-        { error: "stripe_unavailable", message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
+        { error: "stripe_unavailable", message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
         { status: 503, headers: NO_STORE },
       );
     }

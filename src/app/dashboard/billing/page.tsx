@@ -67,7 +67,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {params.checkout === "success" && (
         <Reveal>
           <div role="status" className="rounded-2xl border border-[#B9FF66]/40 bg-[#B9FF66]/10 px-5 py-4 text-xs font-medium text-[#191A23] dark:text-[#B9FF66]">
-            <strong className="font-bold">Pagamento confirmado — processando.</strong> A liberação do plano/créditos
+            <strong className="font-bold">Pagamento confirmado - processando.</strong> A liberação do plano/créditos
             acontece automaticamente em instantes (confirmação via webhook); se não aparecer, recarregue em alguns segundos.
           </div>
         </Reveal>
@@ -75,7 +75,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {params.checkout === "cancelled" && (
         <Reveal>
           <div role="status" className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-card px-5 py-4 text-xs font-medium text-slate-600 dark:text-zinc-300">
-            Checkout cancelado — nenhuma cobrança foi feita.
+            Checkout cancelado - nenhuma cobrança foi feita.
           </div>
         </Reveal>
       )}
@@ -106,9 +106,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <span className="rounded-full bg-amber-500/10 px-3 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
               Plano terminado
             </span>
-            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{plan?.name ?? "Plano Prisma Pro"} terminou em {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "—"}</h2>
+            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">{plan?.name ?? "Plano Prisma Pro"} terminou em {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "-"}</h2>
             <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
-              Reative por aqui em segundos — o checkout já está no ar.
+              Reative por aqui em segundos - o checkout já está no ar.
             </p>
           </div>
         ) : access.trialStatus === "active" ? (
@@ -116,7 +116,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <span className="rounded-full bg-[#B9FF66] px-3 py-0.5 text-xs font-bold text-[#191A23]">
               TESTE 14 DIAS ATIVO
             </span>
-            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">Acesso completo liberado — nível Escala durante o teste</h2>
+            <h2 className="mt-2 text-2xl font-bold text-[#191A23] dark:text-white">Acesso completo liberado - nível Escala durante o teste</h2>
             <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
               Seu teste termina em {access.trialEndsAt ? new Date(access.trialEndsAt).toLocaleDateString("pt-BR") : "14 dias"}. Nenhuma cobrança automática.
             </p>
@@ -125,7 +125,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <div>
             <h2 className="text-xl font-bold text-[#191A23] dark:text-white">Nenhum plano ativo</h2>
             <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-              Assine o plano ideal para a sua operação por aqui — o checkout leva alguns segundos.
+              Assine o plano ideal para a sua operação por aqui - o checkout leva alguns segundos.
             </p>
           </div>
         )}
@@ -148,7 +148,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <div>
               <h2 className="text-lg font-bold text-[#191A23] dark:text-white">Créditos Prisma IA</h2>
               <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                Cada análise da Prisma IA consome créditos — eles não expiram.
+                Cada análise da Prisma IA consome créditos - eles não expiram.
               </p>
             </div>
             <span className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-card px-3.5 py-1.5 text-xs font-bold text-[#191A23] dark:text-white">

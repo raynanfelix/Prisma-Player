@@ -131,7 +131,7 @@ export function ConfigNotice({ text }: { text: string }) {
   return <p role="status" className="rounded-xl bg-muted/60 px-4 py-3 text-xs font-medium themeable-text-ink">{text}</p>;
 }
 
-/** Recurso bloqueado pelo plano — mensagem clara em vez de silêncio. */
+/** Recurso bloqueado pelo plano - mensagem clara em vez de silêncio. */
 export function PlanRequiredNotice() {
   return (
     <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400">
@@ -278,7 +278,7 @@ export function DomainsManager({ app, vsls, onBack }: { app: FeatureApp; vsls: V
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Domínios autorizados</CardTitle>
-            <CardDescription>Um domínio por linha — https://dominio.com, dominio.com ou *.dominio.com para todos os subdomínios. Lista vazia libera qualquer site.</CardDescription>
+            <CardDescription>Um domínio por linha - https://dominio.com, dominio.com ou *.dominio.com para todos os subdomínios. Lista vazia libera qualquer site.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {selectedIds.map((id) => {

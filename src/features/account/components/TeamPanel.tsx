@@ -25,18 +25,18 @@ const roleOptions = Object.entries(roleLabels)
 
 type PanelStatus = "loading" | "ready" | "no_team" | "failed";
 
-/** Mensagens honestas do limite por plano — com o número REAL de assentos. */
+/** Mensagens honestas do limite por plano - com o número REAL de assentos. */
 function seatMessage(seats: number): string {
   return seats <= 1
-    ? "Seu plano permite 1 assento (só você) — faça upgrade para o Pro ou Escala para convidar."
-    : `Seu plano permite ${seats} assentos — faça upgrade para convidar mais pessoas.`;
+    ? "Seu plano permite 1 assento (só você) - faça upgrade para o Pro ou Escala para convidar."
+    : `Seu plano permite ${seats} assentos - faça upgrade para convidar mais pessoas.`;
 }
 
 function inviteErrorMessage(code: string, seats: number): string {
   if (code === "seat_limit_reached") return seatMessage(seats);
   if (code === "team_not_in_plan") return seatMessage(1);
   if (code === "invalid_invite") return "Informe um e-mail válido e um nível de acesso.";
-  if (code === "invite_create_failed") return "Não foi possível criar o convite agora — tente novamente.";
+  if (code === "invite_create_failed") return "Não foi possível criar o convite agora - tente novamente.";
   return "Não foi possível criar o convite.";
 }
 
@@ -62,7 +62,7 @@ export function TeamPanel({ notify }: { notify: (message: string) => void }) {
       setStatus("ready");
     } catch (error) {
       // Conta sem equipe (legado pré-trigger): a resposta 404 ainda carrega os
-      // convites endereçados a este usuário — eles precisam de um lugar para
+      // convites endereçados a este usuário - eles precisam de um lugar para
       // aceitar, senão o convite (que não vai por e-mail) nunca é visto.
       if (error instanceof ApiError && error.code === "team_not_found") {
         setTeam(null);
@@ -77,7 +77,7 @@ export function TeamPanel({ notify }: { notify: (message: string) => void }) {
 
   useEffect(() => {
     // load é async: todo setState acontece APÓS o primeiro await (nenhum setState
-    // síncrono no corpo do efeito) — a regra não atravessa a chamada de função.
+    // síncrono no corpo do efeito) - a regra não atravessa a chamada de função.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
@@ -88,10 +88,10 @@ export function TeamPanel({ notify }: { notify: (message: string) => void }) {
     try {
       await accountSettingsService.inviteMember(email, role);
       setEmail("");
-      // HONESTO: o Neon Auth gerenciado não expõe API de convite por e-mail —
+      // HONESTO: o Neon Auth gerenciado não expõe API de convite por e-mail -
       // nada sai pela caixa de entrada. A pessoa entra ao criar conta com o
       // e-mail convidado; o convite vale 7 dias (lib/account/team.ts).
-      notify("Convite criado — a pessoa entra ao criar conta com este e-mail (vale 7 dias).");
+      notify("Convite criado - a pessoa entra ao criar conta com este e-mail (vale 7 dias).");
       await load();
     } catch (error) {
       notify(inviteErrorMessage(error instanceof ApiError ? error.code : "", team?.seats ?? 1));

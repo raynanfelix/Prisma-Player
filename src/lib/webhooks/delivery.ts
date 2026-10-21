@@ -11,7 +11,7 @@ export interface WebhookEvent {
 }
 export function blockedIp(address: string) {
   const raw = address.toLowerCase().trim().replace(/^\[|\]$/g, "").split("%")[0];
-  // IPv4-mapped IPv6 (::ffff:10.0.0.1) roteia para IPv4 — valida como IPv4.
+  // IPv4-mapped IPv6 (::ffff:10.0.0.1) roteia para IPv4 - valida como IPv4.
   const mapped = raw.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return isBlockedIpv4(mapped[1]);
   if (isIP(raw) === 6) return isBlockedIpv6(raw);
@@ -35,7 +35,7 @@ function isBlockedIpv6(ip: string): boolean {
   if (/^fe[89ab][0-9a-f]/i.test(head)) return true;
   // Unique-local fc00::/7 → fc..fd
   if (head.startsWith("fc") || head.startsWith("fd")) return true;
-  // Documentação, benchmarking, NAT64, discard — nunca destino legítimo de webhook.
+  // Documentação, benchmarking, NAT64, discard - nunca destino legítimo de webhook.
   if (head === "2001" && (ip.startsWith("2001:db8") || ip.startsWith("2001:db8:"))) return true;
   if (ip.startsWith("64:ff9b")) return true;
   if (ip === "100::" || ip.startsWith("100::")) return true;

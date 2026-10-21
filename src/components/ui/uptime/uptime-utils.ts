@@ -1,5 +1,5 @@
 /**
- * Tipos e helpers puros do UptimeCard (kokonutui, MIT — adaptado Prisma).
+ * Tipos e helpers puros do UptimeCard (kokonutui, MIT - adaptado Prisma).
  * Extraídos do componente para respeitar o teto de 350 linhas do repositório
  * (quality/max-lines) e manter a lógica de simulação testável isolada.
  */

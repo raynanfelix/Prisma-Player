@@ -24,7 +24,7 @@ export type ConsumeAiCreditResult =
  * Débito atômico de 1 crédito (equivale ao RPC `consume_ai_credit`): debita a
  * carteira só se `balance >= 1`, registra o uso no ledger com `reference`
  * única (idempotência por job) e devolve o saldo restante. Tudo numa única
- * transação — falha no ledger reverte o débito.
+ * transação - falha no ledger reverte o débito.
  */
 export async function consumeAiCredit(userId: string, reference: string, metadata: Record<string, unknown>): Promise<ConsumeAiCreditResult> {
   try {
@@ -57,7 +57,7 @@ export type RefundAiCreditResult =
  * Estorno de 1 crédito (equivale ao RPC `refund_ai_credit`): só devolve se o
  * consumo correspondente existe; o lançamento de estorno usa a referência
  * derivada (`<reference>:refund`) para a UNIQUE do ledger tornar o estorno
- * idempotente — segunda chamada devolve o saldo sem creditar de novo.
+ * idempotente - segunda chamada devolve o saldo sem creditar de novo.
  */
 export async function refundAiCredit(userId: string, reference: string): Promise<RefundAiCreditResult> {
   return db.transaction(async (tx) => {

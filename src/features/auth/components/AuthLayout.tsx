@@ -16,7 +16,7 @@ export function AuthLayout({ eyebrow, title, description, children, footer }: Au
     <main className="min-h-screen bg-[#F8F9FA] text-[#191A23] font-sans antialiased flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md space-y-6">
 
-        {/* Logo Header — mesmo componente de marca da sidebar do app */}
+        {/* Logo Header - mesmo componente de marca da sidebar do app */}
         <AuthBrandHeader />
 
         {/* Clean Auth Card */}

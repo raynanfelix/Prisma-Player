@@ -69,7 +69,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const duration = Number(body.durationSeconds);
       if (Number.isFinite(duration) && duration > 0) updates.durationSeconds = String(duration);
       // Faststart (moov antes de mdat): diagnóstico best-effort do fim do
-      // upload — só para MP4; null quando indeterminado/erro, nunca derruba
+      // upload - só para MP4; null quando indeterminado/erro, nunca derruba
       // a transição. Campo aditivo na resposta deste PATCH.
       faststart = current.mimeType?.toLowerCase() === "video/mp4"
         ? await detectMp4Faststart(current.objectPath).catch(() => null)

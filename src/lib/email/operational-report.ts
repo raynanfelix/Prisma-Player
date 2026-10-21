@@ -19,7 +19,7 @@ export async function sendOperationalReport(report: OperationalReport) {
     body: JSON.stringify({
       from,
       to: [report.to],
-      subject: `Relatório ${report.frequency} — Prisma Player`,
+      subject: `Relatório ${report.frequency} - Prisma Player`,
       text: `Relatório dos últimos ${report.days} dias\n\nPlays: ${report.plays}\nConversões: ${report.conversions}\nTaxa de conversão: ${report.conversionRate.toFixed(1)}%\n\nAcesse o Prisma Player para analisar cada VSL.`,
       html: `<h1>Relatório ${report.frequency}</h1><p>Período: últimos ${report.days} dias.</p><ul><li><strong>Plays:</strong> ${report.plays}</li><li><strong>Conversões:</strong> ${report.conversions}</li><li><strong>Taxa de conversão:</strong> ${report.conversionRate.toFixed(1)}%</li></ul><p>Acesse o Prisma Player para analisar cada VSL.</p>`,
     }),

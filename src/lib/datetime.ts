@@ -16,7 +16,7 @@ export function nowMs(): number {
   return Date.now();
 }
 
-/** ISO de N dias atrás — janelas de relatório (finance/admin). */
+/** ISO de N dias atrás - janelas de relatório (finance/admin). */
 export function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }

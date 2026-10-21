@@ -14,21 +14,21 @@ const EMBED_SESSION_RATE_LIMIT_WINDOW_MS = envInt("EMBED_SESSION_RATE_LIMIT_WIND
 const NO_STORE = { "cache-control": "private, no-store, max-age=0" };
 
 /**
- * POST /api/embed/[id]/session — mint do token de sessão do DRM "Exigir Token
+ * POST /api/embed/[id]/session - mint do token de sessão do DRM "Exigir Token
  * Assinado por Sessão".
  *
  * Mesmo pipeline de origem do endpoint dinâmico (RM-02): originToken assinado
  * amarrado a este id (ou ao escopo do teste A/B via `abTestId`), header
  * Origin/Referer coerente e prova de render pelo cookie `pp_embed`. O
- * sessionToken é camada ADICIONAL do toggle DRM — nunca substitui estas
+ * sessionToken é camada ADICIONAL do toggle DRM - nunca substitui estas
  * checagens, que continuam obrigatórias aqui e na config.
  *
  * Rota de CRYPTO PURO, sem lookup de player/vídeo/acesso: um mint deve ser
- * barato e cold-start-proof. O `domainAllowed` fica de fora deliberadamente —
+ * barato e cold-start-proof. O `domainAllowed` fica de fora deliberadamente -
  * os domínios vivem no banco e o sessionToken não concede nada por si só: para
  * valer algo ele precisa passar de novo pela config dinâmica, que aplica
  * `domainAllowed` com o MESMO originToken desta requisição. Mintar aqui sem
- * checar domínio não abre bypass — só antecipa um token que será recusado lá.
+ * checar domínio não abre bypass - só antecipa um token que será recusado lá.
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;

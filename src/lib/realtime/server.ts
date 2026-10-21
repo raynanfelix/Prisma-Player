@@ -9,7 +9,7 @@ import { db, schema } from "@/lib/db";
 const { videoEvents, videos } = schema;
 
 /**
- * Neon Realtime — engine de live queries.
+ * Neon Realtime - engine de live queries.
  * Server-side: sela queries SQL com NEON_REALTIME_SECRET e as expõe para o
  * client (o client só vê a query selada, nunca o SQL nem os parâmetros).
  */
@@ -21,7 +21,7 @@ export const realtime = secret
 
 /**
  * Live query: contadores de stats por vídeo (plays, impressões, conclusões).
- * Autorizada na própria query: WHERE user_id = $1 — o dono só vê os seus.
+ * Autorizada na própria query: WHERE user_id = $1 - o dono só vê os seus.
  */
 export function videoStatsQuery(userId: string) {
   return db

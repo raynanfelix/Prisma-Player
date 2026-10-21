@@ -33,7 +33,7 @@ interface OtpInputFieldProps {
 /**
  * Campo de código OTP (6 dígitos) no padrão aprovado: Field + InputOTP com dois
  * grupos de 3 slots (h-9 w-11 text-xl) separados por InputOTPSeparator.
- * Componente token-based — respeita claro/escuro via globals.css.
+ * Componente token-based - respeita claro/escuro via globals.css.
  */
 export function OtpInputField({
   id = "otp",

@@ -50,7 +50,7 @@ export default function LearnModal({ module, label, onClose }: { module: LearnMo
           {content.points.map((point) => <li key={point} className="flex gap-2 text-[13px] leading-relaxed themeable-text-ink"><span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-selected" /><span>{point}</span></li>)}
         </ul>
         <div className="px-5 pb-5">
-          <button type="button" onClick={onClose} className="h-10 w-full rounded-xl bg-selected text-[13px] font-bold text-selected-foreground">Entendi{label ? ` — ${label}` : ""}</button>
+          <button type="button" onClick={onClose} className="h-10 w-full rounded-xl bg-selected text-[13px] font-bold text-selected-foreground">Entendi{label ? ` - ${label}` : ""}</button>
         </div>
       </div>
     </div>

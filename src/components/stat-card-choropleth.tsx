@@ -127,7 +127,7 @@ export function StatCardChoropleth({
 
   /**
    * Escala sequencial de 5 níveis nas CSS vars `--choropleth-*`, que já trazem
-   * valores próprios para claro e escuro — a cor acompanha o tema sem precisar
+   * valores próprios para claro e escuro - a cor acompanha o tema sem precisar
    * ler o tema em JS. Países sem dados usam o tom neutro `empty`, e não o
    * primeiro nível, para não parecerem tráfego baixo.
    */

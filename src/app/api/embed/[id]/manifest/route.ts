@@ -109,13 +109,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 
   // MANIFEST PÚBLICO (Plano A de escala): entrega só cosmetics sanitizadas
-  // (allowlist acima) por player-id — sem originToken, cookie de render ou
+  // (allowlist acima) por player-id - sem originToken, cookie de render ou
   // checagem de domínio. Trade-off aceito pelo dono: as cosmetics são obtíveis
   // por UUID sem render, mas um UUID v4 é incalculável por enumeração e o
   // conteúdo é exatamente o que qualquer visitante da página do cliente já vê
   // renderizado no player. Token de origem, cookie de render, eventToken e a
   // URL assinada do vídeo continuam EXCLUSIVOS do endpoint dinâmico
-  // /api/embed/:id (no-store, intocado) — inclusive a aplicação de
+  // /api/embed/:id (no-store, intocado) - inclusive a aplicação de
   // allowedDomains, que só lá decide se o player roda naquele host.
   const domains = Array.isArray(playerConfig.allowedDomains) ? playerConfig.allowedDomains.map((d) => d.trim()).filter(Boolean) : [];
 
@@ -126,13 +126,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   // POSTER instantâneo do shell (borrow do padrão Vturb): URL assinada do
   // thumbnailStart para o EmbedPlayer pintar o poster antes de a config
-  // dinâmica chegar. A assinatura É a proteção — mesma política dos assets do
+  // dinâmica chegar. A assinatura É a proteção - mesma política dos assets do
   // endpoint dinâmico (ownedAssetPaths só aceita caminhos do próprio
-  // titular) — e o campo é public-cacheável porque o poster é exatamente o
+  // titular) - e o campo é public-cacheável porque o poster é exatamente o
   // que qualquer espectador já vê renderizado no player. Como todo o
   // handler, a assinatura roda só em cache miss: a borda revalida em ≤60s
   // (+300s de stale-while-revalidate), dentro do TTL de 900s da URL. Sem
-  // thumbnail do titular (ou falha ao assinar) o campo fica ausente — o
+  // thumbnail do titular (ou falha ao assinar) o campo fica ausente - o
   // shell cai no box preto de hoje. "assets" não integra a allowlist de
   // config, então o poster sai como campo próprio, extraído do config raw.
   const posterPath = ownedAssetPaths(rawConfig.assets, playerConfig.userId).thumbnailStart;

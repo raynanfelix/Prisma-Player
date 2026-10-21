@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
   // no middleware do SDK (exchangeOAuthToken -> redirect com Set-Cookie).
   // Sem isso o 1º clique caía na raiz anônimo (o challenge cookie só
   // resolvia na 2ª tentativa). Invocamos o middleware da Neon SÓ quando o
-  // verifier está na URL — o resto do proxy (CSP/nonce/embed) segue igual,
+  // verifier está na URL - o resto do proxy (CSP/nonce/embed) segue igual,
   // e o redirect_login dela nunca dispara fora desse caso.
   if (new URL(request.url).searchParams.has("neon_auth_session_verifier")) {
     try {

@@ -41,7 +41,7 @@ function embedErrorMessage(code: string, status: number): string {
 export default function EmbedPlayer({ playerId, tracking, originToken }: { playerId: string; tracking?: Tracking; originToken?: string }) {
   const [payload, setPayload] = useState<Payload | null>(null);
   // Boot em duas fases (Plano A de escala): config pública + poster do
-  // manifest — cacheáveis na borda — pintam o shell de apresentação antes
+  // manifest - cacheáveis na borda - pintam o shell de apresentação antes
   // de a config dinâmica chegar. O playerId viaja junto para nunca pintar o
   // shell de um player por outro.
   const [manifestShell, setManifestShell] = useState<{ playerId: string; config: Record<string, unknown>; posterUrl: string } | null>(null);
@@ -211,7 +211,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     // sessionToken HMAC mintado pelo servidor. Pede um via POST
     // /api/embed/:id/session (mesmos viewerId/sessionId já gerados neste
     // render) e refaz o fetch da config UMA única vez. Players com o toggle
-    // desligado nunca veem este caminho — seguem pagando 1 request como hoje.
+    // desligado nunca veem este caminho - seguem pagando 1 request como hoje.
     const requestSessionToken = async (): Promise<string> => {
       const sessionParams = new URLSearchParams();
       if (originToken) sessionParams.set("originToken", originToken);
@@ -237,7 +237,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       try { params.set("viewerId", getOrCreateViewerId()); } catch { /* sem viewer: limites por navegador inativos */ }
       // RM-04: no fluxo A/B o token foi mintado no escopo do TESTE (playerId =
       // testId + claim `abTest`). A API precisa do id do teste para verificar o
-      // token no escopo certo — sem ele, o consumo do player variante rejeita.
+      // token no escopo certo - sem ele, o consumo do player variante rejeita.
       if (trackingTestId) params.set("abTestId", trackingTestId);
       if (sessionToken) params.set("sessionToken", sessionToken);
       return fetch(`/api/embed/${encodeURIComponent(playerId)}${params.size ? `?${params.toString()}` : ""}`, { cache: "no-store" })
@@ -258,10 +258,10 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
 
     // FAST-PATH do manifest (Plano A): busca em PARALELO à config dinâmica o
     // manifest público (cacheável na borda) que pinta o shell instantâneo.
-    // O embed A/B (trackingTestId) NÃO usa manifest — o fluxo dele fica como
+    // O embed A/B (trackingTestId) NÃO usa manifest - o fluxo dele fica como
     // está. Sem token/sessão no query: a URL é a mesma para todos os
     // visitantes (chave única de cache na CDN). Qualquer falha (rede/4xx/5xx)
-    // é engolida em silêncio — o shell é otimização, nunca dependência.
+    // é engolida em silêncio - o shell é otimização, nunca dependência.
     if (!trackingTestId) {
       fetch(`/api/embed/${encodeURIComponent(playerId)}/manifest`)
         .then(async (response) => {
@@ -462,7 +462,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       window.clearTimeout(promoTimerRef.current);
       promoTimerRef.current = window.setTimeout(() => setPromoSpot(null), 6000);
       // Marca d'água arma na tentativa de download (botão direito). No modo
-      // estático ela já está sempre visível — não agenda o sumiço.
+      // estático ela já está sempre visível - não agenda o sumiço.
       setWatermarkArmed(true);
       if (payload?.config.watermarkType !== "static") {
         window.clearTimeout(watermarkTimerRef.current);
@@ -502,8 +502,8 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     // Sem manifest ainda (ou de outro player): placeholder neutro de hoje.
     if (!shell) return <main className="grid min-h-dvh place-items-center bg-transparent p-4"><div className="w-full max-w-3xl"><div className="grid aspect-video w-full place-items-center overflow-hidden rounded-2xl bg-black"><span className="flex flex-col items-center gap-3"><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden className="animate-pulse"><circle cx="22" cy="22" r="21" fill="rgba(255,255,255,0.08)" /><path d="M18 14.5v15l12-7.5z" fill="rgba(255,255,255,0.85)" /></svg><span className="animate-pulse text-[12px] font-semibold text-white/70">Carregando VSL…</span></span></div></div></main>;
     // SHELL do manifest (boot em duas fases): pintura instantânea de
-    // apresentação com as cosmetics públicas — headline + moldura do player
-    // (fundo preto como o primeiro paint real, radius e proporção 16:9) —
+    // apresentação com as cosmetics públicas - headline + moldura do player
+    // (fundo preto como o primeiro paint real, radius e proporção 16:9) -
     // enquanto a config dinâmica chega. SEM botões, SEM CTA e SEM <video>:
     // interativos existem só no payload final (nada de listener duplicado).
     // O payload substitui este bloco inteiro; headlineVariants/turbo/A-B
@@ -529,7 +529,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
           )}
           <div className="relative order-2 mx-auto grid aspect-video w-full place-items-center overflow-hidden bg-black" style={{ borderRadius: `${Number(shell.radius ?? 0)}px` }}>
             {/* Poster instantâneo (borrow do padrão Vturb): o thumbnailStart
-                assinado do manifest cobre o box por baixo do spinner — o
+                assinado do manifest cobre o box por baixo do spinner - o
                 primeiro paint deixa de ser um retângulo preto. alt vazio +
                 aria-hidden: o poster é decoração do loading; o spinner
                 (role="status") continua sendo o anúncio para leitores de

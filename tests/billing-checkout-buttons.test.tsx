@@ -42,14 +42,14 @@ async function clickAndSettle(): Promise<void> {
 
 const alertText = () => document.querySelector('[role="alert"]')?.textContent ?? "";
 
-describe("PlanCheckoutButton — erro REAL do backend (item 0)", () => {
+describe("PlanCheckoutButton - erro REAL do backend (item 0)", () => {
   it("502 com message devolve o diagnóstico real (price_not_found) no botão", async () => {
     fetchMock.mockImplementation(
       async () =>
         new Response(
           JSON.stringify({
             error: "price_not_found",
-            message: "Preço plano_pro_mensal ainda não existe no Stripe — rode scripts/stripe-seed.mjs com a sua API key.",
+            message: "Preço plano_pro_mensal ainda não existe no Stripe - rode scripts/stripe-seed.mjs com a sua API key.",
           }),
           { status: 502, headers: { "content-type": "application/json" } },
         ),
@@ -70,7 +70,7 @@ describe("PlanCheckoutButton — erro REAL do backend (item 0)", () => {
 
     await clickAndSettle();
 
-    expect(alertText()).toContain("Catálogo de preços ainda não sincronizado — rode o seed do Stripe.");
+    expect(alertText()).toContain("Catálogo de preços ainda não sincronizado - rode o seed do Stripe.");
   });
 
   it("503 com message (Stripe sem config) mostra a orientação real do backend", async () => {
@@ -79,7 +79,7 @@ describe("PlanCheckoutButton — erro REAL do backend (item 0)", () => {
         new Response(
           JSON.stringify({
             error: "stripe_unavailable",
-            message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente.",
+            message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente.",
           }),
           { status: 503, headers: { "content-type": "application/json" } },
         ),

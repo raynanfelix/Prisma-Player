@@ -61,7 +61,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     await db.delete(abTests).where(and(eq(abTests.id, id), eq(abTests.userId, gate.account.accountOwnerId)));
     return NextResponse.json({ ok: true });
   } catch {
-    // id não-UUID (ou falha do banco) cai aqui — mesma resposta do PostgREST.
+    // id não-UUID (ou falha do banco) cai aqui - mesma resposta do PostgREST.
     return NextResponse.json({ error: "delete_failed" }, { status: 400 });
   }
 }

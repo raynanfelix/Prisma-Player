@@ -16,14 +16,14 @@ export interface XAxisProps {
   /** Width of the date ticker box for fade calculation. Default: 50 */
   tickerHalfWidth?: number;
   /**
-   * `"data"` — tick labels snap to data rows so crosshair and tooltip stay aligned (default).
-   * `"domain"` — evenly spaced ticks across the time domain (may not align with hover).
+   * `"data"` - tick labels snap to data rows so crosshair and tooltip stay aligned (default).
+   * `"domain"` - evenly spaced ticks across the time domain (may not align with hover).
    */
   tickMode?: "domain" | "data";
   /**
-   * PATCH LOCAL (não vem do registry @bklit/x-axis — reaplicar após `shadcn add`).
+   * PATCH LOCAL (não vem do registry @bklit/x-axis - reaplicar após `shadcn add`).
    * Formata o rótulo do tick. Sem isso os rótulos são sempre datas curtas, o que
-   * não serve para eixos que só usam `Date` como posição — a retenção por marco
+   * não serve para eixos que só usam `Date` como posição - a retenção por marco
    * do vídeo, onde o eixo é "% assistido".
    */
   formatTick?: (date: Date, index: number) => string;

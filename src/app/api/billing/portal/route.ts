@@ -13,7 +13,7 @@ const { profiles } = schema;
 const NO_STORE = { "cache-control": "no-store" } as const;
 
 /**
- * POST /api/billing/portal — sessão do Customer Portal (upgrade/downgrade,
+ * POST /api/billing/portal - sessão do Customer Portal (upgrade/downgrade,
  * cancelamento, troca de cartão). Exige `profiles.stripe_customer_id`
  * (gravado pelo webhook na primeira compra): sem customer do Stripe não há
  * o que gerenciar → 409 sem_stripe_customer.
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const customerId = profile?.stripeCustomerId ?? null;
   if (!customerId) {
     return NextResponse.json(
-      { error: "sem_stripe_customer", message: "Nenhuma compra via Stripe nesta conta ainda — assine um plano antes de gerenciar a assinatura." },
+      { error: "sem_stripe_customer", message: "Nenhuma compra via Stripe nesta conta ainda - assine um plano antes de gerenciar a assinatura." },
       { status: 409, headers: NO_STORE },
     );
   }
@@ -47,15 +47,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: session.url }, { headers: NO_STORE });
   } catch (error) {
     // Alerta operacional (hardening item 5): portal fora = cliente sem como
-    // cancelar/trocar cartão — situação que vira chargeback.
+    // cancelar/trocar cartão - situação que vira chargeback.
     await alertOperations({
       title: "Portal de cobrança falhou",
-      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      detail: `owner ${ownerId} - motivo: ${error instanceof Error ? error.message : "unknown"}`,
       kind: "billing_portal_failed",
     });
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
-        { error: "stripe_unavailable", message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
+        { error: "stripe_unavailable", message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
         { status: 503, headers: NO_STORE },
       );
     }

@@ -144,10 +144,10 @@ afterEach(() => {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/intelligence/audience-exports — contrato do arquivo        */
+/* POST /api/intelligence/audience-exports - contrato do arquivo        */
 /* ------------------------------------------------------------------ */
 
-describe("POST /api/intelligence/audience-exports — contrato do arquivo", () => {
+describe("POST /api/intelligence/audience-exports - contrato do arquivo", () => {
   it("devolve text/plain com BOM, filename derivado do título e o perfil agregado completo", async () => {
     const response = await exportAudience(exportRequest({ segment: "engagers_75" }));
     expect(response.status).toBe(200);
@@ -160,7 +160,7 @@ describe("POST /api/intelligence/audience-exports — contrato do arquivo", () =
     const raw = Buffer.from(await response.arrayBuffer());
     expect([...raw.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const content = raw.subarray(3).toString("utf8");
-    expect(content.startsWith("PRISMA PLAYER — PERFIL REAL DE PÚBLICO\n")).toBe(true);
+    expect(content.startsWith("PRISMA PLAYER - PERFIL REAL DE PÚBLICO\n")).toBe(true);
     expect(content).toContain("VSL: VSL Acentuação Test!");
     expect(content).toContain("Segmento: engagers_75");
     expect(content).toContain("Sessões no segmento: 120");
@@ -196,10 +196,10 @@ describe("POST /api/intelligence/audience-exports — contrato do arquivo", () =
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/intelligence/audience-exports — agregação no banco         */
+/* POST /api/intelligence/audience-exports - agregação no banco         */
 /* ------------------------------------------------------------------ */
 
-describe("POST /api/intelligence/audience-exports — agregação no banco", () => {
+describe("POST /api/intelligence/audience-exports - agregação no banco", () => {
   it("uma única query agrega por sessão no Postgres, com SQL parametrizado e sem cap", async () => {
     const response = await exportAudience(exportRequest({ segment: "engagers_75" }));
     expect(response.status).toBe(200);
@@ -211,7 +211,7 @@ describe("POST /api/intelligence/audience-exports — agregação no banco", () 
     const query = dialect.sqlToQuery(dbState.executeQueries[0] as SQL);
 
     // Fold por sessão dentro do banco: atributos do evento mais recente
-    // (created_at desc, id desc — mesma regra do fold JS original), max de
+    // (created_at desc, id desc - mesma regra do fold JS original), max de
     // progresso e flags OR. Nada de 50 mil linhas para o JS.
     expect(query.sql).toContain("group by session_id");
     expect(query.sql).toContain("order by created_at desc, id desc");
@@ -258,7 +258,7 @@ describe("POST /api/intelligence/audience-exports — agregação no banco", () 
     expect(await response.json()).toEqual({ error: "segment_without_data", message: "Esta VSL ainda não possui pessoas no segmento escolhido." });
   });
 
-  it("total ausente também vira 422 — num() degrada para 0, nunca NaN", async () => {
+  it("total ausente também vira 422 - num() degrada para 0, nunca NaN", async () => {
     dbState.executeResults = [{ rows: [] }];
     const response = await exportAudience(exportRequest());
     expect(response.status).toBe(422);
@@ -279,10 +279,10 @@ describe("POST /api/intelligence/audience-exports — agregação no banco", () 
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/intelligence/audience-exports — gates                      */
+/* POST /api/intelligence/audience-exports - gates                      */
 /* ------------------------------------------------------------------ */
 
-describe("POST /api/intelligence/audience-exports — gates", () => {
+describe("POST /api/intelligence/audience-exports - gates", () => {
   it("guard negando devolve exatamente o gate.response, antes de qualquer IO", async () => {
     gateState.ok = false;
     gateState.denyResponse = new Response(JSON.stringify({ error: "subscription_required" }), { status: 402 });

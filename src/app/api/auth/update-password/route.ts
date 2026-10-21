@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   // Fluxo Neon Auth: o link do e-mail de reset chega em /reset-password?token=...
   // e a UI envia { password, token }. Sem token só há caminho quando existe
-  // sessão ativa (troca de senha sem senha atual — caso raro de aba legada).
+  // sessão ativa (troca de senha sem senha atual - caso raro de aba legada).
   const parsed = await readJsonBody<{ password?: unknown; token?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: "password_update_failed" }, { status: 400 });
     // A revogação de outras sessões no reset depende de
     // emailAndPassword.revokeSessionsOnPasswordReset no Managed (não
-    // configurável pelo app) — pendência documentada em
+    // configurável pelo app) - pendência documentada em
     // docs/neon-migration/neon-auth-setup.md.
     return NextResponse.json({ ok: true });
   }
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const { data } = await getAuth().getSession();
   if (!data?.user) return NextResponse.json({ error: "reset_token_required" }, { status: 400 });
   // changePassword valida a senha atual no Managed; sem currentPassword válida
-  // ele rejeita (INVALID_PASSWORD) — a UI deve seguir o fluxo do token.
+  // ele rejeita (INVALID_PASSWORD) - a UI deve seguir o fluxo do token.
   const { error } = await getAuth().changePassword({ newPassword: password, currentPassword: "", revokeOtherSessions: true });
   if (error) return NextResponse.json({ error: "password_update_failed" }, { status: 400 });
   return NextResponse.json({ ok: true });

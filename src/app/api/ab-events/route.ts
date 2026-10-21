@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const limited = await rateLimit(request, `ab:${testId}:${variantId}:${sessionId}`, { max: 120, windowMs: 60_000, identifier: sessionIdentifier });
   if (limited) return limited;
   // Decisão do Lead (review do Plano E): a segunda barreira "global" por IP
-  // foi REMOVIDA — com identifier por sessão ela ficava ofuscada pelo
+  // foi REMOVIDA - com identifier por sessão ela ficava ofuscada pelo
   // limite de 120/min acima (código morto custando 1 write no Neon por
   // request) e restaurá-la por IP reabrira o problema de CGNAT que o Plano
   // E fechou. Camadas anti-abuso reais desta rota: validateOrigin acima,
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   // Same proof-of-embed requirement as /api/analytics-events, bound to the
   // video actually served for this variant. A sessão A/B (persistida entre
   // visitas) é intencionalmente distinta da sessão de analytics do viewer, por
-  // isso não exigimos sessão no token aqui — temos que evitar quebrar o
+  // isso não exigimos sessão no token aqui - temos que evitar quebrar o
   // sorteio consistente de variante. Sem efeito lateral pago, não há prejuízo.
   const eventToken = typeof body?.eventToken === "string" ? body.eventToken : null;
   const verifiedEvent = verifyEmbedEventTokenContext(eventToken, { videoId: variant.videoId });

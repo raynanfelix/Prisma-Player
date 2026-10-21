@@ -11,13 +11,13 @@ const { videos, videoLiveSessions } = schema;
 
 /**
  * O dashboard puxava até 50 mil linhas de video_events e agregava em
- * JavaScript: vídeo viral congelava a UI e, pior, mentia — o cap silencioso
+ * JavaScript: vídeo viral congelava a UI e, pior, mentia - o cap silencioso
  * truncava os números. Agora a agregação acontece no Postgres, com
  * `count(distinct ...) filter (...)` sobre o índice (video_id, created_at):
  * O(índice) em vez de O(linhas), sem cap e sem streaming de eventos.
  */
 
-/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) — normaliza. */
+/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) - normaliza. */
 function rowsOf<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
   if (result && typeof result === "object" && Array.isArray((result as { rows?: unknown }).rows)) {
@@ -32,7 +32,7 @@ function num(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** Marcos de retenção — exatamente os pontos do summarizeEvents original. */
+/** Marcos de retenção - exatamente os pontos do summarizeEvents original. */
 const RETENTION_POINTS = [0, 10, 25, 50, 75, 90, 100] as const;
 
 type WindowStats = {
@@ -110,7 +110,7 @@ function retentionOf(stats: WindowStats) {
 /**
  * Série temporal a partir dos buckets já agregados pelo Postgres (floor da
  * distância em segundos desde `since`): mesma binning do buildTimeline
- * original — buckets de ceil(range/30) dias alinhados a `since`, índices
+ * original - buckets de ceil(range/30) dias alinhados a `since`, índices
  * fora de [0, bucketCount) descartados.
  */
 function timelineOf(rows: TimelineSqlRow[], sinceMs: number, bucketMs: number, bucketCount: number) {
@@ -141,7 +141,7 @@ const DIMENSION_KEYS: Array<[key: string, column: string]> = [
 
 /**
  * Mesma montagem do summarizeEvents().dimension(): ordenação por impressões
- * desc (empate preservado — o SQL entrega first_created asc), limite de 30 e
+ * desc (empate preservado - o SQL entrega first_created asc), limite de 30 e
  * rates com o mesmo pct().
  */
 function dimensionsOf(rows: DimensionSqlRow[]): Record<string, DimensionRow[]> {
@@ -209,7 +209,7 @@ export async function GET(request: Request, context: { params: Promise<{ videoId
   // falha só nas sessões ao vivo zera o contador `live` e segue.
   //
   // As três agregações rodam no Postgres sobre índices (video_id, created_at):
-  // resumo das duas janelas, série temporal e dimensões — nenhuma linha de
+  // resumo das duas janelas, série temporal e dimensões - nenhuma linha de
   // evento cruza a rede. A matemática é a mesma do summarizeEvents:
   // - métricas = sessões distintas por event_type;
   // - reachedX = complete OU progress >= X;
@@ -354,7 +354,7 @@ export async function GET(request: Request, context: { params: Promise<{ videoId
   const activeCountries = [...liveCountryMap.entries()].map(([name, viewers]) => ({ name, impressions: viewers, plays: viewers, playRate: 100, completes: 0, completionRate: 0 })).sort((a, b) => b.impressions - a.impressions);
 
   const attentionMap = retention.slice(1).map((point, index, list) => ({ ...point, drop: index ? Math.max(0, Math.round((list[index - 1].rate - point.rate) * 10) / 10) : Math.max(0, 100 - point.rate) }));
-  // `storage_provider` é restrito a 'r2' no schema — R2 é o único storage.
+  // `storage_provider` é restrito a 'r2' no schema - R2 é o único storage.
   const previewSource = await signR2ReadUrl(video.objectPath, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
   const publicVideo = { title: video.title, duration_seconds: video.durationSeconds === null ? null : Number(video.durationSeconds), source: previewSource, type: video.mimeType };
 

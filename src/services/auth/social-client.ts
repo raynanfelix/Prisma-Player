@@ -7,12 +7,12 @@ import { createAuthClient } from "@neondatabase/auth/next";
  *
  * Sem argumentos: o wrapper conversa com o proxy same-origin `/api/auth/*`
  * (catch-all `src/app/api/auth/[...all]/route.ts`), então não precisa de
- * URL nem de variáveis públicas — e as credenciais de sessão continuam
+ * URL nem de variáveis públicas - e as credenciais de sessão continuam
  * saindo só dos cookies do SDK.
  *
  * O `authService` (client.ts) continua sendo a porta para as rotas
  * PRÓPRIAS da aplicação; este cliente existe para os fluxos que o wrapper
- * do Neon precisa conduzir no navegador — hoje, o OAuth social:
+ * do Neon precisa conduzir no navegador - hoje, o OAuth social:
  * fora de iframe o plugin Redirect do Better Auth navega sozinho para a
  * URL do Google; dentro de iframe (embed) o wrapper troca por popup.
  */
@@ -23,7 +23,7 @@ export type SocialSignInResult = { ok: true } | { ok: false; message: string };
 /**
  * Inicia o login social com o Google.
  *
- * Em sucesso o navegador sai da página (redirect/popup do wrapper) — o
+ * Em sucesso o navegador sai da página (redirect/popup do wrapper) - o
  * caller não deve esperar retorno além de "iniciado". Erros vêm sempre
  * como mensagem PT-BR pronta para exibir.
  */
@@ -37,7 +37,7 @@ export async function signInWithGoogle(callbackURL: string): Promise<SocialSignI
   }
 }
 
-/** Erros do social em PT-BR — códigos estáveis do Better Auth/Neon primeiro. */
+/** Erros do social em PT-BR - códigos estáveis do Better Auth/Neon primeiro. */
 function socialErrorMessage(error: unknown): string {
   const code = String((error as { code?: unknown } | null)?.code ?? "").toUpperCase();
   const message = String((error as { message?: unknown } | null)?.message ?? "").toLowerCase();

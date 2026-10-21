@@ -50,7 +50,7 @@ export interface HeatmapSeparatorProps {
    * `0` aligns labels with the line top. Default: 0.
    */
   labelOffset?: number;
-  /** Draw Q1–Q4 labels at the start of each quarter group. Default: false */
+  /** Draw Q1-Q4 labels at the start of each quarter group. Default: false */
   showLabels?: boolean;
   /** Format quarter group labels. Default: `Q{n}` */
   labelFormat?: (quarter: number, startDate: Date) => string;

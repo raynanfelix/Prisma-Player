@@ -25,11 +25,11 @@ function dayIndexFor(timestampMs: number, endMs: number): number {
 }
 
 /**
- * Saúde do Sistema — página montada sobre o UptimeCard (kokonutui, MIT)
+ * Saúde do Sistema - página montada sobre o UptimeCard (kokonutui, MIT)
  * adaptado ao domínio Prisma Player.
  *
  * Fontes de dados REAIS desta página:
- * - Webhooks AbacatePay: tabela payment_webhook_events — eventos com
+ * - Webhooks AbacatePay: tabela payment_webhook_events - eventos com
  *   status "failed" viram incidentes "Indisponível" no dia em que chegaram
  *   (com o erro real de processamento), e a fila pendente ("received"/
  *   "processing") vira "Degradado" no dia corrente.
@@ -40,7 +40,7 @@ function dayIndexFor(timestampMs: number, endMs: number): number {
  * - API (funções Vercel) e Dashboard: sem fonte de incidentes no projeto;
  *   só o dia corrente é comprovado (a própria carga desta página). Dias
  *   anteriores aparecem como "Sem dados" em vez de verde inventado.
- * - R2/Storage: nenhum probe de storage nesta página — linha inteira
+ * - R2/Storage: nenhum probe de storage nesta página - linha inteira
  *   "Sem dados" até existir sondagem dedicada.
  * - Minutos de impacto dos incidentes: o log não registra duração; usa-se
  *   estimativa fixa (15 min por evento, teto 240) só para o cálculo de uptime.
@@ -123,14 +123,14 @@ export default async function AdminSystemPage() {
     // PLACEHOLDER HONESTO: sem telemetria de incidentes; o dia corrente é
     // comprovado pela própria carga desta página (route handler respondeu).
     { name: "API (funções Vercel)", missing: UPTIME_DAYS - 1 },
-    // PLACEHOLDER HONESTO: idem — esta página do Dashboard renderizou hoje.
+    // PLACEHOLDER HONESTO: idem - esta página do Dashboard renderizou hoje.
     { name: "Dashboard", missing: UPTIME_DAYS - 1 },
     // Dados reais: payment_webhook_events (falhas + fila) da AbacatePay.
     { name: "Webhooks AbacatePay", incidents: webhookIncidents },
     // PLACEHOLDER HONESTO: as queries desta página responderam (Neon ativo
     // hoje); não há registro histórico de incidentes de banco no projeto.
     { name: "Banco Neon", missing: UPTIME_DAYS - 1 },
-    // PLACEHOLDER HONESTO: nenhum probe de R2 nesta página — "Sem dados".
+    // PLACEHOLDER HONESTO: nenhum probe de R2 nesta página - "Sem dados".
     { name: "R2/Storage", missing: UPTIME_DAYS },
   ];
 
@@ -151,7 +151,7 @@ export default async function AdminSystemPage() {
           />
           <p className="text-[11px] leading-relaxed themeable-text-ink-muted-48">
             Fonte real: tabela <strong>payment_webhook_events</strong> (falhas e fila dos webhooks AbacatePay) e a
-            resposta desta página. API, Dashboard e Banco Neon ainda não possuem telemetria histórica de incidentes —
+            resposta desta página. API, Dashboard e Banco Neon ainda não possuem telemetria histórica de incidentes -
             os dias anteriores aparecem como <em>Sem dados</em> e apenas o dia corrente é comprovado. R2/Storage
             aguarda sondagem dedicada.
           </p>
@@ -188,9 +188,9 @@ export default async function AdminSystemPage() {
                       {timeFormatter.format(event.receivedAt.getTime())} · {event.receivedAt.toLocaleDateString("pt-BR")}
                     </td>
                     <td className="px-5 py-4 themeable-text-ink-muted-48">
-                      {event.processedAt ? event.processedAt.toLocaleString("pt-BR") : "—"}
+                      {event.processedAt ? event.processedAt.toLocaleString("pt-BR") : "-"}
                     </td>
-                    <td className="max-w-[280px] truncate px-5 py-4 text-red-500">{event.processingError ?? "—"}</td>
+                    <td className="max-w-[280px] truncate px-5 py-4 text-red-500">{event.processingError ?? "-"}</td>
                   </tr>
                 ))}
               </tbody>

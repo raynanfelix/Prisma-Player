@@ -89,7 +89,7 @@ export async function POST(request: Request, { params }: Context) {
         .values({ userId: account.accountOwnerId, videoId: id, config: {}, allowedDomains: [], published: true })
         .onConflictDoNothing({ target: playerConfigs.videoId });
       // Faststart (moov antes de mdat): diagnóstico best-effort do fim do
-      // upload — só para MP4; null quando indeterminado/erro, nunca derruba
+      // upload - só para MP4; null quando indeterminado/erro, nunca derruba
       // o complete. Campo aditivo na resposta.
       const faststart = video.mimeType?.toLowerCase() === "video/mp4"
         ? await detectMp4Faststart(video.objectPath).catch(() => null)

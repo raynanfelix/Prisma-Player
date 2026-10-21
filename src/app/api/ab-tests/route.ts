@@ -14,7 +14,7 @@ type VariantMetrics = { id: string; video_id: string; weight: number; videos: { 
 
 /**
  * Esta rota já segue o padrão do sistema (admin + filtro explícito por
- * `accountOwnerId`) — o comentário histórico sobre RLS permanece como
+ * `accountOwnerId`) - o comentário histórico sobre RLS permanece como
  * advertência: nunca voltar ao cliente com `auth.uid()`, que escondia a lista
  * de membros de equipe.
  */

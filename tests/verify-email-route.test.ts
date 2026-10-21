@@ -10,7 +10,7 @@ vi.mock("@/lib/security/csrf", () => ({
 }));
 
 const { verifyState } = vi.hoisted(() => ({
-  /** Estado do getAuth() mockado — respostas de verifyEmail/sendVerificationEmail. */
+  /** Estado do getAuth() mockado - respostas de verifyEmail/sendVerificationEmail. */
   verifyState: {
     verifyEmailResult: {
       data: { status: true, session: { id: "session-1" } } as unknown,
@@ -50,7 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("POST /api/auth/verify-email — código", () => {
+describe("POST /api/auth/verify-email - código", () => {
   it("código válido com sessão (auto-sign-in) → 200 { verified, hasSession }", async () => {
     const response = await post({ email: "novo@exemplo.com", otp: "123456" });
     expect(response.status).toBe(200);
@@ -93,7 +93,7 @@ describe("POST /api/auth/verify-email — código", () => {
   });
 });
 
-describe("POST /api/auth/verify-email — reenvio", () => {
+describe("POST /api/auth/verify-email - reenvio", () => {
   it("{ resend: true } → 200 genérico { ok: true }", async () => {
     const response = await post({ email: "novo@exemplo.com", resend: true });
     expect(response.status).toBe(200);

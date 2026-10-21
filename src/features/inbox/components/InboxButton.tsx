@@ -29,7 +29,7 @@ export default function InboxButton() {
 
   async function read(id: string) {
     // Mesma política do dismiss(): sem confirmação do servidor (rede caiu ou
-    // resposta non-ok) a mensagem NÃO é marcada como lida localmente —
+    // resposta non-ok) a mensagem NÃO é marcada como lida localmente -
     // senão sumia do dropdown e voltava como não-lida no próximo fetch, e a
     // rejeição do fetch virava unhandled rejection no console.
     const response = await fetch("/api/account/inbox", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
@@ -52,7 +52,7 @@ export default function InboxButton() {
   const unread = items.filter((item) => !item.read_at).length;
   // O sino lista apenas NÃO LIDAS: ler a mensagem a consome (o histórico
   // completo, lidas incluídas, vive em /dashboard/inbox). Antes itens lidos
-  // continuavam listados no dropdown para sempre — "limpar" parecia não
+  // continuavam listados no dropdown para sempre - "limpar" parecia não
   // funcionar.
   const unreadItems = items.filter((item) => !item.read_at);
 

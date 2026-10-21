@@ -26,7 +26,7 @@ async function probe(url: string, match?: RegExp): Promise<{ ok: boolean; detail
 /**
  * SEO e IA: verificações automáticas da base técnica (robots, sitemap,
  * llms.txt, pricing legível) + metas de busca com taxa de citação registrada
- * manualmente (3–5 execuções por plataforma, conforme skill ai-seo).
+ * manualmente (3-5 execuções por plataforma, conforme skill ai-seo).
  */
 export default async function AdminSeoPage() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -65,7 +65,7 @@ export default async function AdminSeoPage() {
     </section>
     <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_1.4fr]">
       <div><AdminPanel title="Nova meta de busca" description="Palavra-chave que importa para o negócio."><SeoTargetForm /></AdminPanel>
-        <div className="mt-5"><AdminPanel title="Como medir" description="Rode cada busca 3–5x por plataforma e registre quantas citaram a Prisma."><div className="space-y-2 p-5 text-[12px] themeable-text-ink-muted-48"><p className="flex gap-2"><Globe size={14} /> Consultas: “melhor player de VSL”, “player de VSL preço”, “Prisma Player vs concorrente”.</p><p className="flex gap-2"><Search size={14} /> Base automática: {healthy}/{autoChecks.length} passando. JSON-LD e metadados: ver layout e pricing no código.</p></div></AdminPanel></div></div>
+        <div className="mt-5"><AdminPanel title="Como medir" description="Rode cada busca 3-5x por plataforma e registre quantas citaram a Prisma."><div className="space-y-2 p-5 text-[12px] themeable-text-ink-muted-48"><p className="flex gap-2"><Globe size={14} /> Consultas: “melhor player de VSL”, “player de VSL preço”, “Prisma Player vs concorrente”.</p><p className="flex gap-2"><Search size={14} /> Base automática: {healthy}/{autoChecks.length} passando. JSON-LD e metadados: ver layout e pricing no código.</p></div></AdminPanel></div></div>
       <AdminPanel title="Metas e taxa de citação" description="Citados ÷ execuções somadas (todas as plataformas)."><div className="space-y-4 p-5">{targetRows.map((target) => { const stat = byTarget.get(target.id); const rate = stat && stat.total ? Math.round((stat.cited / stat.total) * 100) : null; return <div key={target.id} className="rounded-[14px] border p-4 themeable-border-hairline"><div className="flex items-center justify-between gap-2"><p className="text-[13px] font-semibold themeable-text-ink">{target.keyword}</p><span className="text-[12px] font-bold themeable-text-ink">{rate === null ? "sem dados" : `${rate}%`}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-card"><div className="h-full rounded-full bg-selected" style={{ width: `${rate ?? 0}%` }} /></div><div className="mt-3"><SeoCheckForm targetId={target.id} /></div></div>; })}{targetRows.length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhuma meta ainda. Adicione a primeira ao lado.</p>}</div></AdminPanel>
     </div>
   </div>;

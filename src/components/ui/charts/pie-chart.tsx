@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * PieChart composável (donut) sobre recharts — Prisma Player.
+ * PieChart composável (donut) sobre recharts - Prisma Player.
  *
  * Base: padrão composável do ecossistema kokonutui/21st.dev (shadcn-style),
  * reconstruído sobre recharts (sem libs novas) e adaptado aos tokens da
@@ -10,7 +10,7 @@
  * marcado com aria-hidden quando o número já existe em texto.
  *
  * Origem/alterações registradas conforme src/components/README.md:
- * - Biblioteca: kokonutui (https://kokonutui.com) / 21st.dev — API aprovada
+ * - Biblioteca: kokonutui (https://kokonutui.com) / 21st.dev - API aprovada
  *   pelo dono (PieChart + PieSlice + PieCenter);
  * - Licença: MIT (ecossistema kokonutui); implementação própria sobre recharts;
  * - Adaptações: tokens de cor, formatação pt-BR, hover controlável;

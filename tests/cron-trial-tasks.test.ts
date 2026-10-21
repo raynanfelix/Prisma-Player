@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * Trial 100% (spec Billing Completo, item 5): o cron agora marca trials
  * vencidos como `expired` (verdade do status para admin/telas) e cria o
  * aviso de fim próximo no inbox (idempotente por trial). O acesso em si já
- * caía no `accessFrom` (trialActive exige trialEndsAt futuro) — coberto no
+ * caía no `accessFrom` (trialActive exige trialEndsAt futuro) - coberto no
  * fim deste arquivo para fechar o loop expiração→acesso.
  */
 
@@ -96,7 +96,7 @@ beforeEach(() => {
   insertCalls.length = 0;
 });
 
-describe("expireOutdatedTrials — cron marca trial vencido como expired", () => {
+describe("expireOutdatedTrials - cron marca trial vencido como expired", () => {
   it("update em account_access com trialStatus expired (idempotente pelo filtro)", async () => {
     const now = new Date("2026-10-20T12:00:00.000Z");
     await expireOutdatedTrials(makeCtx(now));
@@ -114,7 +114,7 @@ describe("expireOutdatedTrials — cron marca trial vencido como expired", () =>
   });
 });
 
-describe("notifyTrialsEndingSoon — aviso de fim próximo no inbox", () => {
+describe("notifyTrialsEndingSoon - aviso de fim próximo no inbox", () => {
   it("trial terminando em 2 dias sem aviso prévio → insere mensagem única com dias restantes", async () => {
     const now = new Date("2026-10-20T12:00:00.000Z");
     dbState.selectRows = {
@@ -166,7 +166,7 @@ describe("notifyTrialsEndingSoon — aviso de fim próximo no inbox", () => {
   });
 });
 
-describe("getAccountAccess — expiração do trial derruba o acesso (lazy, entre crons)", () => {
+describe("getAccountAccess - expiração do trial derruba o acesso (lazy, entre crons)", () => {
   it("trialStatus active com trialEndsAt no passado → sem acesso (cron ainda não marcou)", async () => {
     dbState.selectRows = {
       account_access: [{ onboardingCompleted: true, trialStatus: "active", trialEndsAt: new Date("2026-10-01T00:00:00.000Z") }],
@@ -177,7 +177,7 @@ describe("getAccountAccess — expiração do trial derruba o acesso (lazy, entr
 
     expect(access.trialActive).toBe(false);
     expect(access.hasAccess).toBe(false);
-    // O status cru permanece até o cron marcar — a verdade vigente é a data.
+    // O status cru permanece até o cron marcar - a verdade vigente é a data.
     expect(access.trialStatus).toBe("active");
   });
 

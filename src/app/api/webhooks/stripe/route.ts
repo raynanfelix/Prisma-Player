@@ -16,22 +16,22 @@ export const runtime = "nodejs";
 const NO_STORE = { "cache-control": "no-store" } as const;
 
 /**
- * POST /api/webhooks/stripe — porta única de fulfillment (Opção A).
+ * POST /api/webhooks/stripe - porta única de fulfillment (Opção A).
  *
  * Rigor do neon-webhook (mesmo padrão do repo):
  * - raw body ANTES de qualquer parse (a assinatura é sobre os bytes);
- * - assinatura SEMPRE verificada com `constructEvent` — inválida → 400
+ * - assinatura SEMPRE verificada com `constructEvent` - inválida → 400
  *   sem logar segredo nem detalhe do erro;
  * - idempotência ATÔMICA na tabela `payment_webhook_events` (a mesma que o
  *   admin/UptimeCard lê): INSERT ... ON CONFLICT (provider_event_id) DO
- *   NOTHING — reentrega de evento processed/ignored → 200 no-op;
+ *   NOTHING - reentrega de evento processed/ignored → 200 no-op;
  *   reentrega de evento FAILED reprocessa (recuperação com reentrega do Stripe);
- * - fulfillment SÓ aqui — nunca na página de sucesso;
+ * - fulfillment SÓ aqui - nunca na página de sucesso;
  * - falha de processamento → status failed + 500: o Stripe reentrega e a
  *   tentativa nova reprocessa (o insert conflita com a linha failed).
  */
 export async function POST(request: Request) {
-  // CRÍTICO: raw body ANTES de qualquer parse — a assinatura é sobre os bytes.
+  // CRÍTICO: raw body ANTES de qualquer parse - a assinatura é sobre os bytes.
   const raw = await request.text();
 
   const limited = await rateLimit(request, "stripe-webhook", { max: 120, windowMs: 60_000, failClosed: true });
@@ -109,10 +109,10 @@ export async function POST(request: Request) {
       // O 500 abaixo já faz o Stripe reentregar; o status fica stale só até lá.
     }
     // Alerta operacional (hardening item 5): evento failed não pode ser
-    // silencioso — o dono precisa saber que um pagamento pode estar pendente.
+    // silencioso - o dono precisa saber que um pagamento pode estar pendente.
     await alertOperations({
       title: "Webhook do Stripe falhou",
-      detail: `Evento ${event.type} (${event.id}) marcado failed — o Stripe reentrega. Motivo: ${message}`,
+      detail: `Evento ${event.type} (${event.id}) marcado failed - o Stripe reentrega. Motivo: ${message}`,
       kind: "stripe_webhook_failed",
     });
     return NextResponse.json({ error: "processing_failed" }, { status: 500, headers: NO_STORE });

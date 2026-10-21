@@ -20,7 +20,7 @@ export interface PixelVerifyResultDto {
 
 interface Props {
   provider: StoreProviderId;
-  /** Draft atual do formulário (o teste é puro — usa o que está na tela, não o salvo). */
+  /** Draft atual do formulário (o teste é puro - usa o que está na tela, não o salvo). */
   config: Record<string, string>;
   disabled: boolean;
   /** O pai guarda o resultado (mensagem na tela) e dispara o PUT pós-ok. */
@@ -34,7 +34,7 @@ function isPixelProvider(provider: StoreProviderId): provider is PixelVerifyProv
 /**
  * Botão "Testar conexão" (Sprint 1 Pixel Verdadeiro): dispara um evento de
  * teste REAL na plataforma e devolve a resposta real. A mensagem de
- * sucesso/falha é renderizada pelo IntegrationDetail — este painel cuida do
+ * sucesso/falha é renderizada pelo IntegrationDetail - este painel cuida do
  * botão (spinner) e da chamada ao /api/integrations/verify.
  */
 export default function PixelVerifyPanel({ provider, config, disabled, onResult }: Props) {
@@ -51,7 +51,7 @@ export default function PixelVerifyPanel({ provider, config, disabled, onResult 
         body: JSON.stringify({ provider, config }),
       });
       if (response.status === 429) {
-        onResult({ ok: false, platform, message: "Muitos testes seguidos — aguarde um minuto e tente novamente.", detail: "rate limit (10/min)", receivedAt: new Date().toISOString() });
+        onResult({ ok: false, platform, message: "Muitos testes seguidos - aguarde um minuto e tente novamente.", detail: "rate limit (10/min)", receivedAt: new Date().toISOString() });
         return;
       }
       const result = (await response.json().catch(() => null)) as PixelVerifyResultDto | null;
@@ -61,7 +61,7 @@ export default function PixelVerifyPanel({ provider, config, disabled, onResult 
       }
       onResult(result);
     } catch {
-      onResult({ ok: false, platform, message: "Não foi possível testar agora — verifique sua conexão.", detail: "falha de rede", receivedAt: new Date().toISOString() });
+      onResult({ ok: false, platform, message: "Não foi possível testar agora - verifique sua conexão.", detail: "falha de rede", receivedAt: new Date().toISOString() });
     } finally {
       setTesting(false);
     }

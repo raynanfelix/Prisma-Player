@@ -186,7 +186,7 @@ describe("POST /api/folders", () => {
 
     const inserted = insertedValues(fake(), "video_folders") as Array<Record<string, unknown>>;
     expect(inserted).toHaveLength(1);
-    // Sempre o accountOwnerId da sessão — nome nunca cria pasta para outro.
+    // Sempre o accountOwnerId da sessão - nome nunca cria pasta para outro.
     expect(inserted[0]).toMatchObject({ userId: OWNER, name: "Pasta Nova" });
   });
 

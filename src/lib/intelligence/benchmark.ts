@@ -10,11 +10,11 @@ const { videoEvents } = schema;
 /**
  * Benchmark privado da conta, computado no Postgres (mesma filosofia das
  * rotas de analytics: agregação `count(distinct session_id) filter (...)`
- * sobre o índice (video_id, created_at) — nenhum evento cruza a rede).
+ * sobre o índice (video_id, created_at) - nenhum evento cruza a rede).
  *
  * O benchmark GLOBAL agregado entre contas não tem job de agregação hoje:
  * computá-lo na hora seria um full-scan de `video_events` no carregamento da
- * página. O contrato mantém o estado honesto `qualified: false` — a tela
+ * página. O contrato mantém o estado honesto `qualified: false` - a tela
  * mostra o benchmark privado e explica quando o global entra.
  */
 
@@ -43,7 +43,7 @@ export type BenchmarkData = {
 
 export type BenchmarkVideoOption = { id: string; title: string };
 
-/** Linha agregada por VSL — mesma forma que a query SQL devolve. */
+/** Linha agregada por VSL - mesma forma que a query SQL devolve. */
 export type VideoMetricRow = BenchmarkVideoOption & {
   impressions: number;
   plays: number;

@@ -4,7 +4,7 @@ import { getTableName } from "drizzle-orm";
  * Fake do client Drizzle (`@/lib/db`) para testes unitários das rotas e
  * serviços convertidos. As cadeias do query builder são thenables que
  * registram inserts/updates (com os valores recebidos) e devolvem resultados
- * configuráveis por tabela — suficiente para provar as regras de negócio
+ * configuráveis por tabela - suficiente para provar as regras de negócio
  * (user_id da sessão, gates fail-closed, idempotência de ledger) sem banco.
  *
  * Uso:
@@ -130,7 +130,7 @@ export function installFakeDb(): FakeDb {
   return singleton.fake;
 }
 
-/** Fake já instalado pelo vi.mock — chamar dentro dos testes. */
+/** Fake já instalado pelo vi.mock - chamar dentro dos testes. */
 export function currentFakeDb(): FakeDb {
   if (!singleton.fake) throw new Error("Fake db não instalado: o módulo @/lib/db ainda não foi importado.");
   return singleton.fake;

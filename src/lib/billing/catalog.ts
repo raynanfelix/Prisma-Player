@@ -9,16 +9,16 @@ export type BillingPlan = {
    * Stripe. Espelha os valores da landing (mesma vitrine, mesmo desconto).
    */
   annual_amount_cents: number;
-  /** Equivalente mensal do anual (annual_amount_cents / 12) — o preço grande da vitrine em modo anual. */
+  /** Equivalente mensal do anual (annual_amount_cents / 12) - o preço grande da vitrine em modo anual. */
   annual_monthly_equivalent: number;
   currency: "BRL";
   included_plays: number;
-  /** Storage não é mais cobrado nem limitado — campo legado da tabela. */
+  /** Storage não é mais cobrado nem limitado - campo legado da tabela. */
   storage_gb?: number;
   prisma_ai_analyses: number;
   team_seats: number;
   play_overage_millicents: number;
-  /** Sem cobrança por storage — campo legado da tabela. */
+  /** Sem cobrança por storage - campo legado da tabela. */
   storage_overage_cents_per_gb?: number;
   provider_pix_product_id: string | null;
   provider_card_product_id: string | null;
@@ -41,11 +41,11 @@ export type CreditPackage = {
 };
 
 /**
- * Catálogo LOCAL — fonte da vitrine de planos e pacotes de créditos IA.
+ * Catálogo LOCAL - fonte da vitrine de planos e pacotes de créditos IA.
  * Espelha o pricing público do site (mesmos valores que o dono mantém na
  * landing). Quando o novo provedor de pagamento chegar, as rows do banco
  * (billing_plans / ai_credit_products) passam a prevalecer; isto é o
- * fallback que garante que a página NUNCA fique vazia — inclusive no trial.
+ * fallback que garante que a página NUNCA fique vazia - inclusive no trial.
  */
 export const CATALOG_PLANS: BillingPlan[] = [
   {
@@ -110,17 +110,17 @@ export const CATALOG_PLANS: BillingPlan[] = [
 ];
 
 /**
- * Pacotes de créditos da Prisma IA (vitrine). Valores de lançamento —
+ * Pacotes de créditos da Prisma IA (vitrine). Valores de lançamento -
  * ajustáveis quando o provedor de pagamento for integrado.
  */
 export const CATALOG_CREDIT_PACKAGES: CreditPackage[] = [
-  { id: "catalog-credits-start", slug: "credits-start", name: "Créditos IA — Start", credits: 100, bonus_credits: 0, amount_cents: 1990 },
-  { id: "catalog-credits-pro", slug: "credits-pro", name: "Créditos IA — Pro", credits: 500, bonus_credits: 100, amount_cents: 8990 },
-  { id: "catalog-credits-escala", slug: "credits-escala", name: "Créditos IA — Escala", credits: 2000, bonus_credits: 500, amount_cents: 32990 },
+  { id: "catalog-credits-start", slug: "credits-start", name: "Créditos IA - Start", credits: 100, bonus_credits: 0, amount_cents: 1990 },
+  { id: "catalog-credits-pro", slug: "credits-pro", name: "Créditos IA - Pro", credits: 500, bonus_credits: 100, amount_cents: 8990 },
+  { id: "catalog-credits-escala", slug: "credits-escala", name: "Créditos IA - Escala", credits: 2000, bonus_credits: 500, amount_cents: 32990 },
 ];
 
 /**
- * Plano que o trial libera (ALL_CAPABILITIES = nível Escala — factual na
+ * Plano que o trial libera (ALL_CAPABILITIES = nível Escala - factual na
  * mensagem de ativação e na tela de billing). A vitrine usa isto para marcar
  * o card do teste como "plano atual" enquanto o trial estiver vigente.
  */
@@ -157,7 +157,7 @@ export function formatStorageOverage(cents: number | null | undefined) {
 }
 
 /**
- * Excedente por play: 1 real = 100.000 millicents. Formata com 2 casas —
+ * Excedente por play: 1 real = 100.000 millicents. Formata com 2 casas -
  * R$ 0,02 (não R$ 0,020) e cai para 3 casas só quando o valor exigir
  * (ex.: 0,005 por play).
  */

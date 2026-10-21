@@ -45,7 +45,7 @@ describe("player pixel configuration", () => {
     // trackConversion + round-trip iframe → pixel-event) e uma terceira via
     // CAPI. Meta/TikTok só colapsam as duplicatas quando TODAS as vias
     // carregam a mesma chave: eventID (fbq, 4º arg) / event_id (ttq.track,
-    // 3º arg) = transaction_id — exatamente o event_id que o
+    // 3º arg) = transaction_id - exatamente o event_id que o
     // services/ads/server-events envia no CAPI.
     const script = buildPlayerLoaderScript("37c52d61-f4ae-45db-890f-0ef87de5a967");
     expect(script).toContain("dedupeId?{eventID:dedupeId}:undefined");

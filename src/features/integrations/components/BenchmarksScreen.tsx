@@ -23,7 +23,7 @@ function MetricTile({ label, value, hint }: { label: string; value: string; hint
 }
 
 /**
- * "Benchmarks" no Marketplace: informativo, sem config de VSL — mostra o
+ * "Benchmarks" no Marketplace: informativo, sem config de VSL - mostra o
  * benchmark privado da conta (média + melhor VSL, últimos 30 dias) e o estado
  * honesto do benchmark global.
  */
@@ -77,7 +77,7 @@ export default function BenchmarksScreen({ app, capabilities, benchmarkData, onB
                 </div>
               ) : (
                 <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground themeable-border-hairline">
-                  Ainda não há VSLs com tráfego suficiente para eleger uma melhor — o pódio aparece com pelo menos 10 plays.
+                  Ainda não há VSLs com tráfego suficiente para eleger uma melhor - o pódio aparece com pelo menos 10 plays.
                 </p>
               )}
             </>
@@ -90,7 +90,7 @@ export default function BenchmarksScreen({ app, capabilities, benchmarkData, onB
           <CardTitle className="flex items-center gap-2 text-base">
             <Globe2 className="size-4 text-muted-foreground" aria-hidden /> Benchmark global
           </CardTitle>
-          <CardDescription>Média agregada e anônima entre todas as contas — nenhuma operação aparece individualmente.</CardDescription>
+          <CardDescription>Média agregada e anônima entre todas as contas - nenhuma operação aparece individualmente.</CardDescription>
         </CardHeader>
         <CardContent>
           {allowed && benchmarkData.global.qualified ? (

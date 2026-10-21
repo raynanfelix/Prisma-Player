@@ -56,7 +56,7 @@ const RETENTION_POINTS = [0, 10, 25, 50, 75, 90, 100] as const;
  *
  * A implementação anterior varria o array inteiro uma vez por métrica (mais de
  * quinze varreduras) e, no agrupamento por dimensão, recriava o array do grupo a
- * cada linha (`[...(grupo ?? []), linha]`) — comportamento quadrático que, com
+ * cada linha (`[...(grupo ?? []), linha]`) - comportamento quadrático que, com
  * o teto de 50 mil eventos, dominava o tempo de resposta do endpoint mais caro
  * do sistema.
  */

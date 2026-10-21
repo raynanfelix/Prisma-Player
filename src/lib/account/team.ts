@@ -100,7 +100,7 @@ function toMembership(row: {
  * Contexto canônico: equipe própria sempre vence (mesma regra de
  * getTeamAccountContext). A versão anterior ordenava só por joined_at, e o
  * trigger de signup cria equipe própria + adesões de convite na MESMA
- * transação (joined_at idêntico) — usuário convidado pré-cadastro podia
+ * transação (joined_at idêntico) - usuário convidado pré-cadastro podia
  * acordar operando na equipe do convidante.
  */
 export async function getTeamContext(userId: string): Promise<TeamContext> {

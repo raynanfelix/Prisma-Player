@@ -28,7 +28,7 @@ import { detectMp4Faststart } from "@/lib/storage/faststart";
 const WINDOW = 65_536;
 const OBJECT_PATH = "user-owner/vsl.mp4";
 
-/** Body lido via transformToByteArray — o caminho primário do SDK v3. */
+/** Body lido via transformToByteArray - o caminho primário do SDK v3. */
 function byteArrayBody(bytes: Uint8Array) {
   return { transformToByteArray: async () => bytes };
 }
@@ -49,7 +49,7 @@ beforeEach(() => {
   r2State.commands = [];
 });
 
-describe("detectMp4Faststart — parser (sem rede)", () => {
+describe("detectMp4Faststart - parser (sem rede)", () => {
   it("faz exatamente um Range GET de 64 KiB no objeto pedido", async () => {
     r2State.body = byteArrayBody(windowBytes([{ mark: "moov", at: 8 }, { mark: "mdat", at: 4096 }]));
     await detectMp4Faststart(OBJECT_PATH);

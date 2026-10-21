@@ -156,7 +156,7 @@ vi.mock("@/lib/db", async () => {
 
   // Delete envolvido: preserva a resolução do fake oficial (honra
   // failingTables), permite falha isolada via `failingDeletes` e captura o
-  // `where` — a proteção IDOR do delete está no filtro da query, então ele
+  // `where` - a proteção IDOR do delete está no filtro da query, então ele
   // precisa ser inspecionável no teste.
   const originalDelete = fake.db.delete.bind(fake.db);
   fake.db.delete = (table: unknown) => {
@@ -281,7 +281,7 @@ afterEach(() => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/videos — lista com contrato snake_case e paywall           */
+/* GET /api/videos - lista com contrato snake_case e paywall           */
 /* ------------------------------------------------------------------ */
 
 describe("GET /api/videos", () => {
@@ -364,7 +364,7 @@ describe("GET /api/videos", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/videos — criação, quota, título e mime                    */
+/* POST /api/videos - criação, quota, título e mime                    */
 /* ------------------------------------------------------------------ */
 
 describe("POST /api/videos", () => {
@@ -535,7 +535,7 @@ describe("POST /api/videos", () => {
 /* ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ */
-/* PATCH /api/videos/[id] — título, pasta e transição de status         */
+/* PATCH /api/videos/[id] - título, pasta e transição de status         */
 /* ------------------------------------------------------------------ */
 
 describe("PATCH /api/videos/[id]", () => {
@@ -651,7 +651,7 @@ describe("PATCH /api/videos/[id]", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* DELETE /api/videos/[id] — posse, assets e limpeza no R2              */
+/* DELETE /api/videos/[id] - posse, assets e limpeza no R2              */
 /* ------------------------------------------------------------------ */
 
 describe("DELETE /api/videos/[id]", () => {
@@ -736,7 +736,7 @@ describe("DELETE /api/videos/[id]", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/videos/[id]/multipart — upload em partes                  */
+/* POST /api/videos/[id]/multipart - upload em partes                  */
 /* ------------------------------------------------------------------ */
 
 describe("POST /api/videos/[id]/multipart", () => {
@@ -908,7 +908,7 @@ describe("POST /api/videos/[id]/multipart", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/videos/[id]/duplicate — duplicação com quota               */
+/* POST /api/videos/[id]/duplicate - duplicação com quota               */
 /* ------------------------------------------------------------------ */
 
 describe("POST /api/videos/[id]/duplicate", () => {

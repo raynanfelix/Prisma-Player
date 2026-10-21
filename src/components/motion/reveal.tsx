@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 /**
  * Revelação suave de conteúdo (fade + micro slide de 8px). Spring macio
  * (stiffness baixo + damping alto = desacelera sem tranco). `delay` para
- * cascata. whileInView "once" — anima só na primeira aparição.
+ * cascata. whileInView "once" - anima só na primeira aparição.
  * Respeita prefers-reduced-motion.
  */
 export default function Reveal({

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (accountLimited) return accountLimited;
 
   // O Managed Better Auth envia o e-mail de reset (SMTP compartilhado no dev).
-  // O link aponta para /reset-password?token=... — não há troca de código por
+  // O link aponta para /reset-password?token=... - não há troca de código por
   // sessão; o token é entregue a /api/auth/update-password.
   const { error } = await getAuth().requestPasswordReset({
     email,

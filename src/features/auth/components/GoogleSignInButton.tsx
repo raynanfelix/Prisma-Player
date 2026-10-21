@@ -14,7 +14,7 @@ import { signInWithGoogle } from "@/services/auth/social-client";
  * pai exibir no AuthNotice padrão.
  *
  * Estilo: variante outline do Button (bg branco, hairline slate, tinta)
- * com a altura/raio dos botões primários dos formulários — o verde-lima
+ * com a altura/raio dos botões primários dos formulários - o verde-lima
  * continua reservado para a ação principal (design.md).
  */
 export function GoogleSignInButton({ onError, label = "Continuar com Google" }: { onError: (message: string) => void; label?: string }) {
@@ -31,7 +31,7 @@ export function GoogleSignInButton({ onError, label = "Continuar com Google" }: 
         onError(result.message);
         setLoading(false);
       }
-      // ok: o wrapper assume (redirect/popup) — o loading fica até a navegação.
+      // ok: o wrapper assume (redirect/popup) - o loading fica até a navegação.
     } finally {
       submittingRef.current = false;
     }

@@ -148,7 +148,7 @@ export default function AbTestsPage() {
     <Dialog open={testOpen} onClose={() => setTestOpen(false)} title="Criar teste A/B real" description="Escolha de 2 a 10 VSLs publicadas. O tráfego será dividido automaticamente." size="lg" footer={<><button type="button" onClick={() => setTestOpen(false)} className="min-h-10 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-4 text-xs font-semibold text-slate-700 dark:text-zinc-300">Cancelar</button><button type="button" onClick={() => void createExperiment()} disabled={creating || !name.trim() || selectedVideos.length < 2} className="min-h-10 rounded-xl bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] px-5 text-xs font-bold text-[#191A23] shadow-xs disabled:opacity-40">{creating ? "Criando teste…" : `Criar com ${selectedVideos.length} VSLs`}</button></>}>
       <label className="block text-xs font-semibold text-[#191A23] dark:text-zinc-200">
         Nome do teste
-        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Oferta principal — julho" className="mt-2 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" />
+        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Oferta principal - julho" className="mt-2 h-10 w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-card px-3.5 text-xs font-medium text-[#191A23] dark:text-white outline-none focus:border-[#B9FF66]" />
       </label>
       <div className="mt-4">
         <p className="mb-2 text-xs font-semibold text-[#191A23] dark:text-zinc-200">Selecione as VSLs</p>

@@ -5,7 +5,7 @@ import { realtime, sealQuery, videoCountersQuery, videoStatsQuery } from "@/lib/
 
 /**
  * Sela live queries do dashboard e devolve para o client assinar via WebSocket.
- * O client NUNCA vê o SQL nem os parâmetros — só o token selado.
+ * O client NUNCA vê o SQL nem os parâmetros - só o token selado.
  */
 export async function GET(request: Request) {
   const gate = await guard(request);

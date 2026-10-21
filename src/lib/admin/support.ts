@@ -12,7 +12,7 @@ export type SupportCaseInput = { userId?: string | null; subject: string; catego
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** Validação pura (testável) — o banco reforça com checks. */
+/** Validação pura (testável) - o banco reforça com checks. */
 export function validateCaseInput(input: SupportCaseInput): string | null {
   const subject = input.subject.trim().replace(/\s+/g, " ");
   if (subject.length < 3 || subject.length > 140) return "invalid_subject";

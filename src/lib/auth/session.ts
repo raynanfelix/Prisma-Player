@@ -14,7 +14,7 @@ import { getAuth } from "./server";
  *   embeds, marketing) para o login. Aqui o matcher continua global (o proxy
  *   também faz CSP/nonce/cookie de embed) e a decisão fica nesta função.
  * - O refresh do token acontece dentro do `auth.middleware` do Neon (valida
- *   via cache de cookie assinado ou upstream) nas rotas protegidas — exatamente
+ *   via cache de cookie assinado ou upstream) nas rotas protegidas - exatamente
  *   onde a sessão é necessária. Rotas públicas validam na hora do uso via
  *   `auth.getSession()` (RSC/route handlers).
  * - O redirecionamento de login recebe `?next=` de volta (deep-link), o que o
@@ -57,7 +57,7 @@ export async function updateSession(request: NextRequest, requestHeaders?: Heade
 
   // Usuário autenticado em página de auth sai para o app. Presença do cookie de
   // sessão (cookie assinado pelo proxy); a validação real acontece na rota
-  // protegida — um token expirado converge em no máximo um redirecionamento.
+  // protegida - um token expirado converge em no máximo um redirecionamento.
   if ((AUTH_ROUTES as readonly string[]).includes(pathname) && request.cookies.get(NEON_AUTH_SESSION_COOKIE_NAME)?.value) {
     const url = request.nextUrl.clone();
     url.pathname = LOGGED_IN_REDIRECT;

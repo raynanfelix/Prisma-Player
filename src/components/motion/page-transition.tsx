@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
 /**
- * Transição de navegação do dashboard: suave, quase imperceptível — a página
+ * Transição de navegação do dashboard: suave, quase imperceptível - a página
  * "respira" pra posição em vez de pular. 6px de deslize, 380ms, ease-out
  * exponencial (desacelera sem tranco no fim). Respeita prefers-reduced-motion.
  */

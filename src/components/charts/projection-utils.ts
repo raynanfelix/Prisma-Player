@@ -2,7 +2,7 @@ export type ProjectionMode = "auto" | "target" | "manual";
 export type ProjectionAutoMethod = "linearRegression" | "lastSegment";
 /** How the projection segment is drawn between anchor and horizon. */
 type ProjectionCurveKind = "linear" | "bezier";
-/** @deprecated Stepped density removed — projections always anchor → horizon. */
+/** @deprecated Stepped density removed - projections always anchor → horizon. */
 export type ProjectionPathDensity = "stepped" | "endpoints";
 
 export interface ProjectionPoint {
@@ -24,7 +24,7 @@ export interface BuildProjectionPathOptions {
   horizonPoints?: number;
   /** Target Y at the final projected date (target mode). */
   endValue?: number;
-  /** Full manual path — anchor + future points (manual mode). */
+  /** Full manual path - anchor + future points (manual mode). */
   points?: ProjectionPoint[];
 }
 
@@ -228,7 +228,7 @@ function buildHorizontalTangentBezierPath(
   y0: number,
   x1: number,
   y1: number,
-  /** How far control points sit along the x span (0–0.5). Default: 0.45 */
+  /** How far control points sit along the x span (0-0.5). Default: 0.45 */
   tension = 0.45
 ): string {
   const dx = x1 - x0;

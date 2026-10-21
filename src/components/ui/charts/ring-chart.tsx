@@ -2,9 +2,9 @@
 
 /**
  * RingChart composável (anéis concêntricos com hover sincronizado) sobre
- * SVG + Motion — Prisma Player.
+ * SVG + Motion - Prisma Player.
  *
- * Base: kokonutui "Ring Chart" (ecossistema kokonutui/21st.dev, MIT — mesmo
+ * Base: kokonutui "Ring Chart" (ecossistema kokonutui/21st.dev, MIT - mesmo
  * componente já aprovado pelo dono no dashboard), portado para
  * `ui/charts` com a Legend decomposta na API aprovada (arquivo
  * `ring-legend.tsx`):

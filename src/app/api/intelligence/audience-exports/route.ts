@@ -11,28 +11,28 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const segments = new Set(["all", "buyers", "completers", "engagers_75", "cta_clickers"]);
 
 /**
- * DECISÃO DE SEMÂNTICA — o cap de 50 mil eventos morreu por AGREGAÇÃO, não
+ * DECISÃO DE SEMÂNTICA - o cap de 50 mil eventos morreu por AGREGAÇÃO, não
  * por paginação. Este "export" nunca foi uma lista de sessões: o arquivo é um
  * perfil agregado (totais + distribuições top-12), então todos os números
  * dele são computáveis no Postgres. O caminho antigo baixava até
  * ANALYTICS.MAX_EVENTS_PER_ANALYSIS linhas (risk < 70, ordem desc) e dobrava
- * em JS — em vídeo viral o cap silencioso CORTAVA sessões no meio (eventos
+ * em JS - em vídeo viral o cap silencioso CORTAVA sessões no meio (eventos
  * fora da janela mudavam maxProgress/flags das sessões de borda e o próprio
  * total): o relatório já era inexato antes de ser formatado.
  *
  * A mesma matemática do fold original, agora no banco:
  * - atributos por sessão = os do evento MAIS RECENTE (created_at desc, id
- *   desc) — o fold processava as linhas nessa ordem e mantinha os atributos
+ *   desc) - o fold processava as linhas nessa ordem e mantinha os atributos
  *   do primeiro evento visto de cada sessão;
  * - maxProgress = max(progress_percent) (nulo → 0, como antes);
  * - conversion/complete/cta = bool_or por sessão;
  * - filtro risk_score < 70 idêntico; segmento filtra SESSÕES, não eventos;
  * - distribuições: sessões por valor, top-12 por contagem, empates por
- *   last_seen desc — antes o empate seguia a ordem de inserção do Map (um
+ *   last_seen desc - antes o empate seguia a ordem de inserção do Map (um
  *   artefato da iteração desc); é a mesma ordem, agora explícita.
  */
 
-/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) — normaliza. */
+/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) - normaliza. */
 function rowsOf<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
   if (result && typeof result === "object" && Array.isArray((result as { rows?: unknown }).rows)) {
@@ -54,7 +54,7 @@ type SegmentSqlRow = {
   buyers?: unknown;
 };
 
-/** Condição de segmento sobre a CTE de sessões — fragmento estático (nenhum dado do usuário entra no texto). */
+/** Condição de segmento sobre a CTE de sessões - fragmento estático (nenhum dado do usuário entra no texto). */
 const segmentConditions: Record<string, SQL> = {
   all: sql`true`,
   buyers: sql`conversion`,
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
     // Uma única query faz o fold por sessão (CTE) e as distribuições
     // (GROUPING SETS com uma linha de total): nenhum evento cruza a rede e
-    // não existe mais teto — os números são exatos em qualquer volume.
+    // não existe mais teto - os números são exatos em qualquer volume.
     const result = await db.execute(sql`
       with sessions as (
         select
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
   const buyers = num(total?.buyers);
   if (!totalSessions) return NextResponse.json({ error: "segment_without_data", message: "Esta VSL ainda não possui pessoas no segmento escolhido." }, { status: 422 });
 
-  const content = `PRISMA PLAYER — PERFIL REAL DE PÚBLICO\nVSL: ${video.title}\nSegmento: ${segment}\nGerado em: ${new Date().toLocaleString("pt-BR")}\n\nAMOSTRA E SINAIS\nSessões no segmento: ${totalSessions}\nCompradores/conversões identificadas: ${buyers}\nTaxa de conversão do segmento: ${(buyers / totalSessions * 100).toFixed(1)}%\n\nPAÍSES\n${distributionOf(rows, "country", totalSessions)}\n\nDISPOSITIVOS\n${distributionOf(rows, "device", totalSessions)}\n\nSISTEMAS OPERACIONAIS\n${distributionOf(rows, "os", totalSessions)}\n\nNAVEGADORES\n${distributionOf(rows, "browser", totalSessions)}\n\nORIGENS DE TRÁFEGO\n${distributionOf(rows, "source", totalSessions)}\n\nCAMPANHAS\n${distributionOf(rows, "campaign", totalSessions)}\n\nCOMO USAR EM ADS\n1. Priorize os países, dispositivos e origens com maior presença entre compradores e espectadores qualificados.\n2. Cruze este perfil com os relatórios do seu checkout antes de alterar orçamento.\n3. Use UTMs consistentes para separar campanha, conjunto e criativo.\n4. Não trate amostra pequena como conclusão estatística.\n\nLIMITAÇÕES IMPORTANTES\nIdade e gênero não são coletados pelo player e não foram inferidos ou inventados. Esses atributos exigem dados consentidos do checkout, CRM ou relatórios agregados da plataforma de anúncios. O arquivo não contém e-mail, telefone, IP nem identificadores pessoais; ele serve como orientação real de segmentação, não como lista de Customer Match.\n`;
+  const content = `PRISMA PLAYER - PERFIL REAL DE PÚBLICO\nVSL: ${video.title}\nSegmento: ${segment}\nGerado em: ${new Date().toLocaleString("pt-BR")}\n\nAMOSTRA E SINAIS\nSessões no segmento: ${totalSessions}\nCompradores/conversões identificadas: ${buyers}\nTaxa de conversão do segmento: ${(buyers / totalSessions * 100).toFixed(1)}%\n\nPAÍSES\n${distributionOf(rows, "country", totalSessions)}\n\nDISPOSITIVOS\n${distributionOf(rows, "device", totalSessions)}\n\nSISTEMAS OPERACIONAIS\n${distributionOf(rows, "os", totalSessions)}\n\nNAVEGADORES\n${distributionOf(rows, "browser", totalSessions)}\n\nORIGENS DE TRÁFEGO\n${distributionOf(rows, "source", totalSessions)}\n\nCAMPANHAS\n${distributionOf(rows, "campaign", totalSessions)}\n\nCOMO USAR EM ADS\n1. Priorize os países, dispositivos e origens com maior presença entre compradores e espectadores qualificados.\n2. Cruze este perfil com os relatórios do seu checkout antes de alterar orçamento.\n3. Use UTMs consistentes para separar campanha, conjunto e criativo.\n4. Não trate amostra pequena como conclusão estatística.\n\nLIMITAÇÕES IMPORTANTES\nIdade e gênero não são coletados pelo player e não foram inferidos ou inventados. Esses atributos exigem dados consentidos do checkout, CRM ou relatórios agregados da plataforma de anúncios. O arquivo não contém e-mail, telefone, IP nem identificadores pessoais; ele serve como orientação real de segmentação, não como lista de Customer Match.\n`;
   const filename = video.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "vsl";
   return new NextResponse(`\uFEFF${content}`, { headers: { "content-type": "text/plain; charset=utf-8", "content-disposition": `attachment; filename="audiencia-${filename}.txt"`, "cache-control": "no-store" } });
 }

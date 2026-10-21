@@ -20,7 +20,7 @@ export type GuardOptions = {
    * Exige trial ativo ou assinatura ativa do titular da conta.
    *
    * Sem isto, o bloqueio de acesso existia apenas no componente `AccessGate`,
-   * que roda no navegador — ou seja, não existia. Toda rota que cria, altera ou
+   * que roda no navegador - ou seja, não existia. Toda rota que cria, altera ou
    * entrega valor precisa passar por aqui.
    */
   paid?: boolean;
@@ -40,11 +40,11 @@ function deny(error: string, status: number, message?: string): { ok: false; res
 /**
  * Porta única de entrada das rotas autenticadas: CSRF, sessão, papel na
  * equipe, acesso pago e o teto de rate limit default (60/min por dono,
- * fail-open). Centralizar evita a classe de bug mais cara deste código —
+ * fail-open). Centralizar evita a classe de bug mais cara deste código -
  * uma rota nova que esquece uma das cinco verificações.
  *
  * Neon Auth (Managed Better Auth): `userId`/`accountOwnerId` são o id do
- * usuário do Neon Auth (TEXT) — nenhuma query pode presumir UUID. A resolução
+ * usuário do Neon Auth (TEXT) - nenhuma query pode presumir UUID. A resolução
  * de equipe/plano acontece via getTeamAccountContext/getAccountPlan.
  */
 export async function guard(request: Request, options: GuardOptions = {}): Promise<GuardResult> {
@@ -76,7 +76,7 @@ export async function guard(request: Request, options: GuardOptions = {}): Promi
   }
 
   // Teto default de TODA rota autenticada (hardening item 4): 60/min por
-  // DONO — nenhuma rota nova nasce sem limite. Fail-OPEN de propósito: uma
+  // DONO - nenhuma rota nova nasce sem limite. Fail-OPEN de propósito: uma
   // falha do store de rate limit não pode travar usuário legítimo em pico;
   // rotas críticas (login, checkout, webhooks, verify) mantêm seus próprios
   // limites fail-closed por cima. Rotas públicas não passam pelo guard.

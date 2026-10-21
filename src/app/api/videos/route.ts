@@ -17,7 +17,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 /**
  * O caminho do objeto passou a ser montado no servidor. Antes vinha do cliente
  * e era validado contra o id de quem chamava, mas a linha em `videos` é gravada
- * com o id do TITULAR — então um membro de equipe criava arquivos num prefixo
+ * com o id do TITULAR - então um membro de equipe criava arquivos num prefixo
  * que a rotina de exclusão (que filtra pelo prefixo do titular) nunca limparia.
  *
  * No R2 quem escreve é o servidor, então o prefixo é sempre o titular e o
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
   const maxBytes = r2MaxUploadBytes();
   if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0 || sizeBytes > maxBytes) return NextResponse.json({ error: "invalid_file_size", maxBytes }, { status: 422 });
 
-  // Quota do plano. Sem isto o armazenamento — e o custo de R2 — não tinha teto.
+  // Quota do plano. Sem isto o armazenamento - e o custo de R2 - não tinha teto.
   const usedBytes = await getStorageUsedBytes(account.accountOwnerId);
   if (usedBytes + sizeBytes > plan.quotas.storageBytes) {
     return NextResponse.json({

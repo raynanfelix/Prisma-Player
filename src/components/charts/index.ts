@@ -2,7 +2,7 @@ export { LineChart } from "./line-chart";
 export { Line } from "./line";
 // Subcomponentes do LineChart (visx). Os nomes levam o prefixo `Line` porque
 // `Grid`/`XAxis`/`ChartTooltip` já estão ocupados pelos equivalentes do
-// AreaChart, que roda em Recharts e usa outro contexto — misturar os dois quebra.
+// AreaChart, que roda em Recharts e usa outro contexto - misturar os dois quebra.
 export { Grid as LineGrid } from "./grid";
 export { XAxis as LineXAxis } from "./x-axis";
 export { ChartTooltip as LineChartTooltip } from "./tooltip";

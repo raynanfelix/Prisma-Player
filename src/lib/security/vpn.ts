@@ -1,7 +1,7 @@
 /**
  * Detecção de VPN/proxy por IP via provedor externo (proxycheck.io).
  *
- * Sem chave (`VPN_DETECTION_KEY`): inerte, sempre fail-open — nunca bloqueia
+ * Sem chave (`VPN_DETECTION_KEY`): inerte, sempre fail-open - nunca bloqueia
  * reprodução por falta de configuração. Com chave: veredito com cache curto
  * em memória e timeout agressivo para não atrasar o carregamento do player.
  * Erro/timeout de rede também é fail-open (não quebrar playback legítimo).

@@ -56,7 +56,7 @@ function sign(value: string): string {
 /**
  * Origens próprias da plataforma (mesmo critério do `csrf.ts`, fonte única em
  * self-origins.ts). Usadas apenas para ISENTAR o header de Origin/Referer self
- * quando conferimos o host reivindicado por um token — nunca como autoridade
+ * quando conferimos o host reivindicado por um token - nunca como autoridade
  * de domínio para embeds.
  */
 const SELF_ORIGINS = buildConfiguredSelfOrigins();
@@ -130,7 +130,7 @@ const EVENT_TOKEN_MAX_AGE_SECONDS = 6 * 60 * 60;
 
 /**
  * Binds telemetry to a real embed load. Without it, anyone who knows the public
- * video UUID can forge plays and conversions — including for players whose
+ * video UUID can forge plays and conversions - including for players whose
  * allowed_domains they were never able to satisfy.
  *
  * The TTL covers a long VSL session; the token carries no secret of its own and
@@ -236,7 +236,7 @@ export type VerifiedEmbedEventContext = {
  * - `videoId`: sempre exigido (o token é escopado a um vídeo).
  * - `sessionId`: quando informado, o token precisa carregar EXATAMENTE esta
  *   sessão (evento com sessionId trocado é rejeitado).
- * - `host` / `nonce`: options claims — quando informados, precisam casar.
+ * - `host` / `nonce`: options claims - quando informados, precisam casar.
  * Devolve o contexto decodificado (host/sessionId/nonce) para o chamador usar
  * nas checagens de origem e de render.
  */
@@ -316,7 +316,7 @@ export function verifyEmbedOriginToken(token: string | null | undefined, playerI
 }
 
 /* ------------------------------------------------------------------ */
-/* DRM "Exigir Token Assinado por Sessão" — token de sessão assinado    */
+/* DRM "Exigir Token Assinado por Sessão" - token de sessão assinado    */
 /* ------------------------------------------------------------------ */
 
 // Versão do formato do token (segmento literal na frente do payload).
@@ -339,7 +339,7 @@ export interface EmbedSessionTokenClaims {
  * da família (EMBED_ORIGIN_SECRET), então quem tem o token tem uma declaração
  * do SERVIDOR de que aquela tríade player/viewer/sessão passou pelo pipeline
  * de origem+render num render específico (nonce). UUIDs inventados no cliente
- * nunca reproduzem a assinatura — é isso que mata o bypass do review MEDIUM.
+ * nunca reproduzem a assinatura - é isso que mata o bypass do review MEDIUM.
  */
 export function mintEmbedSessionToken(input: EmbedSessionTokenClaims): string {
   const payload = base64url(JSON.stringify({
@@ -357,7 +357,7 @@ export function mintEmbedSessionToken(input: EmbedSessionTokenClaims): string {
  * precisam bater (playerId, viewerId, sessionId, nonce do render) e o token
  * não pode estar expirado. Assinatura em comparação timing-safe (mesmo
  * padrão de verifyEmbedOriginToken); claims são valores que o próprio
- * chamador conhece e fornece — nada a vazar por timing.
+ * chamador conhece e fornece - nada a vazar por timing.
  */
 export function verifyEmbedSessionToken(token: string | null | undefined, expected: EmbedSessionTokenClaims): boolean {
   if (!token) return false;

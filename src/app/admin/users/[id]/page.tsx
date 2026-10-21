@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * Customer 360: tudo da conta em um lugar — perfil, assinatura, vídeos,
+ * Customer 360: tudo da conta em um lugar - perfil, assinatura, vídeos,
  * créditos, checkouts, eventos e auditoria. Ações de suporte no contexto.
  */
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -150,7 +150,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     <AdminHeader title={profile.full_name || profile.email} description={`${profile.email} · desde ${new Date(profile.created_at).toLocaleDateString("pt-BR")} · ${id}`} />
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <AdminMetric label="Assinatura" value={subscriptionDisplayStatus(subscription ?? null)} detail={plan ? `${plan.name} · ${money(plan.amount_cents)}/mês` : "sem plano"} icon={CreditCard} tone={isSubscriptionEffective(subscription ?? null) ? "green" : "red"} />
-      <AdminMetric label="Trial" value={access?.trial_status ?? "—"} detail={access?.trial_ends_at ? `até ${new Date(access.trial_ends_at).toLocaleDateString("pt-BR")}` : "sem trial ativo"} icon={Video} />
+      <AdminMetric label="Trial" value={access?.trial_status ?? "-"} detail={access?.trial_ends_at ? `até ${new Date(access.trial_ends_at).toLocaleDateString("pt-BR")}` : "sem trial ativo"} icon={Video} />
       <AdminMetric label="Storage" value={`${storageGb.toFixed(2)} GB`} detail={`sem limite · ${videos.length} vídeo${videos.length === 1 ? "" : "s"}`} icon={HardDrive} tone="blue" />
       <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetimeUsed ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
     </section>
@@ -159,14 +159,14 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
     <div className="mt-6 grid gap-5 xl:grid-cols-2">
       <AdminPanel title="Assinatura e pagamentos" description="Ciclo, método e checkouts da conta."><div className="space-y-2 p-5 text-[12px]">
-        <p className="themeable-text-ink">Status: {subscription ? <StatusPill value={subscriptionDisplayStatus(subscription)} /> : "—"}</p>
-        <p className="themeable-text-ink-muted-48">Método: {subscription?.billing_method ?? "—"} · Período: {subscription?.current_period_start ? new Date(subscription.current_period_start).toLocaleDateString("pt-BR") : "—"} → {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "—"}</p>
+        <p className="themeable-text-ink">Status: {subscription ? <StatusPill value={subscriptionDisplayStatus(subscription)} /> : "-"}</p>
+        <p className="themeable-text-ink-muted-48">Método: {subscription?.billing_method ?? "-"} · Período: {subscription?.current_period_start ? new Date(subscription.current_period_start).toLocaleDateString("pt-BR") : "-"} → {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("pt-BR") : "-"}</p>
         {(checkouts).map((checkout) => { const item = Array.isArray(checkout.plan) ? checkout.plan[0] : checkout.plan; return <div key={checkout.id} className="flex items-center justify-between gap-2 rounded-xl border p-3 themeable-border-hairline"><span className="themeable-text-ink">{item?.name ?? "?"} · {money(checkout.amount_cents)} · {checkout.checkout_type}</span><StatusPill value={checkout.status} /></div>; })}
         {checkouts.length === 0 && <p className="themeable-text-ink-muted-48">Nenhum checkout.</p>}
       </div></AdminPanel>
       <AdminPanel title="Vídeos e players" description={`${videos.length} vídeos (50 recentes).`}><div className="max-h-80 space-y-2 overflow-y-auto p-5">{videos.map((video) => <div key={video.id} className="flex items-center justify-between gap-2 text-[12px]"><span className="max-w-[60%] truncate font-semibold themeable-text-ink">{video.title}</span><StatusPill value={video.status} /></div>)}{videos.length === 0 && <p className="text-[12px] themeable-text-ink-muted-48">Nenhum vídeo.</p>}</div></AdminPanel>
       <AdminPanel title="Créditos e ledger" description="Saldo e últimos 20 lançamentos."><div className="space-y-2 p-5 text-[12px]">{ledger.map((entry, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="themeable-text-ink-muted-48">{entry.reason} · {new Date(entry.created_at).toLocaleDateString("pt-BR")}</span><span className={`font-bold ${entry.amount >= 0 ? "text-emerald-600" : "text-red-500"}`}>{entry.amount >= 0 ? "+" : ""}{entry.amount}</span></div>)}{ledger.length === 0 && <p className="themeable-text-ink-muted-48">Sem movimentos.</p>}</div></AdminPanel>
-      <AdminPanel title="Auditoria da conta" description="Ações administrativas sobre esta conta. Somente leitura."><div className="space-y-2 p-5 text-[12px]">{logs.map((log, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="font-semibold themeable-text-ink">{actionLabel[log.action] ?? log.action}</span><span className="themeable-text-ink-muted-48">{operatorEmail.get(log.admin_user_id) ?? "—"} · {new Date(log.created_at).toLocaleString("pt-BR")}</span></div>)}{logs.length === 0 && <p className="themeable-text-ink-muted-48">Nenhuma ação registrada.</p>}</div></AdminPanel>
+      <AdminPanel title="Auditoria da conta" description="Ações administrativas sobre esta conta. Somente leitura."><div className="space-y-2 p-5 text-[12px]">{logs.map((log, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="font-semibold themeable-text-ink">{actionLabel[log.action] ?? log.action}</span><span className="themeable-text-ink-muted-48">{operatorEmail.get(log.admin_user_id) ?? "-"} · {new Date(log.created_at).toLocaleString("pt-BR")}</span></div>)}{logs.length === 0 && <p className="themeable-text-ink-muted-48">Nenhuma ação registrada.</p>}</div></AdminPanel>
     </div>
     <p className="mt-6 text-[12px] themeable-text-ink-muted-48"><Link href="/admin/users" className="font-semibold underline">← Voltar para contas</Link> · <Radio size={12} className="inline" /> {eventsCount} eventos de reprodução vinculados.</p>
   </div>;

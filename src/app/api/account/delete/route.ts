@@ -18,7 +18,7 @@ import { deleteR2Object } from "@/lib/storage/r2";
  *
  * O schema de produto NÃO tem FK para `neon_auth."user"`, então não existe
  * cascade automático ao apagar o usuário da auth. A deleção de cada tabela de
- * produto é EXPLÍCITA aqui, dentro de uma transação — é o que garante o
+ * produto é EXPLÍCITA aqui, dentro de uma transação - é o que garante o
  * direito do titular.
  *
  * Storage é somente R2 desde a migração (CHECK em `videos.storage_provider`),
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     );
   }
   // Assets de player (R2, prefixo por usuário) não têm listagem aqui; tratamos
-  // como órfãos toleráveis — problema de custo, não de privacidade do titular.
+  // como órfãos toleráveis - problema de custo, não de privacidade do titular.
   if (videos.length > 0) storageErrors.push("player-assets: cleanup manual pendente (sem listagem R2)");
   if (storageErrors.length) console.error("account_delete_storage_cleanup_failed", { userId, storageErrors });
 
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
   // Por último, o usuário no Neon Auth (schema neon_auth, gerenciado pela
   // Neon). O schema do Better Auth tem ON DELETE CASCADE de session/account/
-  // verification para user — uma deleção encerra todas as sessões.
+  // verification para user - uma deleção encerra todas as sessões.
   try {
     await db.execute(sql`DELETE FROM neon_auth."user" WHERE id = ${userId}`);
   } catch (reason) {

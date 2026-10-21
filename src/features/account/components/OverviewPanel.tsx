@@ -29,7 +29,7 @@ export function OverviewPanel({
       icon: Database,
       label: "Biblioteca",
       value: `${overview.usage.videos.toLocaleString("pt-BR")} vídeo${overview.usage.videos === 1 ? "" : "s"}`,
-      detail: `${storageGb.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} GB — sem limite`,
+      detail: `${storageGb.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} GB - sem limite`,
       percent: 0,
     },
     {

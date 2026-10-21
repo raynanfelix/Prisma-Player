@@ -15,7 +15,7 @@ import { recordSecurityEvent } from "@/lib/security/auth-events";
  *    (o e-mail vem da sessão; balde apertado porque dispara e-mail real)
  *
  *  - PATCH { currentPassword, password, otp } → valida o OTP com
- *      signIn.emailOtp({ email, otp }) — a identidade fica confirmada — e só
+ *      signIn.emailOtp({ email, otp }) - a identidade fica confirmada - e só
  *    então chama changePassword, que valida a senha atual atomicamente com a
  *    troca (revokeOtherSessions preserva a sessão atual).
  *
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     failClosed: true,
   });
   if (limited) return limited;
-  // Corpo tolerante: { stage: "request" } ou vazio — o e-mail vem da sessão.
+  // Corpo tolerante: { stage: "request" } ou vazio - o e-mail vem da sessão.
 
   const { error } = await getAuth().emailOtp.sendVerificationOtp({
     email: session.email,
@@ -87,7 +87,7 @@ export async function PATCH(request: Request) {
   if (!currentPassword) return NextResponse.json({ error: "current_password_required" }, { status: 400, headers: NO_STORE });
   if (!OTP_PATTERN.test(otp)) return NextResponse.json({ error: "invalid_otp_format", message: "Digite os 6 dígitos do código." }, { status: 400, headers: NO_STORE });
 
-  // Fator 1 — OTP confirma a identidade pelo e-mail (Managed: signIn.emailOtp).
+  // Fator 1 - OTP confirma a identidade pelo e-mail (Managed: signIn.emailOtp).
   const otpResult = await getAuth().signIn.emailOtp({ email: session.email, otp });
   if (otpResult.error) {
     await recordSecurityEvent("password_change_otp_denied", { userId: session.userId });
@@ -100,7 +100,7 @@ export async function PATCH(request: Request) {
     );
   }
 
-  // Fator 2 — changePassword valida a senha atual e efetua a troca, com
+  // Fator 2 - changePassword valida a senha atual e efetua a troca, com
   // revokeOtherSessions trocando para uma nova sessão preservando a atual.
   const { error } = await getAuth().changePassword({ currentPassword, newPassword: password, revokeOtherSessions: true });
   if (error) {

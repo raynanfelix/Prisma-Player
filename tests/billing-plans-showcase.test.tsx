@@ -10,7 +10,7 @@ import { BillingPlansShowcase } from "@/features/account/components/BillingPlans
 /**
  * Toggle mensal/anual da vitrine de planos (spec Impecável, item 3): o ciclo
  * muda o preço exibido, o selo "à vista/ano" e o `billing` que o botão envia
- * ao /api/billing/checkout. Fetch mockado SEM sucesso — o redirect nunca
+ * ao /api/billing/checkout. Fetch mockado SEM sucesso - o redirect nunca
  * acontece e o teste prova o corpo do POST + a mensagem de erro honesta.
  */
 
@@ -37,14 +37,14 @@ function renderShowcase(props: Partial<Parameters<typeof BillingPlansShowcase>[0
   return root;
 }
 
-/** pt-BR usa NBSP entre "R$" e o valor — normaliza para asserções legíveis. */
+/** pt-BR usa NBSP entre "R$" e o valor - normaliza para asserções legíveis. */
 const norm = (text: string) => text.replace(/\u00A0/g, " ");
 
 const cycleButtons = () => Array.from(document.querySelectorAll('[role="group"] button')) as HTMLButtonElement[];
 const cardPrice = (index: number) => norm(document.querySelectorAll("article p.text-3xl")[index]!.textContent ?? "");
 const checkoutButtons = () => Array.from(document.querySelectorAll('article [data-slot="button"]')) as HTMLButtonElement[];
 
-describe("BillingPlansShowcase — toggle mensal/anual", () => {
+describe("BillingPlansShowcase - toggle mensal/anual", () => {
   it("padrão ANUAL: preço grande é o equivalente mensal e cada card mostra o valor à vista/ano", () => {
     renderShowcase();
 
@@ -53,9 +53,9 @@ describe("BillingPlansShowcase — toggle mensal/anual", () => {
     expect(cardPrice(2)).toContain("R$ 230");
 
     const body = norm(document.body.textContent ?? "");
-    expect(body).toContain("Cobrado R$ 539 à vista/ano — economize 34%");
-    expect(body).toContain("Cobrado R$ 1.175 à vista/ano — economize 34%");
-    expect(body).toContain("Cobrado R$ 2.759 à vista/ano — economize 34%");
+    expect(body).toContain("Cobrado R$ 539 à vista/ano - economize 34%");
+    expect(body).toContain("Cobrado R$ 1.175 à vista/ano - economize 34%");
+    expect(body).toContain("Cobrado R$ 2.759 à vista/ano - economize 34%");
 
     expect(cycleButtons()[1]!.getAttribute("aria-pressed")).toBe("true");
     expect(cycleButtons()[0]!.getAttribute("aria-pressed")).toBe("false");
@@ -77,7 +77,7 @@ describe("BillingPlansShowcase — toggle mensal/anual", () => {
     expect(cycleButtons()[1]!.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("o botão de checkout envia o ciclo selecionado — annual por padrão, monthly após o toggle", async () => {
+  it("o botão de checkout envia o ciclo selecionado - annual por padrão, monthly após o toggle", async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify({ message: "indisponível agora" }), { status: 400 }));
     renderShowcase();
 
@@ -99,7 +99,7 @@ describe("BillingPlansShowcase — toggle mensal/anual", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(String(fetchMock.mock.calls[1]![1]!.body))).toEqual({ planSlug: "iniciante", billing: "monthly" });
 
-    // Erro honesto inline (sem redirect — o fetch não devolveu { url }).
+    // Erro honesto inline (sem redirect - o fetch não devolveu { url }).
     expect(document.querySelector('[role="alert"]')?.textContent).toContain("indisponível agora");
   });
 
@@ -113,7 +113,7 @@ describe("BillingPlansShowcase — toggle mensal/anual", () => {
   });
 });
 
-describe("BillingPlansShowcase — trial marca o plano atual (spec Billing Completo, item 1)", () => {
+describe("BillingPlansShowcase - trial marca o plano atual (spec Billing Completo, item 1)", () => {
   it("trial vigente: card Escala com badge 'Seu plano atual (teste)' e botão desabilitado 'Incluído no seu teste'", () => {
     renderShowcase({ trialActive: true });
 
@@ -153,7 +153,7 @@ describe("BillingPlansShowcase — trial marca o plano atual (spec Billing Compl
   });
 });
 
-describe("BillingPlansShowcase — troca de plano via portal (spec Billing Completo, item 2)", () => {
+describe("BillingPlansShowcase - troca de plano via portal (spec Billing Completo, item 2)", () => {
   it("assinatura ativa: card do plano atual com badge e sem botão; demais cards chamam /api/billing/portal", async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify({ message: "sem customer" }), { status: 409 }));
     renderShowcase({ currentPlanSlug: "pro", showPortal: true, hasPlan: true });

@@ -2,14 +2,14 @@
 
 /**
  * @author: @dorianbaffier (kokonutui)
- * @description: Uptime Card — Status do Sistema (Prisma Player)
+ * @description: Uptime Card - Status do Sistema (Prisma Player)
  * @version: 1.0.0
  * @license: MIT
  * @website: https://kokonutui.com/docs/cards/uptime-card
  * @github: https://github.com/kokonut-labs/kokonutui
  *
  * Origem (registro conforme src/components/README.md):
- * - Biblioteca: kokonutui — componente original "Uptime Card"
+ * - Biblioteca: kokonutui - componente original "Uptime Card"
  *   (components/kokonutui/uptime-card.tsx, versão 1.0.0 de 2026-10-15);
  * - Licença: MIT; consulta em 2026-10-17 (raw.githubusercontent.com, main);
  * - Adaptações Prisma: cópia integral da lógica de interação (magnify de

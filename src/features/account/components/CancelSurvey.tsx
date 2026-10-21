@@ -7,12 +7,12 @@ import { accountSettingsService } from "@/services/account/settings";
 import { ApiError } from "@/services/http/client";
 
 /**
- * Cancelamento com pesquisa de churn (spec Billing Completo, item 4 — skill
+ * Cancelamento com pesquisa de churn (spec Billing Completo, item 4 - skill
  * churn-prevention: 1 pergunta, oferta honesta, SEM dark pattern).
  *
  * Fluxo: botão "Cancelar assinatura" → pesquisa (radio + textos livres) →
  * POST /api/billing/churn-survey → oferta honesta ("Mudar plano" ou
- * "Continuar com cancelamento", ambas pelo Customer Portal — o Stripe é o
+ * "Continuar com cancelamento", ambas pelo Customer Portal - o Stripe é o
  * dono do cancelamento de verdade; a pesquisa NUNCA bloqueia).
  */
 
@@ -51,9 +51,9 @@ export function CancelSurvey({ active, notify }: { active: boolean; notify: (mes
         ...(improvement.trim() ? { improvement: improvement.trim().slice(0, TEXT_LIMIT) } : {}),
       });
     } catch {
-      // Transparência (spec): a pesquisa é 1 clique — falha nela NUNCA
+      // Transparência (spec): a pesquisa é 1 clique - falha nela NUNCA
       // bloqueia o cancelamento. Segue para a oferta do mesmo jeito.
-      notify("Não foi possível registrar sua resposta — pode continuar com o cancelamento.");
+      notify("Não foi possível registrar sua resposta - pode continuar com o cancelamento.");
     } finally {
       setSending(false);
       setStep("offer");
@@ -91,7 +91,7 @@ export function CancelSurvey({ active, notify }: { active: boolean; notify: (mes
         <div>
           <p className="text-sm font-bold text-[#191A23] dark:text-white">Por que está cancelando?</p>
           <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-zinc-400">
-            Uma pergunta rápida — sua resposta nos ajuda a melhorar. O cancelamento segue disponível logo em seguida.
+            Uma pergunta rápida - sua resposta nos ajuda a melhorar. O cancelamento segue disponível logo em seguida.
           </p>
         </div>
         <fieldset className="space-y-1.5">
@@ -162,7 +162,7 @@ export function CancelSurvey({ active, notify }: { active: boolean; notify: (mes
       <div>
         <p className="text-sm font-bold text-[#191A23] dark:text-white">Antes de concluir: prefere mudar de plano?</p>
         <p className="mt-0.5 text-xs font-medium text-slate-600 dark:text-zinc-300">
-          Um plano menor pode resolver — e você mantém tudo como está. Se preferir, o cancelamento está logo abaixo,
+          Um plano menor pode resolver - e você mantém tudo como está. Se preferir, o cancelamento está logo abaixo,
           sem enrolação.
         </p>
       </div>
@@ -188,7 +188,7 @@ export function CancelSurvey({ active, notify }: { active: boolean; notify: (mes
       </div>
       <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
         <AlertCircle className="size-3.5 shrink-0" aria-hidden />
-        O cancelamento é concluído no portal seguro do Stripe — sem ligação, sem e-mail, sem obstáculo.
+        O cancelamento é concluído no portal seguro do Stripe - sem ligação, sem e-mail, sem obstáculo.
       </p>
     </div>
   );

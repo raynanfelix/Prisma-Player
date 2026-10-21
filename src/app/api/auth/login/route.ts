@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await getAuth().signIn.email({ email, password });
   if (error || !data?.user) {
-    // Observabilidade: o código/mensagem REAL do Better Auth no log da Vercel —
+    // Observabilidade: o código/mensagem REAL do Better Auth no log da Vercel -
     // sem isso um código não mapeado vira fallback genérico e fica invisível.
     console.error("login_failed", {
       code: error?.code ?? "no_code",

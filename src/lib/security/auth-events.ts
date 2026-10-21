@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
- * Eventos de segurança (tabela security_events) — Drizzle + Lakebase Postgres.
+ * Eventos de segurança (tabela security_events) - Drizzle + Lakebase Postgres.
  *
  * O id do usuário é o id do usuário do Neon Auth (TEXT). Escrita via `db`
  * (client Drizzle) em SQL parametrizado.
@@ -14,7 +14,7 @@ import { getPostHogClient } from "@/lib/posthog-server";
  * metadata jsonb NOT NULL default {} · created_at timestamptz NOT NULL ·
  * índice (user_id, created_at DESC).
  *
- * Não há RLS no Lakebase para este app — a filtragem por usuário acontece
+ * Não há RLS no Lakebase para este app - a filtragem por usuário acontece
  * SEMPRE em SQL (WHERE user_id = sessão).
  */
 

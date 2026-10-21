@@ -51,7 +51,7 @@ export default function AccountMenu() {
   async function logout() {
     await authService.signOut();
     // Logout encerra a sessão e precisa limpar o estado do servidor (cache de
-    // dados do usuário) — replace + refresh reproduzem isso sem recarregar o
+    // dados do usuário) - replace + refresh reproduzem isso sem recarregar o
     // documento inteiro.
     router.replace("/login");
     router.refresh();

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Log de incidentes do dia fixado no UptimeCard (kokonutui, MIT — adaptado
+ * Log de incidentes do dia fixado no UptimeCard (kokonutui, MIT - adaptado
  * Prisma: textos pt-BR, superfícies/hairlines dos tokens do projeto).
  * Subcomponente extraído para respeitar o teto de 350 linhas (quality).
  */

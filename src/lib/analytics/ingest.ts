@@ -186,8 +186,8 @@ type LiveSessionInput = { lastEvent: NormalizedAnalyticsEvent; viewerId: string 
 async function upsertLiveSession(video: { id: string; userId: string }, sessionId: string, input: LiveSessionInput): Promise<boolean> {
   const lastSeenAt = new Date();
   try {
-    // Upsert com a MESMA chave de antes (video_id, session_id — PK composta de
-    // video_live_sessions). viewer_id entra no update apenas quando presente —
+    // Upsert com a MESMA chave de antes (video_id, session_id - PK composta de
+    // video_live_sessions). viewer_id entra no update apenas quando presente -
     // sem viewer, o valor anterior permanece (mesma semântica de omitir o campo
     // no payload do upsert anterior).
     const liveUpsert = {
@@ -210,7 +210,7 @@ async function upsertLiveSession(video: { id: string; userId: string }, sessionI
 
 async function quotaHeadersOf(userId: string): Promise<Record<string, string>> {
   // Medição de plays do mês para observabilidade de overage. included_plays é
-  // cota com cobrança por excedente, não bloqueio — eventos legítimos nunca são
+  // cota com cobrança por excedente, não bloqueio - eventos legítimos nunca são
   // negados aqui. O consumo real é exposto em /api/account/overview.
   let quotaHeaders: Record<string, string> = {};
   try {
@@ -255,7 +255,7 @@ function buildEventRow(ctx: EventRowContext, event: NormalizedAnalyticsEvent) {
 async function persistEventRows(rows: Array<ReturnType<typeof buildEventRow>>): Promise<Array<{ eventType: string; progressPercent: number }> | null> {
   // Chave de dedupe (video_id,session_id,event_type,
   // progress_percent => video_events_session_event_key). DO NOTHING absorve
-  // duplicatas — inclusive dentro do mesmo lote — e `.returning()` devolve só
+  // duplicatas - inclusive dentro do mesmo lote - e `.returning()` devolve só
   // as linhas realmente persistidas, que é o que o after() usa.
   try {
     return await db

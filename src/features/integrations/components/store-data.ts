@@ -18,7 +18,7 @@ import utmifyLogo from "@/assets/utmify.png";
  * Dois tipos de app vivem na mesma vitrine:
  * - `provider`: instala/atualiza via PUT/DELETE /api/integrations (backend em
  *   src/lib/integrations/server.ts);
- * - `feature`: recurso de produto já existente na Prisma — o detalhe mostra
+ * - `feature`: recurso de produto já existente na Prisma - o detalhe mostra
  *   um "Como funciona" honesto (o que existe HOJE) e a configuração real
  *   acontece na própria tela do Marketplace.
  */
@@ -67,7 +67,7 @@ export interface ProviderField {
   placeholder: string;
   secret?: boolean;
   optional?: boolean;
-  /** Preenchido automaticamente (ex.: getMe do Telegram) — não editável. */
+  /** Preenchido automaticamente (ex.: getMe do Telegram) - não editável. */
   readOnly?: boolean;
 }
 
@@ -156,7 +156,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     howItWorks: {
       intro: "O Meta Pixel envia eventos de conversão diretamente para a API de Conversões do Facebook/Instagram, permitindo otimizar suas campanhas com dados precisos de compra.",
       bullets: [
-        "Purchase — enviado quando um pagamento é confirmado",
+        "Purchase - enviado quando um pagamento é confirmado",
         "Valor da compra e moeda",
         "ID do pedido (deduplicação entre browser e servidor)",
         "E-mail do cliente (hash SHA-256) e informações do dispositivo",
@@ -185,7 +185,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     },
     howItWorks: {
       intro: "A tag do Google dispara conversões de visualização, reprodução, clique no CTA e compra para o Google Ads e o GA4.",
-      bullets: ["view_item — a VSL é vista", "video_start / video_progress / video_complete", "generate_lead — clique no CTA", "purchase — compra confirmada no seu checkout"],
+      bullets: ["view_item - a VSL é vista", "video_start / video_progress / video_complete", "generate_lead - clique no CTA", "purchase - compra confirmada no seu checkout"],
     },
   },
   {
@@ -199,7 +199,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     verify: "pixel",
     fields: [
       { key: "pixelId", label: "ID do pixel", placeholder: "CXXXXXXXXXXXXXXXXX" },
-      { key: "accessToken", label: "Access Token (Events API)", placeholder: "TikTok Events Manager → Manage API access — cole o token", secret: true },
+      { key: "accessToken", label: "Access Token (Events API)", placeholder: "TikTok Events Manager → Manage API access - cole o token", secret: true },
       { key: "testEventCode", label: "Test Event Code (opcional)", placeholder: "Events Manager → Test Events (ex.: TEST12345)", optional: true },
     ],
     events: {
@@ -209,7 +209,7 @@ export const PROVIDER_APPS: ProviderApp[] = [
     },
     howItWorks: {
       intro: "O TikTok Pixel registra os eventos da VSL e a compra confirmada para otimizar campanhas no TikTok Ads Manager.",
-      bullets: ["ViewContent — a VSL é vista", "Play/Progress/Complete — reprodução", "Purchase — compra confirmada"],
+      bullets: ["ViewContent - a VSL é vista", "Play/Progress/Complete - reprodução", "Purchase - compra confirmada"],
     },
   },
   {
@@ -246,23 +246,23 @@ export const PROVIDER_APPS: ProviderApp[] = [
     events: {
       title: "Eventos em tempo real",
       tag: "play · progress · cta_click · conversion · complete",
-      detail: "Disparados conforme a VSL é assistida — uma mensagem formatada por evento no canal.",
+      detail: "Disparados conforme a VSL é assistida - uma mensagem formatada por evento no canal.",
     },
     howItWorks: {
       intro: "Os eventos das suas VSLs são entregues em tempo real no canal do seu servidor Discord via webhook.",
       bullets: [
         "Play, progresso, clique no CTA, conversão e conclusão da VSL",
         "Mensagem formatada para o canal do Discord",
-        "A URL fica salva no servidor — nunca vai para a embed",
+        "A URL fica salva no servidor - nunca vai para a embed",
         "Múltiplos webhooks: cadastre um para cada canal ou servidor",
       ],
       note: "As atividades enviadas são escolhidas no cadastro de cada instância aqui mesmo.",
     },
     selectableEvents: [
-      { key: "play", label: "Play — espectador iniciou a VSL" },
-      { key: "progress", label: "Progresso — marcos de 10% a 90%" },
+      { key: "play", label: "Play - espectador iniciou a VSL" },
+      { key: "progress", label: "Progresso - marcos de 10% a 90%" },
       { key: "cta_click", label: "Clique no CTA" },
-      { key: "conversion", label: "Conversão — compra confirmada" },
+      { key: "conversion", label: "Conversão - compra confirmada" },
       { key: "complete", label: "Conclusão do vídeo" },
     ],
   },
@@ -285,23 +285,23 @@ export const PROVIDER_APPS: ProviderApp[] = [
     events: {
       title: "Eventos em tempo real",
       tag: "play · progress · cta_click · conversion · complete",
-      detail: "Disparados conforme a VSL é assistida — uma mensagem por evento no bot.",
+      detail: "Disparados conforme a VSL é assistida - uma mensagem por evento no bot.",
     },
     howItWorks: {
       intro: "Os eventos das suas VSLs são entregues em tempo real no chat do seu bot do Telegram via API oficial.",
       bullets: [
-        "Crie o bot com o @BotFather e cole o token aqui — nome e username são verificados automaticamente",
+        "Crie o bot com o @BotFather e cole o token aqui - nome e username são verificados automaticamente",
         "Mande /start para o seu bot no Telegram para a Prisma descobrir o chat de entrega",
-        "Play, progresso, clique no CTA, conversão e conclusão da VSL — você escolhe quais envia",
-        "A URL fica salva no servidor — nunca vai para a embed",
+        "Play, progresso, clique no CTA, conversão e conclusão da VSL - você escolhe quais envia",
+        "A URL fica salva no servidor - nunca vai para a embed",
       ],
       note: "Precisa de um bot criado no Telegram com o @BotFather.",
     },
     selectableEvents: [
-      { key: "play", label: "Play — espectador iniciou a VSL" },
-      { key: "progress", label: "Progresso — marcos de 10% a 90%" },
+      { key: "play", label: "Play - espectador iniciou a VSL" },
+      { key: "progress", label: "Progresso - marcos de 10% a 90%" },
       { key: "cta_click", label: "Clique no CTA" },
-      { key: "conversion", label: "Conversão — compra confirmada" },
+      { key: "conversion", label: "Conversão - compra confirmada" },
       { key: "complete", label: "Conclusão do vídeo" },
     ],
   },
@@ -320,7 +320,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     howItWorks: {
       intro: "Cada VSL tem a sua própria allowlist. Enquanto a lista estiver vazia, o player pode ser reproduzido em qualquer site; com domínios cadastrados, apenas eles conseguem carregar a VSL.",
       bullets: [
-        "Um domínio por linha — aceita https://dominio.com, dominio.com ou *.dominio.com",
+        "Um domínio por linha - aceita https://dominio.com, dominio.com ou *.dominio.com",
         "O curinga *.exemplo.com libera todos os subdomínios",
         "A lista é salva por VSL, no allowedDomains do config do player",
         "A proteção passa a valer nos embeds logo após salvar",
@@ -338,9 +338,9 @@ export const FEATURE_APPS: FeatureApp[] = [
     logo: reportsLogo,
     actionLabel: "Configurar",
     howItWorks: {
-      intro: "O resumo periódico da sua operação chega pronto no seu Inbox da Prisma — plays, conversões e taxa de conversão do período, sem precisar montar relatório.",
+      intro: "O resumo periódico da sua operação chega pronto no seu Inbox da Prisma - plays, conversões e taxa de conversão do período, sem precisar montar relatório.",
       bullets: [
-        "Frequência diária, semanal ou mensal — você escolhe aqui mesmo",
+        "Frequência diária, semanal ou mensal - você escolhe aqui mesmo",
         "Escolha as VSLs do resumo: todas ou apenas as que interessam",
         "Entrega no Inbox, com atalho para abrir o relatório",
         "Cópia por e-mail quando o envio está configurado no servidor (REPORT_EMAIL_FROM)",
@@ -358,7 +358,7 @@ export const FEATURE_APPS: FeatureApp[] = [
     logo: perfilDePublicoLogo,
     actionLabel: "Configurar",
     howItWorks: {
-      intro: "A Prisma transforma os sinais reais de audiência de cada VSL em um perfil pronto para orientar campanhas — você escolhe a VSL e o segmento aqui mesmo.",
+      intro: "A Prisma transforma os sinais reais de audiência de cada VSL em um perfil pronto para orientar campanhas - você escolhe a VSL e o segmento aqui mesmo.",
       bullets: [
         "Segmentos prontos: assistiram 75%+, concluíram, clicaram no CTA, compraram ou toda a audiência",
         "O perfil reúne localização, dispositivo, sistema, navegador, origem e campanhas",
@@ -380,7 +380,7 @@ export const FEATURE_APPS: FeatureApp[] = [
       bullets: [
         "Play rate, retenção final e conversão da sua operação lado a lado com a média global",
         "Benchmark privado entre as suas próprias VSLs: melhor VSL e média da conta",
-        "Dados globais agregados e anônimos — nenhuma conta aparece individualmente",
+        "Dados globais agregados e anônimos - nenhuma conta aparece individualmente",
       ],
       note: "A referência global fica disponível quando há base comparável suficiente.",
     },
@@ -400,7 +400,7 @@ export const FEATURE_APPS: FeatureApp[] = [
         "Somente queda real: acima do limite que você definir (padrão 20%) e no mínimo 10 plays em cada período",
         "Escolha as VSLs monitoradas: todas ou apenas as que interessam",
         "O aviso chega no seu Inbox com o tamanho da queda e atalho para analisar a VSL",
-        "No máximo um alerta por VSL por dia — sem spam",
+        "No máximo um alerta por VSL por dia - sem spam",
       ],
       note: "Ative aqui e ajuste a sensibilidade.",
     },

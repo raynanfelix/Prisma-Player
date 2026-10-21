@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Gráficos da página Conversões & Jornada — Prisma Player.
+ * Gráficos da página Conversões & Jornada - Prisma Player.
  *
  * Reusa os primitivos composáveis de `@/components/ui/charts` (ecossistema
  * kokonutui/21st.dev sobre recharts): o mesmo ComposedChart da Retenção e o

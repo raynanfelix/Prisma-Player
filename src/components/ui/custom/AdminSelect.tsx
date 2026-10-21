@@ -1,5 +1,5 @@
 "use client";
-// Origem: componente próprio da Prisma (ui/custom) — dropdown acessível com
+// Origem: componente próprio da Prisma (ui/custom) - dropdown acessível com
 // tokens do tema para substituir o <select> nativo no admin e no produto.
 
 import { useEffect, useId, useRef, useState } from "react";
@@ -100,7 +100,7 @@ export default function AdminSelect({ value, options, onChange, label, className
         onKeyDown={(event) => { if ((event.key === "ArrowDown" || event.key === "Enter") && !open) { event.preventDefault(); toggle(); } }}
         className="flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-medium themeable-text-ink transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-prisma-blue disabled:opacity-50 dark:border-zinc-800 dark:bg-card"
       >
-        <span className="truncate">{selected?.label ?? "—"}</span>
+        <span className="truncate">{selected?.label ?? "-"}</span>
         <ChevronDown size={14} aria-hidden className={cn("shrink-0 transition-transform themeable-text-ink-muted-48", open && "rotate-180")} />
       </button>
       {open && pos && (

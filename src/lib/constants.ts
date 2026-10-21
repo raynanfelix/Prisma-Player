@@ -60,7 +60,7 @@ export const TRIAL = {
 } as const;
 
 // Teto de leitura de player_events por teste A/B ao carregar as variantes
-// para o dashboard — evita puxar a tabela inteira para a memória.
+// para o dashboard - evita puxar a tabela inteira para a memória.
 export const AB = {
   MAX_EVENTS_PER_TEST_READ: 100_000,
 } as const;

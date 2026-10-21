@@ -25,7 +25,7 @@ interface VslMultiSelectProps {
 /**
  * Multi-select de VSLs do Marketplace: trigger com badge de contagem
  * ("3 VSLs"), popover com busca, checkboxes verdes (token de marca) e rodapé
- * "Selecionar todas / Limpar". Reutiliza o Popover do shadcn (Base UI) —
+ * "Selecionar todas / Limpar". Reutiliza o Popover do shadcn (Base UI) -
  * sem estado de foco manual.
  */
 export default function VslMultiSelect({

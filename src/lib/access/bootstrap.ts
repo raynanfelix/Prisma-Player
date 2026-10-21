@@ -17,7 +17,7 @@ const {
 
 export type BootstrapUser = { id: string; email?: string | null; name?: string | null };
 
-/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) — normaliza. */
+/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) - normaliza. */
 function rowsOf<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
   if (result && typeof result === "object" && Array.isArray((result as { rows?: unknown }).rows)) {
@@ -28,7 +28,7 @@ function rowsOf<T>(result: unknown): T[] {
 
 /**
  * Dados do usuário no Neon Auth (schema `neon_auth`, gerenciado pela Neon e
- * legível por SQL — mesmo acesso usado por api/admin/team/role).
+ * legível por SQL - mesmo acesso usado por api/admin/team/role).
  */
 async function fetchAuthUser(userId: string): Promise<BootstrapUser | null> {
   const result = await db.execute(
@@ -39,19 +39,19 @@ async function fetchAuthUser(userId: string): Promise<BootstrapUser | null> {
 }
 
 /**
- * Bootstrap de nova conta — equivalente aplicacional do antigo trigger
+ * Bootstrap de nova conta - equivalente aplicacional do antigo trigger
  * `on_auth_user_created_prisma_bootstrap` (docs/legacy-supabase/
  * 20260717233000_intelligence_controls_and_resilient_signup.sql).
  *
  * O schema `neon_auth` é gerenciado pela Neon e não aceita triggers, então a
- * criação das linhas de produto — profiles, account_access, wallet de IA,
- * controles de inteligência, mensagem de boas-vindas e equipe própria — agora
+ * criação das linhas de produto - profiles, account_access, wallet de IA,
+ * controles de inteligência, mensagem de boas-vindas e equipe própria - agora
  * acontece aqui, no primeiro momento em que a aplicação vê o usuário:
  * signup, primeira leitura de perfil/access ou primeira navegação autenticada
  * (self-heal de contas criadas antes desta correção).
  *
  * Idempotente (upserts/no-op em conflito) e resiliente: falhas em módulos
- * auxiliares nunca propagam — o mesmo contrato do trigger original, onde só
+ * auxiliares nunca propagam - o mesmo contrato do trigger original, onde só
  * a criação do usuário no Auth era crítica.
  */
 export async function ensureAccountBootstrap(input: BootstrapUser): Promise<void> {
@@ -67,13 +67,13 @@ export async function ensureAccountBootstrap(input: BootstrapUser): Promise<void
   const email = (user.email ?? "").trim().toLowerCase();
 
   // Perfil: sem ele a conta não renderiza (nome na UI, /api/account/profile).
-  // Única escrita que pode propagar erro — o restante é best-effort.
+  // Única escrita que pode propagar erro - o restante é best-effort.
   await db
     .insert(profiles)
     .values({ id: user.id, email, fullName })
     .onConflictDoNothing();
 
-  // Módulos auxiliares — best-effort, nunca bloqueiam (contrato do trigger).
+  // Módulos auxiliares - best-effort, nunca bloqueiam (contrato do trigger).
   try {
     await db.insert(accountAccess).values({ userId: user.id }).onConflictDoNothing();
     await db.insert(aiCreditWallets).values({ userId: user.id }).onConflictDoNothing();
@@ -100,7 +100,7 @@ export async function ensureAccountBootstrap(input: BootstrapUser): Promise<void
     });
   }
 
-  // Equipe própria (owner) + auto-aceite de convite pendente por e-mail —
+  // Equipe própria (owner) + auto-aceite de convite pendente por e-mail -
   // fluxo legado preservado do trigger.
   try {
     const [team] = await db

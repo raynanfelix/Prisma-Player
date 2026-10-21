@@ -3,7 +3,7 @@
 import { curveNatural } from "@visx/curve";
 import { LinePath } from "@visx/shape";
 
-// Fábrica de curva opaca ao consumo: tipo real de @types/d3-shape — d3-shape é
+// Fábrica de curva opaca ao consumo: tipo real de @types/d3-shape - d3-shape é
 // dependência direta do projeto; a fábrica só é repassada adiante ao @visx/shape.
 import type { CurveFactory } from "d3-shape";
 

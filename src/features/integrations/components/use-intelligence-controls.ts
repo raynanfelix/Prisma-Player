@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 /**
  * Controles da inteligência operacional (contrato snake_case da rota
  * /api/intelligence/controls). Mesmo mecanismo de carga/salvamento do
- * IntelligenceControls — o Marketplace apenas troca a tela, não o motor.
+ * IntelligenceControls - o Marketplace apenas troca a tela, não o motor.
  */
 export type IntelligenceControlsState = {
   automatic_reports_enabled: boolean;
@@ -57,7 +57,7 @@ export function useIntelligenceControls() {
       .finally(() => setBusy(null));
   }, []);
 
-  /** PATCH da rota de controls — mesmo formato de payload do IntelligenceControls. */
+  /** PATCH da rota de controls - mesmo formato de payload do IntelligenceControls. */
   async function saveControls(section: string, payload: Record<string, unknown>, successMessage = "Configuração salva com sucesso."): Promise<boolean> {
     setBusy(section);
     setNotice("");

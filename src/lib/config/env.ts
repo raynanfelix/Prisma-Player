@@ -4,7 +4,7 @@ import "server-only";
  * Lê uma variável de ambiente numérica sem os modos de falha silenciosa do
  * `Number(process.env.X ?? "padrao")`:
  *
- * - `Number("60_000")` é NaN — o separador numérico só existe em literais de
+ * - `Number("60_000")` é NaN - o separador numérico só existe em literais de
  *   código, não em strings. O valor viajava como `null` até o Postgres e a
  *   janela do rate limit virava 1 segundo em vez de 60.
  * - `Number("")` é 0, o que zeraria um limite em vez de usar o padrão.

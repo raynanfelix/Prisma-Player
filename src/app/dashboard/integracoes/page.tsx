@@ -38,7 +38,7 @@ export default async function IntegracoesPage() {
   ]);
 
   // Contrato do item 2 do hardening: segredos NUNCA saem daqui com o valor
-  // cru — a page renderiza o mesmo payload mascarado do GET /api/integrations
+  // cru - a page renderiza o mesmo payload mascarado do GET /api/integrations
   // ("" + hasToken/hasWebhookUrl), que a UI usa para o placeholder "••••".
   const integrations: IntegrationItem[] = rows.map((item) => {
     const masked = maskIntegrationConfig(item.provider, item.config);
@@ -62,7 +62,7 @@ export default async function IntegracoesPage() {
     <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-6">
       <header>
         <h1 className="text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">Marketplace de apps</h1>
-        <p className="mt-1 text-[12px] themeable-text-ink-muted-48">Pixels, webhooks e atribuição para suas VSLs — configurados uma vez por conta.</p>
+        <p className="mt-1 text-[12px] themeable-text-ink-muted-48">Pixels, webhooks e atribuição para suas VSLs - configurados uma vez por conta.</p>
       </header>
       <IntegrationsStore
         integrations={integrations}

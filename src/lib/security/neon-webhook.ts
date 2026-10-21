@@ -2,7 +2,7 @@ import "server-only";
 import { createPublicKey, verify as verifyEd25519, type KeyObject } from "node:crypto";
 
 /**
- * Verificação dos webhooks do Neon Auth (Managed Better Auth) — spec oficial:
+ * Verificação dos webhooks do Neon Auth (Managed Better Auth) - spec oficial:
  * https://neon.com/docs/auth/guides/webhooks.md
  *
  * O Neon envia um POST com JWS detached EdDSA (Ed25519) no header
@@ -15,7 +15,7 @@ import { createPublicKey, verify as verifyEd25519, type KeyObject } from "node:c
  *   signingInput        = `${headerB64}.${signaturePayloadB64}`
  *
  * A chave pública vem do JWKS em `${NEON_AUTH_BASE_URL}/.well-known/jwks.json`
- * (mesmo env do SDK — nenhuma variável nova). Fail-closed: qualquer falha
+ * (mesmo env do SDK - nenhuma variável nova). Fail-closed: qualquer falha
  * (rede, kid desconhecido, timestamp velho, assinatura inválida) devolve
  * `null` e a rota responde 401. Reentrega do mesmo event id devolve o
  * evento com `duplicate: true` (a rota responde a mesma 200, sem
@@ -34,7 +34,7 @@ export type NeonWebhookEvent = {
   eventType: string;
   user: NeonWebhookUser;
   eventData: Record<string, unknown>;
-  /** Reentrega do mesmo event id (replay legítimo) — a rota responde a mesma 200 sem reprocessar. */
+  /** Reentrega do mesmo event id (replay legítimo) - a rota responde a mesma 200 sem reprocessar. */
   duplicate: boolean;
 };
 
@@ -49,13 +49,13 @@ const SEEN_EVENTS_MAX = 1000;
 
 type CachedJwk = { key: KeyObject | null; fetchedAt: number };
 
-/** Cache por kid (Map preserva ordem de inserção — usado como LRU nas entradas). */
+/** Cache por kid (Map preserva ordem de inserção - usado como LRU nas entradas). */
 const jwksCache = new Map<string, CachedJwk>();
 
 /** Event ids já processados (reentrega da Neon não reprocessa). */
 const seenEventIds = new Map<string, number>();
 
-/** Reset de caches de módulo — exclusivo para testes (padrão resetAccessCacheForTests). */
+/** Reset de caches de módulo - exclusivo para testes (padrão resetAccessCacheForTests). */
 export function resetNeonWebhookStateForTests(): void {
   jwksCache.clear();
   seenEventIds.clear();
@@ -73,7 +73,7 @@ function cacheTtlMs(entry: CachedJwk): number {
 /**
  * Busca o JWKS e indexa TODAS as chaves retornadas (um refresh serve todos os
  * kids). Falha de rede/HTTP/JSON → lança para o caller, que devolve null
- * (fail-closed) sem cachear nada — um kid válido nunca é negado por um glitch.
+ * (fail-closed) sem cachear nada - um kid válido nunca é negado por um glitch.
  */
 async function refreshJwks(fetcher: NeonJwksFetcher): Promise<void> {
   const url = jwksUrl();
@@ -91,7 +91,7 @@ async function refreshJwks(fetcher: NeonJwksFetcher): Promise<void> {
     try {
       jwksCache.set(jwk.kid, { key: createPublicKey({ key: jwk, format: "jwk" }), fetchedAt });
     } catch {
-      // JWK malformado para este kid — entrada negativa; outros kids seguem.
+      // JWK malformado para este kid - entrada negativa; outros kids seguem.
       jwksCache.set(jwk.kid, { key: null, fetchedAt });
     }
   }
@@ -153,7 +153,7 @@ function extractEventData(parsed: unknown): Record<string, unknown> {
 
 /**
  * Verifica um webhook do Neon Auth. Retorna o evento parseado (com o flag
- * `duplicate` para reentregas) ou `null` (inválido). Nunca lança — falhas
+ * `duplicate` para reentregas) ou `null` (inválido). Nunca lança - falhas
  * são logadas e viram null.
  *
  * O `fetcher` é injetável para os testes fornecerem um JWKS de chave de teste;
@@ -202,11 +202,11 @@ export async function verifyNeonAuthWebhook(
     const user = extractUser(parsed);
     if (!user) return null;
 
-    // Idempotência por fim: só eventos íntegros e assinados entram no LRU —
+    // Idempotência por fim: só eventos íntegros e assinados entram no LRU -
     // um atacante sem a chave não consegue "queimar" um event id legítimo.
     // Reentrega (duplicate=true) continua sendo um evento VÁLIDO: a spec da
     // Neon manda devolver a MESMA resposta para duplicados, então `null`
-    // fica reservado aos inválidos — a rota responde 200 sem reprocessar.
+    // fica reservado aos inválidos - a rota responde 200 sem reprocessar.
     const duplicate = !markEventSeen(eventId);
 
     return { eventId, eventType, user, eventData: extractEventData(parsed), duplicate };

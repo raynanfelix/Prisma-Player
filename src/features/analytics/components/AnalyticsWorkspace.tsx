@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/message-scroller";
 import type { LucideIcon } from "lucide-react";
 
-// Custom charts imports (gráficos já interativos e bons — mantidos)
+// Custom charts imports (gráficos já interativos e bons - mantidos)
 import {
   FunnelChart,
   AreaChart,
@@ -334,7 +334,7 @@ function DimensionTable({ title, rows, isCountry = false, onRowClick }: { title:
 export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoId: string }) {
   const [currentVideoId, setCurrentVideoId] = useState(initialVideoId);
   const [tab, setTab] = useState("performance");
-  // Período das métricas: range (from–to) no date picker; a API continua
+  // Período das métricas: range (from-to) no date picker; a API continua
   // recebendo ?days= derivado da diferença inclusiva do período.
   const [range, setRange] = useState<PickerDateRange | undefined>(() => ({ from: subDays(startOfToday(), 29), to: startOfToday() }));
   const days = useMemo(() => {
@@ -814,7 +814,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     </div>
                   </div>
 
-                  {/* Card 2: Traffic source — radar das fontes (dimensions.traffic) */}
+                  {/* Card 2: Traffic source - radar das fontes (dimensions.traffic) */}
                   <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
                     <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center justify-between">
                       <span>Origem do tráfego</span>
@@ -861,7 +861,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                     )}
                   </div>
 
-                  {/* Card 3: Audience top countries — anéis com hover sincronizado */}
+                  {/* Card 3: Audience top countries - anéis com hover sincronizado */}
                   <div className="rounded-2xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-card p-6 shadow-xs space-y-4">
                     <h3 className="text-sm font-bold text-[#191A23] dark:text-white flex items-center justify-between">
                       <span>Audiência</span>
@@ -934,7 +934,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block">Conclusão do Vídeo</span>
                       <strong className="text-xl font-bold text-[#191A23] dark:text-white">{format(data.summary.completionRate, true)}</strong>
                       <span className="text-[11px] text-slate-500 dark:text-zinc-400 block mt-0.5">{data.summary.completed} espectadores até o fim</span>
-                      <span className="text-[10px] text-slate-400 dark:text-zinc-500 block mt-0.5">{data.video.duration_seconds ? formatSecondsToTimeString(Math.round(data.video.duration_seconds * data.summary.completionRate / 100)) : "—"} no total</span>
+                      <span className="text-[10px] text-slate-400 dark:text-zinc-500 block mt-0.5">{data.video.duration_seconds ? formatSecondsToTimeString(Math.round(data.video.duration_seconds * data.summary.completionRate / 100)) : "-"} no total</span>
                     </div>
 
                     <div className="rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/50 dark:bg-card p-4">
@@ -1112,7 +1112,7 @@ export default function AnalyticsWorkspace({ videoId: initialVideoId }: { videoI
                 <div>
                   <h2 className="text-base font-bold text-[#191A23] dark:text-white">Dispositivos e Tecnologia</h2>
                   <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-                    Visitas por hardware, navegador e sistema operacional — um anel por segmento.
+                    Visitas por hardware, navegador e sistema operacional - um anel por segmento.
                   </p>
                 </div>
 

@@ -61,8 +61,8 @@ export function getPasswordChecks(password: string): PasswordCheck[] {
 const STRENGTH_LABELS = ["Muito fraca", "Fraca", "Média", "Forte", "Excelente"] as const;
 
 /**
- * Heurística client-side de força da senha (0–4). Apenas o comprimento mínimo
- * é obrigatório; os demais critérios aumentam a força sem bloquear o envio —
+ * Heurística client-side de força da senha (0-4). Apenas o comprimento mínimo
+ * é obrigatório; os demais critérios aumentam a força sem bloquear o envio -
  * a política real continua sendo aplicada pelo servidor.
  */
 export function getPasswordStrength(password: string) {

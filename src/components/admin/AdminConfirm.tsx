@@ -23,7 +23,7 @@ export default function AdminConfirm({ open, title, lines, consequence, confirmL
   // `onClose` vive em um ref: todos os chamadores passam arrow inline
   // (identidade nova a cada render do pai). Se o efeito de foco dependesse de
   // `onClose`, cada tecla no motivo re-renderizava o pai, o efeito re-rodava e
-  // `dialogRef.focus()` roubava o foco do input — digitação interrompida.
+  // `dialogRef.focus()` roubava o foco do input - digitação interrompida.
   // O ref mantém o Escape chamando sempre o callback mais recente.
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);

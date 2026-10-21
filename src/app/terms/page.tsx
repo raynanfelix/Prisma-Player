@@ -13,7 +13,7 @@ export default function TermsPage() {
     <LegalPageLayout
       tag="Legal"
       title="Termos de Uso"
-      intro="Estes termos explicam as regras para usar a Prisma Player de forma segura, profissional e transparente — inclusive quando o produto é vendido globalmente."
+      intro="Estes termos explicam as regras para usar a Prisma Player de forma segura, profissional e transparente - inclusive quando o produto é vendido globalmente."
       icon="scale"
       sections={termsSections}
       updatedAt={legalUpdatedAt}

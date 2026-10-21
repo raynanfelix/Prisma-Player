@@ -1,6 +1,6 @@
 "use client";
 
-// Date Picker da Prisma — composição do Calendar/Popover do shadcn com copy
+// Date Picker da Prisma - composição do Calendar/Popover do shadcn com copy
 // PT-BR ("Escolha um período", presets Hoje/Últimos N dias/Este mês) e tokens
 // da marca: bordas slate-200/zinc-800, card branco (preto no escuro),
 // seleção via bg-selected e range verde translúcido (calibrados no calendar).
@@ -26,7 +26,7 @@ function formatLong(date: Date) {
 }
 
 function rangeLabel(value: PickerDateRange) {
-  return isSameDay(value.from, value.to) ? formatLong(value.from) : `${formatShort(value.from)} – ${formatShort(value.to)}`;
+  return isSameDay(value.from, value.to) ? formatLong(value.from) : `${formatShort(value.from)} - ${formatShort(value.to)}`;
 }
 
 /** Painel lateral de atalhos de período (range picker). */
@@ -117,7 +117,7 @@ export function DatePicker({
   );
 }
 
-/** Picker de período (from–to) com painel lateral de presets. */
+/** Picker de período (from-to) com painel lateral de presets. */
 export function DateRangePicker({
   value,
   onChange,

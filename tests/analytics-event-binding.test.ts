@@ -69,7 +69,7 @@ describe("analytics event-token binding (RM-03)", () => {
     // Este é o caso do atacante que forja Origin = domínio do token: o header
     // "concorda" com o token (não há disagreement), mas a origem não é
     // first-party. O gate do /api/analytics-events bloqueia efeitos laterais
-    // com `!firstPartyOrigin` — replicado aqui pela checagem self.
+    // com `!firstPartyOrigin` - replicado aqui pela checagem self.
     const token = mod.createBoundEmbedEventToken({ videoId: VIDEO, host: "cliente.com.br", sessionId: SESSION });
     const ctx = mod.verifyEmbedEventTokenContext(token, { videoId: VIDEO, sessionId: SESSION });
     expect(ctx).not.toBeNull();

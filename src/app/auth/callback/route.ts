@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/dashboard/videos";
 
   // Neon Auth (Managed Better Auth): links de verificação/reset de e-mail não
-  // passam por aqui — o reset chega direto em /reset-password?token=... e o
+  // passam por aqui - o reset chega direto em /reset-password?token=... e o
   // callback de OAuth é proxyado pelo catch-all /api/auth/callback/*.
   // Esta rota permanece para compatibilidade de links antigos: repassa o token
   // (quando presente) e mantém o destino saneado.

@@ -29,7 +29,7 @@ interface Props {
 function secretPlaceholder(field: ProviderField, item: IntegrationItem | null): string {
   if (!field.secret || !item) return field.placeholder;
   const saved = field.key === "webhookUrl" ? item.hasWebhookUrl : item.hasToken;
-  return saved ? "•••• preenchido — cole para trocar" : field.placeholder;
+  return saved ? "•••• preenchido - cole para trocar" : field.placeholder;
 }
 
 /**
@@ -70,7 +70,7 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
       });
       const result = (await response.json().catch(() => null)) as { error?: string; botName?: string; botUsername?: string; chatId?: string } | null;
       if (!response.ok || !result) {
-        setError(result?.error === "invalid_token" ? "Token inválido — copie exatamente o que o @BotFather enviou." : "Não foi possível verificar o token agora.");
+        setError(result?.error === "invalid_token" ? "Token inválido - copie exatamente o que o @BotFather enviou." : "Não foi possível verificar o token agora.");
         return;
       }
       setDraft((current) => ({
@@ -89,7 +89,7 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
   /**
    * "Testar conexão" (Sprint 1 Pixel Verdadeiro): guarda a resposta REAL da
    * plataforma e, quando o teste passa em instância SALVA, chama o PUT normal
-   * já com config.lastVerifiedAt/lastVerifyOk — o badge "Verificada" nasce.
+   * já com config.lastVerifiedAt/lastVerifyOk - o badge "Verificada" nasce.
    * Em instância nova o metadado fica no estado e entra no "Criar instância".
    */
   async function handleVerifyResult(result: PixelVerifyResultDto) {
@@ -356,7 +356,7 @@ export default function IntegrationDetail({ app, instances, vsls, onBack }: Prop
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Instâncias cadastradas</CardTitle>
-            <CardDescription>{instances.length} de {app.name} na sua conta — clique para editar.</CardDescription>
+            <CardDescription>{instances.length} de {app.name} na sua conta - clique para editar.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {instances.map((item) => {

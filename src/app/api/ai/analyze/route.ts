@@ -15,16 +15,16 @@ const allowedTypes = new Set(["performance", "retention", "funnel", "copy", "exp
 const MAX_REQUEST_BYTES = 4096;
 
 /* ------------------------------------------------------------------ */
-/* Agregação no Postgres — mesmo padrão vencedor do dashboard           */
+/* Agregação no Postgres - mesmo padrão vencedor do dashboard           */
 /* ------------------------------------------------------------------ */
 
 /**
  * Esta rota puxava até ANALYTICS.MAX_EVENTS_PER_ANALYSIS (50 mil) linhas de
  * video_events e agregava em JavaScript com summarizeEvents. Em vídeo viral o
- * cap truncava os números em silêncio — o snapshot entregava dados mentirosos
+ * cap truncava os números em silêncio - o snapshot entregava dados mentirosos
  * para a IA (e `truncated: true` no melhor dos casos). Agora o Postgres
  * agrega com `count(distinct ...) filter (...)` sobre o índice (video_id,
- * created_at): sem cap e sem streaming — só agregados cruzam a rede, exatos
+ * created_at): sem cap e sem streaming - só agregados cruzam a rede, exatos
  * em qualquer volume. A matemática é a mesma do summarizeEvents:
  * - métricas = sessões distintas por event_type;
  * - reachedX = complete OU progress >= X;
@@ -32,7 +32,7 @@ const MAX_REQUEST_BYTES = 4096;
  *   como "Não informado".
  */
 
-/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) — normaliza. */
+/** `db.execute` devolve `{ rows }` (pg) ou array (outros drivers) - normaliza. */
 function rowsOf<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
   if (result && typeof result === "object" && Array.isArray((result as { rows?: unknown }).rows)) {
@@ -47,7 +47,7 @@ function num(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** Marcos de retenção — exatamente os pontos do summarizeEvents original. */
+/** Marcos de retenção - exatamente os pontos do summarizeEvents original. */
 const RETENTION_POINTS = [0, 10, 25, 50, 75, 90, 100] as const;
 
 type Stats = {
@@ -126,7 +126,7 @@ const DIMENSION_KEYS: Array<[key: string, column: string]> = [
 
 /**
  * Mesma montagem do summarizeEvents().dimension(): ordenação por impressões
- * desc (empate preservado — o SQL entrega first_created asc; antes a ordem
+ * desc (empate preservado - o SQL entrega first_created asc; antes a ordem
  * de empate era a ordem arbitrária de retorno do banco, agora é
  * determinística), limite de 30 e rates com o mesmo pct().
  */
@@ -219,7 +219,7 @@ export async function POST(request: Request) {
   const since = new Date(Date.now() - days * 86400000);
 
   // Mesma tolerância do original: erro na leitura dos eventos propagava (500
-  // pelo Next) — nenhum try/catch foi adicionado. As duas agregações correm
+  // pelo Next) - nenhum try/catch foi adicionado. As duas agregações correm
   // no Postgres sobre o índice (video_id, created_at) e nenhum evento cruza
   // a rede. Sem GROUP BY no resumo, o banco devolve uma única linha (zeros
   // quando a janela está vazia).
@@ -277,7 +277,7 @@ export async function POST(request: Request) {
     question,
     // O cap de 50 mil eventos morreu junto com o streaming de linhas: o
     // snapshot é exato em qualquer volume e a chave permanece no contrato
-    // sempre como false — mesma decisão já aplicada no dashboard.
+    // sempre como false - mesma decisão já aplicada no dashboard.
     truncated: false,
     summary,
     retention: retentionOf(stats),

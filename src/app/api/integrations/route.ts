@@ -26,13 +26,13 @@ function noStore(body: unknown, status = 200) {
 
 /**
  * Integrações por CONTA (App Store em /dashboard/integracoes).
- * GET: lista as integrações do dono — campos secretos (tokens, api secrets e
+ * GET: lista as integrações do dono - campos secretos (tokens, api secrets e
  * URLs de webhook) saem MASCARADOS como "" com flags hasToken/hasWebhookUrl;
  * o valor cru nunca chega ao cliente. PUT: instala/atualiza uma (provider +
  * config validado por provider + vslIds conferidos contra as VSLs do dono;
  * campo secreto vazio preserva o valor salvo). DELETE: remove uma.
  * Tokens/chaves ficam server-side (a rota é do próprio dono, mas a resposta
- * nunca circula fora daqui — no-store).
+ * nunca circula fora daqui - no-store).
  */
 export async function GET(request: Request) {
   const gate = await guard(request);

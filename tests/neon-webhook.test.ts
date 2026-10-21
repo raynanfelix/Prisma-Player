@@ -3,7 +3,7 @@ import { generateKeyPairSync, randomUUID, sign as cryptoSign } from "node:crypto
 
 /**
  * Webhook do Neon Auth: gera um par Ed25519 de teste, expõe a pública num JWKS
- * mockado (fetcher injetado) e assina os payloads exatamente como a Neon —
+ * mockado (fetcher injetado) e assina os payloads exatamente como a Neon -
  * JWS detached com dupla base64url amarrando o timestamp:
  *
  *   signingInput = headerB64 + "." + base64url(`${timestamp}.${base64url(rawBody)}`)
@@ -12,7 +12,7 @@ import { generateKeyPairSync, randomUUID, sign as cryptoSign } from "node:crypto
  */
 
 const { afterState, alertCalls } = vi.hoisted(() => ({
-  /** Tarefas passadas ao after() do Next — executadas manualmente no teste. */
+  /** Tarefas passadas ao after() do Next - executadas manualmente no teste. */
   afterState: { tasks: [] as Array<() => unknown> },
   alertCalls: [] as Array<{ title?: string; detail?: string; kind?: string }>,
 }));
@@ -133,7 +133,7 @@ beforeEach(() => {
   afterState.tasks.length = 0;
   alertCalls.length = 0;
   vi.clearAllMocks();
-  // A rota usa o fetch default (globalThis.fetch) — stub devolve o JWKS de teste.
+  // A rota usa o fetch default (globalThis.fetch) - stub devolve o JWKS de teste.
   vi.stubGlobal("fetch", (async () => jwksResponse([testJwk])) as typeof fetch);
 });
 
@@ -141,7 +141,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("verifyNeonAuthWebhook — verificação cripto", () => {
+describe("verifyNeonAuthWebhook - verificação cripto", () => {
   it("(a) assinatura válida devolve o evento parseado", async () => {
     const body = userCreatedBody("evt-a");
     const signed = signWebhook({ body });
@@ -249,7 +249,7 @@ describe("verifyNeonAuthWebhook — verificação cripto", () => {
   });
 });
 
-describe("POST /api/webhooks/neon-auth — rota", () => {
+describe("POST /api/webhooks/neon-auth - rota", () => {
   it("(e) user.created válido → 200 imediato e bootstrap 1x via after()", async () => {
     const body = userCreatedBody("evt-route-e");
     const signed = signWebhook({ body });
@@ -279,7 +279,7 @@ describe("POST /api/webhooks/neon-auth — rota", () => {
     const first = await POST(webhookRequest(body, webhookHeaders(signed, { eventId: "evt-route-f" })));
     expect(first.status).toBe(200);
 
-    // Spec Neon (Idempotency): duplicados recebem a mesma resposta — 4xx
+    // Spec Neon (Idempotency): duplicados recebem a mesma resposta - 4xx
     // numa reentrega legítima (resposta perdida) viraria falha de delivery.
     const replay = await POST(webhookRequest(body, webhookHeaders(signed, { eventId: "evt-route-f" })));
     expect(replay.status).toBe(200);
@@ -358,7 +358,7 @@ describe("POST /api/webhooks/neon-auth — rota", () => {
     expect(await response.json()).toEqual({ error: "invalid_webhook" });
     expect(afterState.tasks).toHaveLength(0);
     // Item 5: assinatura inválida em produção = segredo/painel mal configurado
-    // ou forja — o dono precisa saber.
+    // ou forja - o dono precisa saber.
     expect(alertCalls[0]).toMatchObject({ kind: "neon_auth_invalid_webhook" });
   });
 

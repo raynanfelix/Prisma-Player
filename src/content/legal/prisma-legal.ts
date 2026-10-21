@@ -4,7 +4,7 @@ export const legalContactEmail = "privacidade@prismaplayer.com.br";
 export type LegalSection = { title: string; body: string; items?: string[] };
 
 /**
- * Documentos jurídicos da Prisma Player (versão 2 — global: LGPD/GDPR/CCPA).
+ * Documentos jurídicos da Prisma Player (versão 2 - global: LGPD/GDPR/CCPA).
  * Páginas: /terms, /privacy, /cookies.
  * ⚠️ PREENCHER antes da publicação final: razão social, CNPJ, endereço e comarca
  * marcados como [PREENCHER]. Revisão por advogado é obrigatória (checkpoint).
@@ -87,7 +87,7 @@ export const termsSections: LegalSection[] = [
   },
   {
     title: "13. Limitação de responsabilidade",
-    body: "Na máxima extensão permitida pela lei aplicável, a Prisma Player não responde por danos indiretos, lucros cessantes, perda de dados do cliente (mantenha cópias próprias), perda de audiência ou receita, nem por atos de terceiros e provedores. Nossa responsabilidade contratual total, somada, é limitada aos valores pagos por você nos últimos 12 (doze) meses. Nada aqui exclui responsabilidades que não podem ser renunciadas pela lei do seu país ou estado — em especial direitos irrenunciáveis de consumidores.",
+    body: "Na máxima extensão permitida pela lei aplicável, a Prisma Player não responde por danos indiretos, lucros cessantes, perda de dados do cliente (mantenha cópias próprias), perda de audiência ou receita, nem por atos de terceiros e provedores. Nossa responsabilidade contratual total, somada, é limitada aos valores pagos por você nos últimos 12 (doze) meses. Nada aqui exclui responsabilidades que não podem ser renunciadas pela lei do seu país ou estado - em especial direitos irrenunciáveis de consumidores.",
   },
   {
     title: "14. Indenização",
@@ -139,7 +139,7 @@ export const privacySections: LegalSection[] = [
       "Execução do contrato: entregar o serviço contratado (hospedagem, player, métricas, embeds).",
       "Cumprimento de obrigação legal: retenção fiscal, resposta a ordens judiciais e authorities.",
       "Legítimo interesse: segurança da plataforma, prevenção a fraude e pirataria, medição agregada e melhorias.",
-      "Consentimento: comunicações de marketing e cookies e pixels onde exigido — retirável a qualquer momento.",
+      "Consentimento: comunicações de marketing e cookies e pixels onde exigido - retirável a qualquer momento.",
     ],
   },
   {
@@ -175,9 +175,9 @@ export const privacySections: LegalSection[] = [
     title: "10. Seus direitos",
     body: "Você pode solicitar a qualquer momento pelo e-mail " + legalContactEmail + ":",
     items: [
-      "LGPD (art. 18): confirmação do tratamento, acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamentos, informação sobre a possibilidade de não consentir e revogação do consentimento — resposta em até 15 dias (art. 19).",
-      "GDPR (UE/Espanha): acesso, retificação, apagamento, restrição, portabilidade, oposição e reclamação à autoridade de controle (ex.: AEPD na Espanha) — resposta em até 30 dias, prorrogáveis com aviso.",
-      "CCPA/CPRA (Califórnia): conhecer, excluir e corrigir dados, além do direito de não ter dados pessoais vendidos ou compartilhados para publicidade — não vendemos dados e respeitamos os sinais de Global Privacy Control (GPC).",
+      "LGPD (art. 18): confirmação do tratamento, acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamentos, informação sobre a possibilidade de não consentir e revogação do consentimento - resposta em até 15 dias (art. 19).",
+      "GDPR (UE/Espanha): acesso, retificação, apagamento, restrição, portabilidade, oposição e reclamação à autoridade de controle (ex.: AEPD na Espanha) - resposta em até 30 dias, prorrogáveis com aviso.",
+      "CCPA/CPRA (Califórnia): conhecer, excluir e corrigir dados, além do direito de não ter dados pessoais vendidos ou compartilhados para publicidade - não vendemos dados e respeitamos os sinais de Global Privacy Control (GPC).",
       "Espectadores de players: solicitações podem ser dirigidas ao site que publicou o vídeo (nosso cliente, controlador) ou a nós como operadora, que encaminharemos ao cliente responsável.",
     ],
   },
@@ -202,7 +202,7 @@ export const privacySections: LegalSection[] = [
 export const cookieSections: LegalSection[] = [
   {
     title: "1. O que são cookies e tecnologias similares",
-    body: "Cookies são pequenos arquivos que sites e players salvam no seu navegador. Também usamos armazenamento local (localStorage) para funções do player. Usamos essas tecnologias para o serviço funcionar, para medir audiência e — quando você permite — para publicidade.",
+    body: "Cookies são pequenos arquivos que sites e players salvam no seu navegador. Também usamos armazenamento local (localStorage) para funções do player. Usamos essas tecnologias para o serviço funcionar, para medir audiência e - quando você permite - para publicidade.",
   },
   {
     title: "2. Cookies essenciais",
@@ -228,7 +228,7 @@ export const cookieSections: LegalSection[] = [
   },
   {
     title: "5. Marketing e publicidade",
-    body: "Conforme configurado pelo cliente que publica o vídeo e consentido por você, eventos do player podem ser enviados para plataformas de anúncios: Meta (Pixel e Conversions API) e TikTok (Events API). Identificadores são tratados por hash. Serve para medir e otimizar campanhas — nunca para vender seus dados.",
+    body: "Conforme configurado pelo cliente que publica o vídeo e consentido por você, eventos do player podem ser enviados para plataformas de anúncios: Meta (Pixel e Conversions API) e TikTok (Events API). Identificadores são tratados por hash. Serve para medir e otimizar campanhas - nunca para vender seus dados.",
   },
   {
     title: "6. Como gerenciar seus cookies",

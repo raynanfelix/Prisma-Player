@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * "Testar conexão" — Sprint 1 Pixel Verdadeiro (docs/PIXEL_VERIFY_SPEC.md).
+ * "Testar conexão" - Sprint 1 Pixel Verdadeiro (docs/PIXEL_VERIFY_SPEC.md).
  *
  * Cada integração de anúncio dispara um evento de teste REAL na API oficial
  * da plataforma e devolve a resposta REAL padronizada em
@@ -15,7 +15,7 @@ import "server-only";
  *
  * Regras do contrato: fetch com timeout de 8s e `cache: "no-store"`; tokens e
  * secrets NUNCA aparecem em mensagens, detalhes ou logs (este módulo não
- * loga — erros viram resposta honesta para a tela).
+ * loga - erros viram resposta honesta para a tela).
  */
 
 export type PixelVerifyPlatform = "meta" | "google" | "tiktok";
@@ -39,7 +39,7 @@ export function isPixelVerifyProvider(value: unknown): value is PixelVerifyProvi
   return value === "meta_pixel" || value === "google_ads" || value === "tiktok";
 }
 
-/** fetch puro com timeout de 8s e sem cache — o teste sempre fala com a plataforma. */
+/** fetch puro com timeout de 8s e sem cache - o teste sempre fala com a plataforma. */
 async function platformFetch(url: string, init: RequestInit): Promise<Response> {
   return fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
@@ -74,20 +74,20 @@ function result(ok: boolean, platform: PixelVerifyPlatform, message: string, det
 }
 
 function unreachable(platform: PixelVerifyPlatform): PixelVerifyResult {
-  return result(false, platform, "A plataforma não respondeu em até 8s — tente novamente.", "timeout ou falha de rede");
+  return result(false, platform, "A plataforma não respondeu em até 8s - tente novamente.", "timeout ou falha de rede");
 }
 
 /**
  * Evento de teste com nome próprio ("PrismaVerifyTest"): sem test_event_code o
  * evento cai como evento customizado claramente marcado, nunca como Purchase
- * de verdade — não polui a otimização da campanha do dono.
+ * de verdade - não polui a otimização da campanha do dono.
  */
 function testEventId(): string {
   return `prisma-verify-${Date.now()}`;
 }
 
 // ---------------------------------------------------------------------------
-// Meta — graph.facebook.com
+// Meta - graph.facebook.com
 // ---------------------------------------------------------------------------
 
 function graphApiVersion(): string {
@@ -99,10 +99,10 @@ function graphApiVersion(): string {
 function metaRefusalMessage(status: number, reason: string): string {
   const text = reason.toLowerCase();
   if (text.includes("validating access token") || text.includes("invalid oauth") || text.includes("access token")) {
-    return "Access Token inválido ou expirado — gere um novo no Events Manager (API de Conversões).";
+    return "Access Token inválido ou expirado - gere um novo no Events Manager (API de Conversões).";
   }
   if (status === 404 || text.includes("does not exist") || text.includes("nonexist") || text.includes("unsupported get request") || text.includes("unsupported post request")) {
-    return "Pixel não encontrado — confira o ID e se o token pertence à mesma conta de anúncios.";
+    return "Pixel não encontrado - confira o ID e se o token pertence à mesma conta de anúncios.";
   }
   return `Meta recusou a chamada (HTTP ${status}).`;
 }
@@ -118,7 +118,7 @@ export async function verifyMeta(config: Record<string, unknown>): Promise<Pixel
   const version = graphApiVersion();
   try {
     // 1) Best-effort: pegar o nome do pixel (tokens de CAPI têm permissão de
-    //    ENVIO, não de leitura — GET com "Missing Permission" é NORMAL e não
+    //    ENVIO, não de leitura - GET com "Missing Permission" é NORMAL e não
     //    pode falhar o teste; o veredito é o POST /events abaixo).
     let pixelName = "";
     try {
@@ -131,7 +131,7 @@ export async function verifyMeta(config: Record<string, unknown>): Promise<Pixel
         pixelName = (checkBody["name"] as string).slice(0, 60);
       }
     } catch {
-      // GET é opcional — segue pro POST mesmo sem ele.
+      // GET é opcional - segue pro POST mesmo sem ele.
     }
 
     // 2) Evento de teste REAL na API de Conversões.
@@ -171,7 +171,7 @@ export async function verifyMeta(config: Record<string, unknown>): Promise<Pixel
 }
 
 // ---------------------------------------------------------------------------
-// Google — GA4 Measurement Protocol (debug/mp/collect)
+// Google - GA4 Measurement Protocol (debug/mp/collect)
 // ---------------------------------------------------------------------------
 
 export async function verifyGoogle(config: Record<string, unknown>): Promise<PixelVerifyResult> {
@@ -182,15 +182,15 @@ export async function verifyGoogle(config: Record<string, unknown>): Promise<Pix
   }
 
   // AW- (Google Ads sem G-): não existe teste em tempo real para tag de
-  // conversão — resposta honesta de formato, sem inventar verificação.
+  // conversão - resposta honesta de formato, sem inventar verificação.
   if (/^AW-\d{5,20}$/.test(tagId)) {
-    return result(true, "google", "Tag de conversão do Google Ads configurada — o Google Ads mostra o evento em até 3h (tags AW- não têm teste em tempo real).", `formato ${tagId} validado`);
+    return result(true, "google", "Tag de conversão do Google Ads configurada - o Google Ads mostra o evento em até 3h (tags AW- não têm teste em tempo real).", `formato ${tagId} validado`);
   }
   if (!/^G-[A-Z0-9]{5,20}$/.test(tagId)) {
-    return result(false, "google", "ID da tag inválido — use G-XXXXXXX (GA4) ou AW-XXXXXXX (Google Ads).", `formato rejeitado: ${tagId}`);
+    return result(false, "google", "ID da tag inválido - use G-XXXXXXX (GA4) ou AW-XXXXXXX (Google Ads).", `formato rejeitado: ${tagId}`);
   }
   if (!apiSecret) {
-    return result(false, "google", "Preencha o API Secret para testar a tag G- — você gera em GA4 → Admin → Data Streams → Measurement Protocol API secret.", "apiSecret ausente para tag G-");
+    return result(false, "google", "Preencha o API Secret para testar a tag G- - você gera em GA4 → Admin → Data Streams → Measurement Protocol API secret.", "apiSecret ausente para tag G-");
   }
 
   try {
@@ -212,8 +212,8 @@ export async function verifyGoogle(config: Record<string, unknown>): Promise<Pix
     const validation = body?.["validationResponse"] as { validationMessages?: Array<{ description?: string; message?: string; validationCode?: string }> } | undefined;
     if (!validation || !Array.isArray(validation.validationMessages)) {
       // O endpoint debug devolve `validationResponse` só para par
-      // measurement_id + api_secret válido — resposta vazia = credenciais erradas.
-      return result(false, "google", "GA4 não validou o payload — confira o ID G- e o API Secret (o Google devolveu validação vazia).", "validationResponse ausente");
+      // measurement_id + api_secret válido - resposta vazia = credenciais erradas.
+      return result(false, "google", "GA4 não validou o payload - confira o ID G- e o API Secret (o Google devolveu validação vazia).", "validationResponse ausente");
     }
     const messages = validation.validationMessages;
     if (messages.length === 0) {
@@ -227,7 +227,7 @@ export async function verifyGoogle(config: Record<string, unknown>): Promise<Pix
 }
 
 // ---------------------------------------------------------------------------
-// TikTok — Events API (open_api/v1.3/event/track/)
+// TikTok - Events API (open_api/v1.3/event/track/)
 // ---------------------------------------------------------------------------
 
 export async function verifyTikTok(config: Record<string, unknown>): Promise<PixelVerifyResult> {
@@ -266,7 +266,7 @@ export async function verifyTikTok(config: Record<string, unknown>): Promise<Pix
       return result(true, "tiktok", "TikTok confirmou: evento de teste recebido.", "code: 0 · success");
     }
     const reason = message || (code !== null ? `código ${code}` : `HTTP ${response.status}`);
-    const tokenHint = /auth|token|permission|certif/i.test(message) ? "Access Token sem permissão para este pixel — " : "";
+    const tokenHint = /auth|token|permission|certif/i.test(message) ? "Access Token sem permissão para este pixel - " : "";
     return result(false, "tiktok", `${tokenHint}TikTok recusou: ${reason}`, redact(`code ${code ?? "?"}: ${reason}`, [accessToken]));
   } catch {
     return unreachable("tiktok");

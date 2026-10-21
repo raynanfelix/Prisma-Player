@@ -10,7 +10,7 @@ const ALLOWED_KINDS = new Set<string>(PLAYER_ASSET_KINDS);
  *
  * `player_configs.config` é um jsonb livre gravado pelo próprio usuário. Sem
  * este filtro, bastava apontar `config.assets` para o caminho de outro tenante
- * e abrir o próprio embed para receber uma URL assinada do arquivo alheio — o
+ * e abrir o próprio embed para receber uma URL assinada do arquivo alheio - o
  * endpoint de embed assinava qualquer string que encontrasse ali.
  */
 export function ownedAssetPaths(rawAssets: unknown, ownerId: string): Record<string, string> {

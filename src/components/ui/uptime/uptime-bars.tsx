@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Grade de barras diárias do UptimeCard (kokonutui, MIT — adaptado Prisma).
+ * Grade de barras diárias do UptimeCard (kokonutui, MIT - adaptado Prisma).
  * Subcomponente extraído para respeitar o teto de 350 linhas (quality).
  */
 
@@ -25,7 +25,7 @@ export function UptimeBars({ services, days, uptimes, shownDay }: UptimeBarsProp
             <span className="font-medium">{service.name}</span>
             <span className="tabular-nums text-[#7a7a7a] dark:text-zinc-400">
               {uptimes[row] === null || uptimes[row] === undefined
-                ? "—"
+                ? "-"
                 : `${uptimes[row].toFixed(2)}%`}
             </span>
           </div>

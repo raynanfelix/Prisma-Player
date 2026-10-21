@@ -53,7 +53,7 @@ export function buildHeatmapColumns(
 /**
  * Escala de cor por quantil relativo ao pico da série. O
  * `getHeatmapContributionLevel` do bklit usa limiares absolutos (1, 2, 3, 4+),
- * calibrados para contagem de commits — com centenas de plays por dia todos os
+ * calibrados para contagem de commits - com centenas de plays por dia todos os
  * dias cairiam no nível máximo e o mapa ficaria chapado.
  */
 function buildQuantileColorScale(

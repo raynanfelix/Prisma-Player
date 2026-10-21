@@ -52,7 +52,7 @@ function post(body: unknown): Promise<Response> {
   );
 }
 
-/** Chamada capturada do fetch: [url, init] — init existe em runtime mesmo em mocks sem parâmetros. */
+/** Chamada capturada do fetch: [url, init] - init existe em runtime mesmo em mocks sem parâmetros. */
 function callOf(mock: ReturnType<typeof vi.fn>, index: number): [string, RequestInit] {
   return mock.mock.calls[index] as [string, RequestInit];
 }
@@ -71,7 +71,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// verifyMeta — GET /{pixel_id} + POST /events
+// verifyMeta - GET /{pixel_id} + POST /events
 // ---------------------------------------------------------------------------
 
 describe("verifyMeta", () => {
@@ -165,7 +165,7 @@ describe("verifyMeta", () => {
 });
 
 // ---------------------------------------------------------------------------
-// verifyGoogle — debug/mp/collect + resposta honesta para AW-
+// verifyGoogle - debug/mp/collect + resposta honesta para AW-
 // ---------------------------------------------------------------------------
 
 describe("verifyGoogle", () => {
@@ -238,7 +238,7 @@ describe("verifyGoogle", () => {
 });
 
 // ---------------------------------------------------------------------------
-// verifyTikTok — open_api/v1.3/event/track
+// verifyTikTok - open_api/v1.3/event/track
 // ---------------------------------------------------------------------------
 
 describe("verifyTikTok", () => {
@@ -282,7 +282,7 @@ describe("verifyTikTok", () => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/integrations/verify — rota
+// POST /api/integrations/verify - rota
 // ---------------------------------------------------------------------------
 
 describe("POST /api/integrations/verify", () => {

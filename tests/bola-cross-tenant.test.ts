@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 
 /**
- * Suíte BOLA cross-tenant (API1) — docs/SECURITY_HARDENING_SPEC.md, item 3.
+ * Suíte BOLA cross-tenant (API1) - docs/SECURITY_HARDENING_SPEC.md, item 3.
  *
  * Duas contas (A e B) com objetos de cada uma; a SESSÃO é sempre de A
  * (guard/getCurrentUserId mockados). O fake-db aqui é mais fiel que o padrão
  * de tests/helpers/fake-db: o select AVALIA a cláusula `where` compilada
  * (eq/inArray via PgDialect) e devolve só as linhas que a query real
- * devolveria — assim o teste FALHA se uma rota esquecer o filtro por
+ * devolveria - assim o teste FALHA se uma rota esquecer o filtro por
  * accountOwnerId, em vez de confiar que a query está certa. Mutações têm o
  * where capturado e conferido (escopo por dono + objeto).
  */
@@ -121,7 +121,7 @@ vi.mock("@/lib/db", async () => {
   function filterRows(table: string, where: unknown, rows: Record<string, unknown>[]): Record<string, unknown>[] {
     if (where === undefined) return rows;
     const { sql, params } = dialect.sqlToQuery(where as never);
-    // Drizzle compila and(a, b, c) como "(a and b and c)" — UM par de
+    // Drizzle compila and(a, b, c) como "(a and b and c)" - UM par de
     // parênteses envolvendo tudo, condições unidas por " and " simples.
     const clean = sql.trim().replace(/^\(/, "").replace(/\)$/, "");
     return rows.filter((row) => clean.split(" and ").every((clause) => clauseMatches(clause.trim(), params, row)));
@@ -268,8 +268,8 @@ beforeEach(() => {
   ];
 });
 
-describe("BOLA: sessão de A tentando objeto de B — GET/DELETE /api/videos", () => {
-  it("GET lista SÓ os vídeos de A — nenhum dado de B na resposta", async () => {
+describe("BOLA: sessão de A tentando objeto de B - GET/DELETE /api/videos", () => {
+  it("GET lista SÓ os vídeos de A - nenhum dado de B na resposta", async () => {
     const response = await listVideos(new Request("https://prisma.test/api/videos"));
     const body = (await response.json()) as { videos: Array<Record<string, unknown>> };
 
@@ -300,7 +300,7 @@ describe("BOLA: sessão de A tentando objeto de B — GET/DELETE /api/videos", (
   });
 });
 
-describe("BOLA: sessão de A tentando objeto de B — PUT/DELETE /api/integrations", () => {
+describe("BOLA: sessão de A tentando objeto de B - PUT/DELETE /api/integrations", () => {
   it("PUT com vslIds de B → 403 vsl_not_owned, nada gravado", async () => {
     const response = await putIntegration(
       request("PUT", { provider: "discord", instanceId: "inst-b", config: { webhookUrl: "https://discord.com/api/webhooks/1/x" }, vslIds: [VIDEO_B] }),
@@ -325,7 +325,7 @@ describe("BOLA: sessão de A tentando objeto de B — PUT/DELETE /api/integratio
   });
 });
 
-describe("BOLA: sessão de A tentando objeto de B — PATCH /api/intelligence/controls", () => {
+describe("BOLA: sessão de A tentando objeto de B - PATCH /api/intelligence/controls", () => {
   it("reportVideoIds de B são DESCARTADOS pelo filtro de posse; só os de A são salvos", async () => {
     const response = await patchControls(request("PATCH", { reportVideoIds: [VIDEO_A, VIDEO_B] }));
 
@@ -341,7 +341,7 @@ describe("BOLA: sessão de A tentando objeto de B — PATCH /api/intelligence/co
   });
 });
 
-describe("BOLA: sessão de A tentando objeto de B — GET /api/player-configs e player-loader", () => {
+describe("BOLA: sessão de A tentando objeto de B - GET /api/player-configs e player-loader", () => {
   it("config do player do vídeo de B → playerConfig null, nenhum marker de B na resposta", async () => {
     const response = await getPlayerConfig(new Request(`https://prisma.test/api/player-configs?videoId=${VIDEO_B}`));
     const body = (await response.json()) as { playerConfig: Record<string, unknown> | null };
@@ -359,7 +359,7 @@ describe("BOLA: sessão de A tentando objeto de B — GET /api/player-configs e 
     expect((body.playerConfig as Record<string, unknown>).id).toBe(PLAYER_CONFIG_ID_A);
   });
 
-  it("player-loader do player de B entrega só o script estático — nada da config de B vaza", async () => {
+  it("player-loader do player de B entrega só o script estático - nada da config de B vaza", async () => {
     const response = await playerLoaderGet(new Request("https://site-de-terceiro.test/"), { params: Promise.resolve({ id: PLAYER_CONFIG_ID_B }) });
     const script = await response.text();
 
@@ -370,7 +370,7 @@ describe("BOLA: sessão de A tentando objeto de B — GET /api/player-configs e 
   });
 });
 
-describe("BOLA: sessão de A tentando objeto de B — POST/PATCH /api/account/team", () => {
+describe("BOLA: sessão de A tentando objeto de B - POST/PATCH /api/account/team", () => {
   it("aceitar convite de B → 404 invite_not_available (convite é amarrado ao e-mail do convidado)", async () => {
     const response = await teamPost(request("POST", { action: "accept", inviteId: "invite-b" }));
 

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * RadarChart composável sobre recharts — Prisma Player.
+ * RadarChart composável sobre recharts - Prisma Player.
  *
  * Base: padrão composável do ecossistema kokonutui/21st.dev (shadcn-style),
  * reconstruído sobre recharts (sem libs novas) e adaptado aos tokens da

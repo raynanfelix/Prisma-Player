@@ -5,9 +5,9 @@ import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
- * Botões reais de checkout/portal da página de Billing (Opção A — Stripe
+ * Botões reais de checkout/portal da página de Billing (Opção A - Stripe
  * Checkout hospedado). A rota devolve `{ url }` e o client redireciona; o
- * fulfillment NUNCA acontece aqui — a ativação vem do webhook.
+ * fulfillment NUNCA acontece aqui - a ativação vem do webhook.
  *
  * Estados cobertos por botão: idle → loading (spinner) → redirect; erro
  * vira mensagem inline honesta (rate limit, Stripe sem config, catálogo
@@ -27,15 +27,15 @@ async function requestCheckoutUrl(endpoint: string, body: Record<string, unknown
     if (response.ok && typeof result?.url === "string") return { ok: true, url: result.url };
     // Diagnóstico REAL (spec Billing Completo, item 0): as rotas de billing
     // devolvem `message` detalhada (price_not_found, stripe_unavailable,
-    // sem_stripe_customer…) — ela SEMPRE vence o genérico; o texto padrão
+    // sem_stripe_customer…) - ela SEMPRE vence o genérico; o texto padrão
     // só sobrevive quando o backend não mandou nada.
-    if (response.status === 429) return { ok: false, message: result?.message ?? "Muitas tentativas seguidas — aguarde um minuto e tente de novo." };
+    if (response.status === 429) return { ok: false, message: result?.message ?? "Muitas tentativas seguidas - aguarde um minuto e tente de novo." };
     if (response.status === 409) return { ok: false, message: result?.message ?? "Nenhuma compra via Stripe nesta conta ainda." };
-    if (response.status === 503) return { ok: false, message: result?.message ?? "Pagamentos temporariamente indisponíveis — configure o Stripe no ambiente." };
-    if (response.status === 502) return { ok: false, message: result?.message ?? "Catálogo de preços ainda não sincronizado — rode o seed do Stripe." };
-    return { ok: false, message: result?.message ?? "Não foi possível iniciar agora — tente novamente." };
+    if (response.status === 503) return { ok: false, message: result?.message ?? "Pagamentos temporariamente indisponíveis - configure o Stripe no ambiente." };
+    if (response.status === 502) return { ok: false, message: result?.message ?? "Catálogo de preços ainda não sincronizado - rode o seed do Stripe." };
+    return { ok: false, message: result?.message ?? "Não foi possível iniciar agora - tente novamente." };
   } catch {
-    return { ok: false, message: "Não foi possível iniciar agora — verifique sua conexão." };
+    return { ok: false, message: "Não foi possível iniciar agora - verifique sua conexão." };
   }
 }
 
@@ -144,7 +144,7 @@ export function ManageSubscriptionButton() {
  * canônico de upgrade/downgrade (nunca reescrever o que o Stripe dá pronto).
  *
  * Pendência do dono: a config do portal com `subscription_update` exige o
- * claim do sandbox no Dashboard — o botão já nasce pronto; até lá o portal
+ * claim do sandbox no Dashboard - o botão já nasce pronto; até lá o portal
  * abre com faturas/cancelamento/cartão.
  */
 export function PlanSwitchButton() {

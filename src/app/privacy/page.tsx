@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <LegalPageLayout
       tag="LGPD · GDPR · CCPA"
       title="Política de Privacidade"
-      intro="Esta política descreve como a Prisma Player trata dados pessoais de usuários, equipes e visitantes das VSLs publicadas — no Brasil, na Europa e no mundo."
+      intro="Esta política descreve como a Prisma Player trata dados pessoais de usuários, equipes e visitantes das VSLs publicadas - no Brasil, na Europa e no mundo."
       icon="shield"
       sections={privacySections}
       updatedAt={legalUpdatedAt}

@@ -10,13 +10,13 @@ import * as schema from "../../../drizzle/schema";
  * Cliente Postgres único do Prisma Player (Drizzle + node-postgres).
  *
  * Conexão: DATABASE_URL deve ser a connection string POOLED do Neon
- * (hostname com sufixo `-pooler`) — regra da skill neon-postgres para
+ * (hostname com sufixo `-pooler`) - regra da skill neon-postgres para
  * Vercel/serverless. Para migrations e tarefas com estado de sessão use
  * DATABASE_URL_UNPOOLED (ver drizzle.config.ts).
  *
  * LAZY: pool e client são criados no PRIMEIRO acesso (proxies sobre as
  * instâncias reais, cacheadas em `globalThis`). Importar este módulo não
- * abre conexão nem exige DATABASE_URL — a coleta de módulos em testes e o
+ * abre conexão nem exige DATABASE_URL - a coleta de módulos em testes e o
  * `next build` funcionam sem rede; a falha explícita acontece na primeira
  * query real. `attachDatabasePool` (Vercel Fluid) sinaliza o pool ao
  * runtime para drenagem limpa.

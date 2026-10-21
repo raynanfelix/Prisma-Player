@@ -8,7 +8,7 @@ import { isValidEmail } from "@/features/auth/lib/validation";
 
 /**
  * Verificação de e-mail por CÓDIGO no signup (Neon Auth "Verify at Sign-up",
- * método códigos — funciona no SMTP compartilhado). Rota pré-sessão: sem
+ * método códigos - funciona no SMTP compartilhado). Rota pré-sessão: sem
  * `guard()` (que exige sessão), mas com o mesmo `csrfGuard` de signup/login.
  *
  * Dois modos no mesmo POST:
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!isValidEmail(email)) return NextResponse.json({ error: "invalid_email" }, { status: 400, headers: NO_STORE });
 
-  // Balde por conta (hash — nunca persistir e-mail cru no store de rate limit):
+  // Balde por conta (hash - nunca persistir e-mail cru no store de rate limit):
   // 10 tentativas por 10 minutos, fail-closed. Cobre verify + resend.
   const limited = await rateLimit(request, "verify-email", {
     max: 10,
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   }
 
   // Auto-sign-in (default do plugin): devolve session/token e o SDK já gravou
-  // os cookies de sessão na resposta — mesmo mecanismo do /api/auth/login.
+  // os cookies de sessão na resposta - mesmo mecanismo do /api/auth/login.
   const session = (data ?? null) as { session?: unknown; token?: unknown } | null;
   const hasSession = Boolean(session?.session ?? session?.token);
   return NextResponse.json(

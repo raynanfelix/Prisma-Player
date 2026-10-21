@@ -40,7 +40,7 @@ export interface ChoroplethChartProps {
   animationDuration?: number;
   /** Motion enter transition (spring or cubic-bezier tween). */
   enterTransition?: Transition;
-  /** Signature of motion URL state — triggers enter replay when it changes. */
+  /** Signature of motion URL state - triggers enter replay when it changes. */
   revealSignature?: string;
   /** Aspect ratio as "width / height". Default: "16 / 9" */
   aspectRatio?: string;
@@ -170,7 +170,7 @@ const DEFAULT_INITIAL_ZOOM: TransformMatrix = {
 
 interface MercatorRenderProps {
   // O d3-geo digere qualquer objeto GeoJSON permissível (features, geometrias,
-  // graticules…) — o tipo real do @visx/vendor/d3-geo cobre isso sem `any`.
+  // graticules…) - o tipo real do @visx/vendor/d3-geo cobre isso sem `any`.
   path: GeoPath;
   projection: (coords: [number, number]) => [number, number] | null | undefined;
 }

@@ -13,7 +13,7 @@ const ROLE_IS_ADMIN_SQL = sql.raw(`role ~ '(^|,)admin(,|$)'`);
 
 /**
  * Equipe: promove/rebaixa papel administrativo. No Managed Neon Auth o papel
- * vive em `neon_auth."user".role` (plugin Admin do Better Auth) — o mesmo
+ * vive em `neon_auth."user".role` (plugin Admin do Better Auth) - o mesmo
  * campo lido por getCurrentAdminUser(); a promoção do primeiro admin é via SQL
  * (docs/neon-migration/neon-auth-setup.md §5), e esta rota usa o mesmo mecanismo.
  * Travas: nunca a si mesmo; nunca rebaixar o último admin.

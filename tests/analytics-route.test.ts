@@ -3,7 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
 /** Corpo da rota parseado no teste: campos aninhados que os asserts navegam
- *  (keys/índices/métodos) precisam de tipo estrutural — lint proíbe any. */
+ *  (keys/índices/métodos) precisam de tipo estrutural - lint proíbe any. */
 type AnalyticsBody = {
   [key: string]: unknown;
   summary: Record<string, unknown>;
@@ -113,7 +113,7 @@ function videoRow(): Record<string, unknown> {
   return { title: "VSL Principal", durationSeconds: "3600.5", objectPath: `${OWNER}/vsl.mp4`, mimeType: "video/mp4" };
 }
 
-/** Agregado das duas janelas (current/previous) — forma que a query de resumo devolve. */
+/** Agregado das duas janelas (current/previous) - forma que a query de resumo devolve. */
 function summaryFixture(): { rows: unknown[] } {
   return {
     rows: [
@@ -123,7 +123,7 @@ function summaryFixture(): { rows: unknown[] } {
   };
 }
 
-/** Buckets da série temporal — forma que a query de timeline devolve. */
+/** Buckets da série temporal - forma que a query de timeline devolve. */
 function timelineFixture(): { rows: unknown[] } {
   return {
     rows: [
@@ -133,7 +133,7 @@ function timelineFixture(): { rows: unknown[] } {
   };
 }
 
-/** Grupos por dimensão — forma que a query de GROUPING SETS devolve. */
+/** Grupos por dimensão - forma que a query de GROUPING SETS devolve. */
 function dimensionsFixture(): { rows: unknown[] } {
   return {
     rows: [
@@ -166,10 +166,10 @@ afterEach(() => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/analytics/[videoId] — contrato preservado                    */
+/* GET /api/analytics/[videoId] - contrato preservado                    */
 /* ------------------------------------------------------------------ */
 
-describe("GET /api/analytics/[videoId] — contrato", () => {
+describe("GET /api/analytics/[videoId] - contrato", () => {
   it("devolve o contrato completo (chaves, ordem e valores) a partir dos rows agregados", async () => {
     dbState.executeResults = defaultFixtures();
     const response = await getAnalytics(analyticsRequest(), ctx(VIDEO_ID));
@@ -291,10 +291,10 @@ describe("GET /api/analytics/[videoId] — contrato", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/analytics/[videoId] — agregação no Postgres                 */
+/* GET /api/analytics/[videoId] - agregação no Postgres                 */
 /* ------------------------------------------------------------------ */
 
-describe("GET /api/analytics/[videoId] — agregação no banco", () => {
+describe("GET /api/analytics/[videoId] - agregação no banco", () => {
   it("executa três queries agregadas com FILTER/GROUPING SETS e SQL parametrizado", async () => {
     dbState.executeResults = defaultFixtures();
     await getAnalytics(analyticsRequest({ days: "30" }), ctx(VIDEO_ID));
@@ -304,7 +304,7 @@ describe("GET /api/analytics/[videoId] — agregação no banco", () => {
     const toQuery = (query: unknown) => dialect.sqlToQuery(query as SQL);
     const [summaryQuery, timelineQuery, dimensionsQuery] = dbState.executeQueries.map(toQuery);
 
-    // Agregação condicional no Postgres — nenhum evento cruza a rede.
+    // Agregação condicional no Postgres - nenhum evento cruza a rede.
     expect(summaryQuery.sql).toContain("count(distinct session_id) filter (where event_type = 'impression')");
     expect(summaryQuery.sql).toContain("count(distinct session_id) filter (where event_type = 'complete' or (event_type = 'progress' and progress_percent >= 25))");
     expect(summaryQuery.sql).toContain("count(distinct session_id) filter (where risk_score >= 50)");
@@ -332,10 +332,10 @@ describe("GET /api/analytics/[videoId] — agregação no banco", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/analytics/[videoId] — gates                                 */
+/* GET /api/analytics/[videoId] - gates                                 */
 /* ------------------------------------------------------------------ */
 
-describe("GET /api/analytics/[videoId] — gates", () => {
+describe("GET /api/analytics/[videoId] - gates", () => {
   it("guard negando devolve exatamente o gate.response, antes de qualquer IO", async () => {
     gateState.ok = false;
     gateState.denyResponse = new Response(JSON.stringify({ error: "subscription_required" }), { status: 402 });
@@ -363,10 +363,10 @@ describe("GET /api/analytics/[videoId] — gates", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/analytics/[videoId] — períodos sem eventos                  */
+/* GET /api/analytics/[videoId] - períodos sem eventos                  */
 /* ------------------------------------------------------------------ */
 
-describe("GET /api/analytics/[videoId] — períodos sem eventos", () => {
+describe("GET /api/analytics/[videoId] - períodos sem eventos", () => {
   it("zero eventos devolve números zerados (0, nunca NaN/null) e a série completa", async () => {
     dbState.executeResults = [{ rows: [] }, { rows: [] }, { rows: [] }];
     const response = await getAnalytics(analyticsRequest({ days: "7" }), ctx(VIDEO_ID));

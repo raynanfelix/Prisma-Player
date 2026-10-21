@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * Deliberadamente NÃO consulta o banco: o objetivo é detectar queda da
  * plataforma (função/edge fora do ar), não da Neon. Monitorar o banco aqui
  * manteria o compute acordado (queimando horas) e derrubaria o health
- * durante o scale-to-zero — falso positivo. A Neon é monitorada
+ * durante o scale-to-zero - falso positivo. A Neon é monitorada
  * indiretamente: um ping que ATIVE o embed (/api/embed de um player de
  * teste, ver DEPLOY.md) valida a cadeia completa quando desejado.
  */

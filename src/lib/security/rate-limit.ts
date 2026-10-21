@@ -48,7 +48,7 @@ function clientIp(request: Request): string {
 /**
  * Headers padrão de rate limit (`X-RateLimit-*` de facto + `RateLimit-Policy`
  * do draft IETF). Sem eles o cliente não tem como se auto-regular e só descobre
- * o limite quando leva 429 — o que, num player embutido em site de terceiro,
+ * o limite quando leva 429 - o que, num player embutido em site de terceiro,
  * vira chamado de suporte.
  */
 function limitHeaders(max: number, remaining: number, resetEpochSeconds: number): Record<string, string> {
@@ -92,7 +92,7 @@ export type RateLimitResult =
  * Incremento atômico em janela fixa (equivalente ao upsert da migration
  * `20260721120000_atomic_rate_limit.sql`): INSERT ... ON CONFLICT (key) DO
  * UPDATE ... RETURNING executa leitura e escrita numa única statement, então
- * requisições concorrentes com a mesma chave nunca leem a mesma contagem —
+ * requisições concorrentes com a mesma chave nunca leem a mesma contagem -
  * o padrão read-then-update antigo deixava a rajada passar do limite.
  *
  * A janela é fixa: o primeiro hit define `expires_at` e os hits seguintes

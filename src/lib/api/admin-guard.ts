@@ -16,9 +16,9 @@ function deny(error: string, status: number, message?: string): AdminGuardResult
 /**
  * Porta de entrada das rotas /api/admin/*. Exige sessão + papel `admin` no
  * campo `role` do usuário do Neon Auth (Managed Better Auth). Rotas admin
- * operam cross-tenant por desenho — toda mutação grava trilha em admin_audit_log.
+ * operam cross-tenant por desenho - toda mutação grava trilha em admin_audit_log.
  *
- * MFA/AAL2: exigência removida — o Managed Neon Auth não expõe MFA (roadmap
+ * MFA/AAL2: exigência removida - o Managed Neon Auth não expõe MFA (roadmap
  * Neon); decisão do usuário foi aceitar o 2FA desligado por ora. Se o MFA
  * voltar (Managed ou Better Auth self-managed), reavaliar aqui.
  */

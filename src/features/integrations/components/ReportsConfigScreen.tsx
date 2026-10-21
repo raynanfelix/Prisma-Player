@@ -35,7 +35,7 @@ export default function ReportsConfigScreen({ app, vsls, capabilities, onBack }:
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Configuração do resumo periódico</CardTitle>
-          <CardDescription>Plays, conversões e taxa de conversão do período — a frequência e as VSLs ficam a seu critério.</CardDescription>
+          <CardDescription>Plays, conversões e taxa de conversão do período - a frequência e as VSLs ficam a seu critério.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {!allowed && <PlanRequiredNotice />}
@@ -86,7 +86,7 @@ export default function ReportsConfigScreen({ app, vsls, capabilities, onBack }:
               className="mt-1.5 h-10 text-xs"
             />
             <span className="mt-1.5 block text-[11px] font-normal text-muted-foreground">
-              O resumo periódico só é gerado com um e-mail cadastrado — ele também chega ao seu Inbox da Prisma.
+              O resumo periódico só é gerado com um e-mail cadastrado - ele também chega ao seu Inbox da Prisma.
             </span>
           </label>
 

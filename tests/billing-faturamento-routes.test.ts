@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Rotas da tela Faturamento + pesquisa de churn (spec Billing Completo,
  * itens 3 e 4): GET /api/billing/invoices, GET /api/billing/payment-method
- * e POST /api/billing/churn-survey — guard manage, rate limit, Stripe e
+ * e POST /api/billing/churn-survey - guard manage, rate limit, Stripe e
  * banco mockados (nenhum teste toca a rede).
  */
 

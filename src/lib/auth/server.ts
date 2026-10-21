@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import { createNeonAuth, type NeonAuth } from "@neondatabase/auth/next/server";
 
 /**
- * Neon Auth (Managed Better Auth) — instância única do SDK server-side.
+ * Neon Auth (Managed Better Auth) - instância única do SDK server-side.
  *
  * A instância é criada sob demanda (lazy) em vez de no escopo do módulo:
  * `createNeonAuth` valida as variáveis de ambiente na criação, e o import de
  * rota acontece no `next build`. Com a criação lazy o build não exige
- * NEON_AUTH_* configurados — a falha acontece na primeira requisição, com
+ * NEON_AUTH_* configurados - a falha acontece na primeira requisição, com
  * mensagem explícita.
  */
 let cachedAuth: NeonAuth | null = null;
@@ -38,7 +38,7 @@ export type AuthUser = {
 /**
  * Papel admin no Managed Better Auth vive no campo `role` do usuário
  * (plugin Admin; padrão "user"). O primeiro admin precisa ser promovido via
- * SQL no schema neon_auth — procedimento em docs/neon-migration/neon-auth-setup.md.
+ * SQL no schema neon_auth - procedimento em docs/neon-migration/neon-auth-setup.md.
  */
 function hasAdminRole(user: AuthUser | null | undefined): boolean {
   if (!user) return false;

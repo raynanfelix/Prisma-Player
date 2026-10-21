@@ -9,7 +9,7 @@ export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   // Contrato preservado para a UI (SecurityPanel): { factors, events }.
-  // O Managed Better Auth não expõe MFA (roadmap Neon) — factors é sempre
+  // O Managed Better Auth não expõe MFA (roadmap Neon) - factors é sempre
   // vazio e as mutations abaixo respondem 503 { error: "mfa_unavailable" }.
   const events = await listRecentSecurityEvents(userId, 20).catch(() => []);
   return NextResponse.json({ factors: [], events });

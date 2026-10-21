@@ -90,7 +90,7 @@ type PlanRow = Partial<PlanCapabilities> & {
  * Assinatura efetiva: status active E período vigente. `current_period_end`
  * nulo com status active é tratado como SEM acesso (fail-closed): todas as
  * escritas legítimas (webhook, ativação, admin) definem o fim do período, e
- * período aberto seria acesso vitalício silencioso — vetor de burla.
+ * período aberto seria acesso vitalício silencioso - vetor de burla.
  */
 export function isSubscriptionEffective(subscription: { status?: string | null; current_period_end?: string | null } | null): boolean {
   if (!subscription || subscription.status !== "active") return false;
@@ -100,7 +100,7 @@ export function isSubscriptionEffective(subscription: { status?: string | null; 
 
 /**
  * Rótulo de verdade para telas: difere `active` vigente de linha vencida.
- * Linha `active` com período passado/nulo exibe como vencida — foi exatamente
+ * Linha `active` com período passado/nulo exibe como vencida - foi exatamente
  * essa divergência (admin verde x produto bloqueado) que gerou o chamado.
  */
 export function subscriptionDisplayStatus(subscription: { status?: string | null; current_period_end?: string | null } | null): string {
@@ -173,7 +173,7 @@ export async function getAccountAccess(userId: string): Promise<AccountAccess> {
   ]);
   if (accessRow.length === 0) {
     // Self-heal: conta criada antes do bootstrap aplicacional (signup legado
-    // sem trigger) — inicializa access/trial e lê de novo. O "?? 'used'" do
+    // sem trigger) - inicializa access/trial e lê de novo. O "?? 'used'" do
     // toAccessRow permanece como defesa, não como fluxo normal.
     await ensureAccountBootstrap({ id: userId });
     accessRow.push(
@@ -216,7 +216,7 @@ export async function getAccountPlan(ownerId: string): Promise<AccountPlan> {
   ]);
 
   if (accessRow.length === 0) {
-    // Self-heal: mesmo contrato de getAccountAccess — conta sem linha de
+    // Self-heal: mesmo contrato de getAccountAccess - conta sem linha de
     // access (criada antes do bootstrap aplicacional) é inicializada e lida
     // de novo antes de qualquer decisão de "pode usar".
     await ensureAccountBootstrap({ id: ownerId });
@@ -286,7 +286,7 @@ export async function getStorageUsedBytes(ownerId: string): Promise<number> {
  * Plays únicos do mês corrente (sessões distintas com event_type=play).
  * Mesma definição do overview da conta. `included_plays` é cota com overage
  * cobrado por play excedente (billing_plans.play_overage_millicents), não
- * bloqueio — por isso esta função serve para medição/observabilidade, nunca
+ * bloqueio - por isso esta função serve para medição/observabilidade, nunca
  * para negar eventos legítimos sem decisão de produto.
  */
 export async function getMonthPlaysUsed(ownerId: string): Promise<number> {

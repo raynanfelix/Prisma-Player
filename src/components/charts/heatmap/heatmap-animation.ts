@@ -21,7 +21,7 @@ export const HEATMAP_LOADING_CHART_OPACITY = 1;
 /** Default max per-cell opacity during loading shimmer. */
 export const HEATMAP_DEFAULT_LOADING_CELL_MAX_OPACITY = 0.85;
 
-/** Default share of cells that participate in loading shimmer (0–1). */
+/** Default share of cells that participate in loading shimmer (0-1). */
 export const HEATMAP_DEFAULT_LOADING_CELL_RANDOMNESS = 1;
 
 /** Opacity for loading cells that do not participate in shimmer. */
@@ -124,7 +124,7 @@ export function computeHeatmapEnterFadeDelayMs({
   return random() * spreadMs;
 }
 
-/** Whether a cell participates in loading shimmer for a given randomness (0–1). */
+/** Whether a cell participates in loading shimmer for a given randomness (0-1). */
 export function heatmapLoadingCellParticipates(
   column: number,
   row: number,

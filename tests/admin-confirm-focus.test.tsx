@@ -9,7 +9,7 @@ import AdminConfirm from "@/components/admin/AdminConfirm";
 // Reproduz o bug reportado pelo dono: o input "Motivo" do AdminConfirm perdia
 // o foco a cada tecla ("não dá para digitar direito"). Causa: o efeito de foco
 // dependia da identidade de `onClose`, e todos os chamadores passam arrow
-// inline — cada setReason re-renderizava o pai, o efeito re-rodava e
+// inline - cada setReason re-renderizava o pai, o efeito re-rodava e
 // dialogRef.focus() roubava o foco do input de volta para o diálogo.
 // O harness abaixo replica o chamador real (arrow inline no JSX).
 
@@ -70,7 +70,7 @@ function typeInto(input: HTMLInputElement, value: string) {
   });
 }
 
-describe("AdminConfirm — foco e digitação", () => {
+describe("AdminConfirm - foco e digitação", () => {
   it("ao abrir, foca o diálogo (não o body)", async () => {
     await mount(<Harness />);
     const dialog = document.querySelector('[role="alertdialog"]');
@@ -78,7 +78,7 @@ describe("AdminConfirm — foco e digitação", () => {
     expect(document.activeElement).toBe(dialog);
   });
 
-  it("cada tecla no motivo mantém o foco no input — diálogo não rouba o foco", async () => {
+  it("cada tecla no motivo mantém o foco no input - diálogo não rouba o foco", async () => {
     await mount(<Harness />);
     const input = reasonInput();
     act(() => { input.focus(); });

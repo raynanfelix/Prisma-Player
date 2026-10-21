@@ -9,9 +9,9 @@ import { TeamPanel } from "@/features/account/components/TeamPanel";
 
 /**
  * Aba Equipe das Configurações (spec Impecável, item 4): UI reflete o
- * contrato REAL do /api/account/team — convites sempre pendentes (sem envio
+ * contrato REAL do /api/account/team - convites sempre pendentes (sem envio
  * de e-mail), assentos por plano com mensagem honesta "Seu plano permite
- * N assentos — faça upgrade" e o aceite dos convites endereçados ao próprio
+ * N assentos - faça upgrade" e o aceite dos convites endereçados ao próprio
  * usuário (sem este card, um convite nunca seria visto nem aceito).
  */
 
@@ -106,7 +106,7 @@ afterEach(() => {
   fetchMock.mockReset();
 });
 
-describe("TeamPanel — aba Equipe das Configurações", () => {
+describe("TeamPanel - aba Equipe das Configurações", () => {
   it("lista membros e convites pendentes com papel, status real e data de expiração", async () => {
     respondWith({
       seats: 5,
@@ -130,7 +130,7 @@ describe("TeamPanel — aba Equipe das Configurações", () => {
     renderPanel();
     await flush();
 
-    expect(text()).toContain("Seu plano permite 1 assento (só você) — faça upgrade para o Pro ou Escala para convidar.");
+    expect(text()).toContain("Seu plano permite 1 assento (só você) - faça upgrade para o Pro ou Escala para convidar.");
     expect(text()).not.toContain("Prime Growth"); // copy stale do catálogo antigo
     const inviteButton = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("Convidar"));
     expect(inviteButton?.disabled).toBe(true);
@@ -144,12 +144,12 @@ describe("TeamPanel — aba Equipe das Configurações", () => {
     renderPanel();
     await flush();
 
-    expect(text()).toContain("Seu plano permite 3 assentos — faça upgrade para convidar mais pessoas.");
+    expect(text()).toContain("Seu plano permite 3 assentos - faça upgrade para convidar mais pessoas.");
     const inviteButton = Array.from(document.querySelectorAll("button")).find((button) => button.textContent?.includes("Convidar"));
     expect(inviteButton?.disabled).toBe(true);
   });
 
-  it("convidar: POST com e-mail e papel — e a mensagem fala a verdade (criar conta), não 'enviado por e-mail'", async () => {
+  it("convidar: POST com e-mail e papel - e a mensagem fala a verdade (criar conta), não 'enviado por e-mail'", async () => {
     respondWith({ seats: 3, members: [member("m1", "dono@prisma.test")] });
     renderPanel();
     await flush();
@@ -200,7 +200,7 @@ describe("TeamPanel — aba Equipe das Configurações", () => {
     });
     await flush();
 
-    expect(notify).toHaveBeenCalledWith("Seu plano permite 3 assentos — faça upgrade para convidar mais pessoas.");
+    expect(notify).toHaveBeenCalledWith("Seu plano permite 3 assentos - faça upgrade para convidar mais pessoas.");
   });
 
   it("convites endereçados a ESTE usuário: card 'Convites para você' e aceite via POST action=accept", async () => {

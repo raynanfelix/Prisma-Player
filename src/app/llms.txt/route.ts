@@ -6,7 +6,7 @@ const { billingPlans } = schema;
 
 /**
  * Contexto legível por IAs (convenção llms.txt): lido do catálogo vigente,
- * nunca hardcodado — o preço aqui é sempre o preço real.
+ * nunca hardcodado - o preço aqui é sempre o preço real.
  */
 export async function GET() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
@@ -53,7 +53,7 @@ export async function GET() {
     "",
     ...plans.map(
       (plan) =>
-        `- ${plan.name} (${plan.slug}): ${formatBRL(plan.amount_cents)}/mês — ${plan.description}; ${plan.included_plays} plays, ${plan.storage_gb} GB, ${plan.prisma_ai_analyses} análises de IA, ${plan.team_seats} assento(s).`,
+        `- ${plan.name} (${plan.slug}): ${formatBRL(plan.amount_cents)}/mês - ${plan.description}; ${plan.included_plays} plays, ${plan.storage_gb} GB, ${plan.prisma_ai_analyses} análises de IA, ${plan.team_seats} assento(s).`,
     ),
     "",
     "## Links",

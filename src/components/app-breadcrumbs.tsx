@@ -6,7 +6,7 @@ import {
 	BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 
-/** Current page segment shown in the header — pass a nav item or `{ title, icon? }`. */
+/** Current page segment shown in the header - pass a nav item or `{ title, icon? }`. */
 export type AppBreadcrumbPage = {
 	title: string;
 	icon?: ReactNode;

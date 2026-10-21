@@ -19,11 +19,11 @@ function readTextField(value: unknown): string {
 }
 
 /**
- * POST /api/billing/churn-survey — registra o motivo do cancelamento na
+ * POST /api/billing/churn-survey - registra o motivo do cancelamento na
  * tabela `billing_churn_surveys` (spec Billing Completo, item 4, skill
  * churn-prevention: 1 pergunta, resposta opcional, zero atrito).
  *
- * Contrato de transparência: a pesquisa NUNCA bloqueia o cancelamento —
+ * Contrato de transparência: a pesquisa NUNCA bloqueia o cancelamento -
  * este endpoint só registra; o cancelamento de verdade acontece no
  * Customer Portal do Stripe (POST /api/billing/portal). Erro aqui segue
  * como falha honesta (o client avisa e libera o portal do mesmo jeito).
@@ -62,17 +62,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { headers: NO_STORE });
   } catch (error) {
     // Registro de churn perdido é sinal para o dono (não é crítico para o
-    // cliente — o fluxo de cancelamento segue no portal de qualquer forma).
+    // cliente - o fluxo de cancelamento segue no portal de qualquer forma).
     await alertOperations({
       title: "Pesquisa de churn falhou",
-      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      detail: `owner ${ownerId} - motivo: ${error instanceof Error ? error.message : "unknown"}`,
       kind: "billing_churn_survey_failed",
     });
     safeLog("billing_churn_survey_failed", { reason: error instanceof Error ? error.message : "unknown" });
     return NextResponse.json(
       {
         error: "survey_failed",
-        message: "Não foi possível registrar sua resposta — você pode continuar com o cancelamento.",
+        message: "Não foi possível registrar sua resposta - você pode continuar com o cancelamento.",
       },
       { status: 500, headers: NO_STORE },
     );

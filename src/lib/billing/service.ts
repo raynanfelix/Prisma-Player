@@ -12,7 +12,7 @@ const { billingPlans } = schema;
  *
  * O preço ANUAL não vive na tabela (só mensal): a fonte é o catálogo local
  * (mesmos valores da landing/Stripe, lookup `plano_<slug>_anual`). Plano
- * fora do catálogo recebe o preço de tabela honesto — 12× mensal, sem
+ * fora do catálogo recebe o preço de tabela honesto - 12× mensal, sem
  * desconto inventado.
  */
 export function toBillingPlan(row: typeof billingPlans.$inferSelect): BillingPlan {

@@ -7,7 +7,7 @@ import { act, type ReactElement } from "react";
 import UserActions from "@/components/admin/UserActions";
 
 // Bug reportado pelo dono: suspender conta em trial (sem linha de assinatura)
-// falhava com "Falhou: subscription_not_found" — a rota /api/admin/users/status
+// falhava com "Falhou: subscription_not_found" - a rota /api/admin/users/status
 // exige uma subscription para suspender. O correto é a UI não oferecer a ação
 // quando não há assinatura (estado honesto no lugar do botão).
 
@@ -52,7 +52,7 @@ function buttonTexts() {
   return [...document.querySelectorAll("button")].map((button) => button.textContent ?? "");
 }
 
-describe("UserActions — suspender depende de assinatura", () => {
+describe("UserActions - suspender depende de assinatura", () => {
   it("sem assinatura (subStatus null): não oferece Suspender e mostra estado honesto", async () => {
     await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus={null} />);
     openPanel();

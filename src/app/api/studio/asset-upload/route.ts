@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
   // Assets contam na quota do plano: sem isto, o storage de thumbnails e
   // legendas crescia fora do limite contratado. A listagem é best effort:
-  // erro aqui não libera upload ilimitado — o total de vídeos da conta já
+  // erro aqui não libera upload ilimitado - o total de vídeos da conta já
   // é somado por getStorageUsedBytes.
   const objects = await listR2Objects(`${account.accountOwnerId}/${videoId}/`, 100).catch(() => []);
   const assetsBytes = objects.reduce((total, object) => total + (Number.isFinite(object.size) && object.size > 0 ? object.size : 0), 0);

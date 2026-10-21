@@ -15,7 +15,7 @@ const { videoLiveSessions, subscriptions, videoEvents, intelligenceControls, vid
 /** Orçamento de tempo: o cron precisa terminar a limpeza mesmo com muitas contas. */
 const TIME_BUDGET_MS = 240_000;
 const CONCURRENCY = 5;
-/** Teto de linhas por passada de purge e de loops — mesma curva das RPCs legadas. */
+/** Teto de linhas por passada de purge e de loops - mesma curva das RPCs legadas. */
 const PURGE_BATCH_SIZE = 5000;
 const PURGE_MAX_LOOPS = 200;
 
@@ -156,7 +156,7 @@ async function expireOutdatedSubscriptions(ctx: MaintenanceContext): Promise<voi
 /**
  * Trial 100% (spec Billing Completo, item 5): marca `expired` nos trials
  * vencidos. O ACESSO já cai no `accessFrom` (trialActive exige trialEndsAt
- * futuro) — este update é a verdade do STATUS: sem ele a linha ficava
+ * futuro) - este update é a verdade do STATUS: sem ele a linha ficava
  * `active` para sempre e os painéis admin (finance/growth) contavam trial
  * vencido como ativo. Idempotente: linhas já expired não casam no filtro.
  */
@@ -173,8 +173,8 @@ const TRIAL_ENDING_SOON_DAYS = 3;
 
 /**
  * Trial 100% (spec Billing Completo, item 5): inbox não tinha aviso de fim
- * próximo — o usuário descobria o fim só quando o acesso caía. Insere um
- * recado único por trial (idempotente: actionUrl do aviso é exclusivo dele —
+ * próximo - o usuário descobria o fim só quando o acesso caía. Insere um
+ * recado único por trial (idempotente: actionUrl do aviso é exclusivo dele -
  * a mensagem de ativação não tem actionUrl) com o CTA para os planos.
  */
 export async function notifyTrialsEndingSoon(ctx: MaintenanceContext): Promise<void> {
@@ -198,7 +198,7 @@ export async function notifyTrialsEndingSoon(ctx: MaintenanceContext): Promise<v
         userId: row.userId,
         kind: "trial",
         title: "Seu teste termina em breve",
-        message: `Seu teste gratuito termina em ${days} dia${days === 1 ? "" : "s"} — nenhum cartão foi cobrado e nada é cobrado automaticamente. Para manter o acesso completo, escolha um plano quando quiser.`,
+        message: `Seu teste gratuito termina em ${days} dia${days === 1 ? "" : "s"} - nenhum cartão foi cobrado e nada é cobrado automaticamente. Para manter o acesso completo, escolha um plano quando quiser.`,
         actionLabel: "Ver planos",
         actionUrl: "/dashboard/billing",
       });
@@ -211,7 +211,7 @@ export async function notifyTrialsEndingSoon(ctx: MaintenanceContext): Promise<v
 
 /**
  * Reconciliação Stripe↔banco (spec Impecável, item 2): confere as linhas
- * locais contra o provedor e REGISTRA divergências para decisão humana —
+ * locais contra o provedor e REGISTRA divergências para decisão humana -
  * nunca corrige sozinho. Roda DEPOIS da expiração: linha active com período
  * vencido já virou expired, então o reconcile compara estados estáveis e o
  * caso "renovação perdida" aparece como divergência de status clara. Sem
@@ -252,7 +252,7 @@ async function expireTeamInvites(ctx: MaintenanceContext): Promise<void> {
 
 /**
  * Rollup diário (insert-only, idempotente): alimenta video_daily_stats com os
- * últimos `daysBack` dias. Mesma SQL da RPC `rollup_video_daily_stats` —
+ * últimos `daysBack` dias. Mesma SQL da RPC `rollup_video_daily_stats` -
  * purges destrutivos SÓ com env explícita; sem env, nada é apagado.
  */
 async function rollupDailyStats(daysBack: number): Promise<number> {
@@ -362,7 +362,7 @@ async function purgeOldPlayerEvents(days: number): Promise<number> {
 
 /**
  * Webhook payload: após o período operacional (piso de 7 dias), mantém
- * metadados e apaga o blob — equivalente a `scrub_old_webhook_payloads`.
+ * metadados e apaga o blob - equivalente a `scrub_old_webhook_payloads`.
  */
 async function scrubOldWebhookPayloads(days: number): Promise<number> {
   const floorDays = Math.max(7, days);

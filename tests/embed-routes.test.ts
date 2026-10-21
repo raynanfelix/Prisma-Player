@@ -138,7 +138,7 @@ function confirmedSessionRequest(id: string, options: Parameters<typeof sessionR
   });
 }
 
-/** Token de sessão "v1.<payload>.<hmac>" forjado com a MESMA secret do beforeAll — para variantes (exp vencida, claims trocados). */
+/** Token de sessão "v1.<payload>.<hmac>" forjado com a MESMA secret do beforeAll - para variantes (exp vencida, claims trocados). */
 function forgedSessionToken(claims: Record<string, unknown>): string {
   const payload = Buffer.from(JSON.stringify(claims), "utf8").toString("base64url");
   const signature = createHmac("sha256", "test-embed-origin-secret").update(payload).digest("base64url");
@@ -171,10 +171,10 @@ afterEach(() => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/embed/[id] — entrega da config do player                    */
+/* GET /api/embed/[id] - entrega da config do player                    */
 /* ------------------------------------------------------------------ */
 
-describe("GET /api/embed/[id] — acesso e publicação", () => {
+describe("GET /api/embed/[id] - acesso e publicação", () => {
   it("id não-UUID devolve 404 player_not_found (não 500), antes de qualquer IO", async () => {
     const response = await getEmbedConfig(embedRequest("/api/embed/not-a-uuid"), ctx("not-a-uuid"));
     expect(response.status).toBe(404);
@@ -182,7 +182,7 @@ describe("GET /api/embed/[id] — acesso e publicação", () => {
   });
 
   it("player inexistente ou não publicado devolve 404 (a query filtra published=true)", async () => {
-    // published=false: o banco (com o filtro da rota) não devolve linha —
+    // published=false: o banco (com o filtro da rota) não devolve linha -
     // não publicado e inexistente são indistinguíveis de fora (404).
     fake().state.selectRows["player_configs"] = [];
     const response = await getEmbedConfig(confirmedRequest(PLAYER_ID), ctx(PLAYER_ID));
@@ -206,7 +206,7 @@ describe("GET /api/embed/[id] — acesso e publicação", () => {
   });
 });
 
-describe("GET /api/embed/[id] — token de origem e prova de render (RM-02)", () => {
+describe("GET /api/embed/[id] - token de origem e prova de render (RM-02)", () => {
   it("sem originToken devolve 403 invalid_origin_token", async () => {
     const response = await getEmbedConfig(embedRequest(`/api/embed/${PLAYER_ID}`), ctx(PLAYER_ID));
     expect(response.status).toBe(403);
@@ -264,7 +264,7 @@ describe("GET /api/embed/[id] — token de origem e prova de render (RM-02)", ()
   });
 });
 
-describe("GET /api/embed/[id] — entrega", () => {
+describe("GET /api/embed/[id] - entrega", () => {
   it("devolve o contrato completo com URL assinada e eventToken amarrado ao render", async () => {
     fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { radius: 12 } })];
     const response = await getEmbedConfig(
@@ -300,7 +300,7 @@ describe("GET /api/embed/[id] — entrega", () => {
   });
 
   it("devolve o IP real do espectador quando o deploy repassa os headers (e só com exibição de IP ativa na marca d'água)", async () => {
-    // Review LOW-2: viewerIp é PII condicional — sai da rota apenas quando o
+    // Review LOW-2: viewerIp é PII condicional - sai da rota apenas quando o
     // dono ativou "Endereço IP" na marca d'água (watermarkShowIp: true).
     fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { watermarkShowIp: true } })];
     const response = await getEmbedConfig(
@@ -320,7 +320,7 @@ describe("GET /api/embed/[id] — entrega", () => {
   });
 
   it("drmSignedTokenEnabled ativo: viewerId/sessionId válidos mas SEM sessionToken é 403 (o bypass de UUIDs forjados morre)", async () => {
-    // Review MEDIUM: antes bastava o FORMATO dos ids — qualquer par de UUIDs
+    // Review MEDIUM: antes bastava o FORMATO dos ids - qualquer par de UUIDs
     // gerados no cliente era aprovado com originToken+cookie. Agora a
     // assinatura do servidor é obrigatória: ids válidos sem token não passam.
     fake().state.selectRows["player_configs"] = [playerConfigRow({ config: { drmSignedTokenEnabled: true } })];
@@ -398,7 +398,7 @@ describe("GET /api/embed/[id] — entrega", () => {
   });
 });
 
-describe("GET /api/embed/[id] — regras de tráfego do config", () => {
+describe("GET /api/embed/[id] - regras de tráfego do config", () => {
   const trafficRow = (config: Record<string, unknown>, headers: Record<string, string> = {}, query: Record<string, string> = {}) => {
     fake().state.selectRows["player_configs"] = [playerConfigRow({ config })];
     return getEmbedConfig(confirmedRequest(PLAYER_ID, { headers, query }), ctx(PLAYER_ID));
@@ -452,7 +452,7 @@ describe("GET /api/embed/[id] — regras de tráfego do config", () => {
   });
 });
 
-describe("GET /api/embed/[id] — limite de fluxos simultâneos", () => {
+describe("GET /api/embed/[id] - limite de fluxos simultâneos", () => {
   const streamRow = (headers: Record<string, string>, query: Record<string, string>) => {
     fake().state.selectRows["player_configs"] = [playerConfigRow({
       config: { limitConcurrentStreams: true, maxConcurrentStreams: 1 },
@@ -496,10 +496,10 @@ describe("GET /api/embed/[id] — limite de fluxos simultâneos", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /api/embed/[id]/session — mint do token de sessão do DRM         */
+/* POST /api/embed/[id]/session - mint do token de sessão do DRM         */
 /* ------------------------------------------------------------------ */
 
-describe("POST /api/embed/[id]/session — mint do sessionToken", () => {
+describe("POST /api/embed/[id]/session - mint do sessionToken", () => {
   it("id não-UUID devolve 404 player_not_found (não 500)", async () => {
     const response = await postEmbedSession(
       confirmedSessionRequest("not-a-uuid", { body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
@@ -584,7 +584,7 @@ describe("POST /api/embed/[id]/session — mint do sessionToken", () => {
 
   it("sessionToken assinado mas EXPIRADO não verifica (exp é checado)", async () => {
     // Forjado com a MESMA secret (beforeAll) e TTL vencido: assinatura
-    // válida, expiração vencida — a verificação precisa recusar.
+    // válida, expiração vencida - a verificação precisa recusar.
     const expired = forgedSessionToken({ pid: PLAYER_ID, vid: VIEWER_ID, sid: SESSION_ID, n: NONCE, exp: Date.now() - 1000 });
     const claims = { playerId: PLAYER_ID, viewerId: VIEWER_ID, sessionId: SESSION_ID, nonce: NONCE };
     expect(verifyEmbedSessionToken(expired, claims)).toBe(false);
@@ -602,11 +602,11 @@ describe("POST /api/embed/[id]/session — mint do sessionToken", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* GET /api/embed/[id]/manifest — config pública cacheável              */
+/* GET /api/embed/[id]/manifest - config pública cacheável              */
 /* ------------------------------------------------------------------ */
 
 describe("GET /api/embed/[id]/manifest", () => {
-  // O manifest é PÚBLICO por player-id: nenhum originToken/cookie é preciso —
+  // O manifest é PÚBLICO por player-id: nenhum originToken/cookie é preciso -
   // a requisição abaixo é a mínima que qualquer visitante faria.
   const manifestRequest = (options: Parameters<typeof embedRequest>[1] = {}) =>
     getEmbedManifest(embedRequest(`/api/embed/${PLAYER_ID}/manifest`, options), ctx(PLAYER_ID));
@@ -710,7 +710,7 @@ describe("GET /api/embed/[id]/manifest", () => {
     expect(body.posterUrl).toBe(`https://r2.signed.test/${OWNER}/thumb.png`);
     // "assets" não vaza no config sanitizado: o poster sai como campo próprio.
     expect(body.config).not.toHaveProperty("assets");
-    // O manifest assina SÓ o poster — a fonte do vídeo continua exclusiva
+    // O manifest assina SÓ o poster - a fonte do vídeo continua exclusiva
     // do endpoint dinâmico.
     const signedKeys = vi.mocked(signR2ReadUrl).mock.calls.map(([key]) => key);
     expect(signedKeys).toEqual([`${OWNER}/thumb.png`]);

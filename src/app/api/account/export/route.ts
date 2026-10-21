@@ -19,11 +19,11 @@ const {
 } = schema;
 
 /**
- * Exportação dos dados pessoais do titular (LGPD, art. 18, V — portabilidade).
+ * Exportação dos dados pessoais do titular (LGPD, art. 18, V - portabilidade).
  *
  * Devolve apenas dados do próprio usuário, em JSON legível. Não inclui eventos
  * de espectadores das VSLs: esses são dados de terceiros, dos quais o cliente é
- * controlador e a Prisma operadora — a exportação deles sai pelo relatório de
+ * controlador e a Prisma operadora - a exportação deles sai pelo relatório de
  * público, não por aqui.
  */
 
@@ -32,7 +32,7 @@ const camelToSnake = (key: string) => key.replace(/[A-Z]/g, (letter) => `_${lett
 /**
  * Converte uma linha Drizzle para o dump snake_case do export: renomeia só as
  * chaves de topo (colunas reais) e serializa timestamps. Valores jsonb (ex.:
- * `player_configs.config`) passam intactos — são dados do usuário, não colunas.
+ * `player_configs.config`) passam intactos - são dados do usuário, não colunas.
  */
 function toJsonRow(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(

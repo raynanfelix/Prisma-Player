@@ -124,7 +124,7 @@ export default function LoginPage() {
         tone: "error",
         message,
         // Better Auth rejeita sign-in de e-mail não verificado (mensagem pode
-        // variar — trate genericamente por substring 'verif'). Oferece a tela
+        // variar - trate genericamente por substring 'verif'). Oferece a tela
         // de verificação por código com o e-mail já preenchido.
         action: /verif/i.test(message)
           ? { label: "Verificar e-mail", href: `/signup?verify=1&email=${encodeURIComponent(normalizedEmail)}` }
@@ -218,7 +218,7 @@ export default function LoginPage() {
         </Button>
         <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500">
           <LockKeyhole size={12} className="text-emerald-600" aria-hidden />
-          Conexão segura — suas credenciais são enviadas por HTTPS.
+          Conexão segura - suas credenciais são enviadas por HTTPS.
         </p>
       </form>
     </AuthLayout>

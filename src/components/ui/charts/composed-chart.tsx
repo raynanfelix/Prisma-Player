@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ComposedChart composável sobre recharts — Prisma Player.
+ * ComposedChart composável sobre recharts - Prisma Player.
  *
  * Base: padrão composável do ecossistema kokonutui/21st.dev (shadcn-style),
  * reconstruído sobre recharts (sem libs novas) e adaptado aos tokens da
@@ -58,7 +58,7 @@ export interface ComposedChartProps {
   yTickFormatter?: (value: number) => string;
   /** Formata os valores no tooltip (ex.: % para taxas, pt-BR para contagens). */
   valueFormatter?: (value: number, name: string) => string;
-  /** Eixo Y secundário (ex.: taxa 0–100%). */
+  /** Eixo Y secundário (ex.: taxa 0-100%). */
   rightAxis?: {
     domain?: [number | "auto", number | "auto"];
     tickFormatter?: (value: number) => string;

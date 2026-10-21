@@ -350,7 +350,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(dbState.profileUpdates).toEqual([]);
   });
 
-  it("invoice.payment_failed → status past_due (não cancela — dunning é do Stripe)", async () => {
+  it("invoice.payment_failed → status past_due (não cancela - dunning é do Stripe)", async () => {
     const event = webhookEvent("invoice.payment_failed", {
       id: "in_failed_001",
       parent: { type: "subscription", subscription_details: { subscription: "sub_001", metadata: null } },
@@ -396,7 +396,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(alertCalls[0]!.detail).toContain("past_due");
   });
 
-  it("charge.refunded → SÓ alerta (sem suspensão — reativação é decisão manual do dono)", async () => {
+  it("charge.refunded → SÓ alerta (sem suspensão - reativação é decisão manual do dono)", async () => {
     dbState.profilesRows = [{ id: "owner-1" }];
     dbState.subscriptionsRows = [{ id: "sub_001" }];
     stripeState.chargesRetrieve = async () => ({ id: "ch_002", customer: "cus_001", payment_intent: null });

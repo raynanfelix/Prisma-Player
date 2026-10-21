@@ -104,7 +104,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const actionLabel: Record<string, string> = { plan_change: "Troca de plano", subscription_suspend: "Suspensão", subscription_reactivate: "Reativação", trial_extend: "Trial +", trial_reset: "Trial reset", credit_adjust: "Créditos", support_case_opened: "Caso aberto", support_case_updated: "Caso atualizado", support_note_added: "Nota", team_role_changed: "Equipe" };
 
   return <div>
-    <AdminHeader title="Visão geral" description={`Negócio, atenção e atividade — últimos ${days} dias. Receita = checkouts pagos; MRR fica no Financeiro.`} />
+    <AdminHeader title="Visão geral" description={`Negócio, atenção e atividade - últimos ${days} dias. Receita = checkouts pagos; MRR fica no Financeiro.`} />
     <div className="mb-5 flex flex-wrap items-center gap-2">
       {PERIODS.map((option) => <Link key={option} href={option === 30 ? "/admin" : `/admin?period=${option}`} className={`rounded-xl px-3.5 py-2 text-[12px] font-semibold ${days === option ? "bg-selected text-selected-foreground" : "border border-slate-200 dark:border-zinc-800"}`}>{option === 30 && params.period === undefined ? "30 dias" : `${option}d`}</Link>)}
     </div>
@@ -121,7 +121,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {attention.length === 0 && <p className="text-[13px] themeable-text-ink-muted-48">Nada pendente: webhooks fluindo, sem inadimplência nem processamento travado.</p>}</div></AdminPanel></div>
 
     <section className="mt-6 grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
-      <AdminPanel title="Receita recebida" description={`Checkouts pagos por dia — últimos ${days} dias.`}>
+      <AdminPanel title="Receita recebida" description={`Checkouts pagos por dia - últimos ${days} dias.`}>
         <AdminRevenueChart series={revenueSeries} totalCents={revenue} periodLabel={`Últimos ${days} dias`} />
       </AdminPanel>
       <AdminPanel title="Checkouts por status" description="Distribuição registrada na cobrança.">
@@ -129,7 +129,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       </AdminPanel>
     </section>
     <div className="mt-6 grid gap-5 xl:grid-cols-2">
-      <AdminPanel title="Atividade administrativa" description="Últimas 10 ações da equipe."><div className="space-y-2 p-5 text-[12px]">{audit.map((item, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="font-semibold themeable-text-ink">{actionLabel[item.action] ?? item.action}</span><span className="truncate themeable-text-ink-muted-48">{actorEmail.get(item.adminUserId) ?? "—"} · {item.createdAt.toLocaleString("pt-BR")}</span></div>)}
+      <AdminPanel title="Atividade administrativa" description="Últimas 10 ações da equipe."><div className="space-y-2 p-5 text-[12px]">{audit.map((item, index) => <div key={index} className="flex items-center justify-between gap-2"><span className="font-semibold themeable-text-ink">{actionLabel[item.action] ?? item.action}</span><span className="truncate themeable-text-ink-muted-48">{actorEmail.get(item.adminUserId) ?? "-"} · {item.createdAt.toLocaleString("pt-BR")}</span></div>)}
         {audit.length === 0 && <p className="themeable-text-ink-muted-48">Nenhuma ação registrada no período.</p>}</div></AdminPanel>
       <AdminPanel title="Acesso rápido" description="Fluxos reais."><div className="grid gap-2 p-5 sm:grid-cols-2">{[
         { href: "/admin/users", label: "Buscar conta", icon: Search },

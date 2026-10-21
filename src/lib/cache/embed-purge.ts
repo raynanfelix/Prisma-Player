@@ -3,7 +3,7 @@ import "server-only";
  * Helper para invalidar o cache de manifest na Cloudflare (borda)
  * quando um player_config é atualizado.
  *
- * Fase 1 do System Design Scale — Seção 6 (tag de cache) do
+ * Fase 1 do System Design Scale - Seção 6 (tag de cache) do
  * docs/SYSTEM_DESIGN_SCALE.md.
  *
  * Variáveis de ambiente necessárias:

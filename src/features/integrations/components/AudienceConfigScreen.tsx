@@ -73,7 +73,7 @@ export default function AudienceConfigScreen({ app, vsls, capabilities, onBack }
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Gerar perfil de audiência</CardTitle>
-          <CardDescription>Escolha a VSL e o grupo de espectadores — o perfil é montado na hora com os sinais reais do player.</CardDescription>
+          <CardDescription>Escolha a VSL e o grupo de espectadores - o perfil é montado na hora com os sinais reais do player.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {!allowed && <PlanRequiredNotice />}

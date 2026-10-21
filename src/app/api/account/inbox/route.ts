@@ -109,7 +109,7 @@ export async function GET() {
       });
     } catch {
       // Seed é melhor-esforço: falhou (ex.: lock indisponível), o próximo GET
-      // tenta de novo — sem duplicar, pois o re-count acima é a guarda.
+      // tenta de novo - sem duplicar, pois o re-count acima é a guarda.
     }
     const fresh = await fetchInbox(userId);
     return NextResponse.json({ items: fresh.map(toInboxItem) }, { headers: { "cache-control": "no-store" } });

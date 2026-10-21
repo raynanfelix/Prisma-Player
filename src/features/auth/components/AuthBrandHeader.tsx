@@ -15,7 +15,7 @@ export function AuthBrandHeader() {
     <div className="flex justify-center">
       <Link
         href="/"
-        aria-label="Prisma Player — página inicial"
+        aria-label="Prisma Player - página inicial"
         className="inline-flex transition-transform hover:scale-[1.02]"
       >
         <Logo />

@@ -57,7 +57,7 @@ export function SupportNoteForm({ caseId }: { caseId: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <form onSubmit={(event) => { event.preventDefault(); if (busy || body.trim().length < 1) return; setBusy(true); post("/api/admin/support/notes", { caseId, body }).then(() => { setBody(""); router.refresh(); }).catch(() => undefined).finally(() => setBusy(false)); }} className="flex gap-2 p-5">
-      <input value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} placeholder="Nota interna — nada aqui é enviado ao cliente" className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-xs dark:border-zinc-800 dark:bg-card" aria-label="Nota interna" />
+      <input value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} placeholder="Nota interna - nada aqui é enviado ao cliente" className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-xs dark:border-zinc-800 dark:bg-card" aria-label="Nota interna" />
       <button type="submit" disabled={busy || !body.trim()} className="h-10 rounded-xl bg-selected px-4 text-xs font-bold text-selected-foreground disabled:opacity-40">Anotar</button>
     </form>
   );
@@ -69,7 +69,7 @@ export function SupportReplyForm({ caseId }: { caseId: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <form onSubmit={(event) => { event.preventDefault(); if (busy || body.trim().length < 1) return; setBusy(true); post("/api/admin/support/notes", { caseId, body, reply: true }).then(() => { setBody(""); router.refresh(); }).catch(() => undefined).finally(() => setBusy(false)); }} className="flex gap-2 px-5 pb-5">
-      <input value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} placeholder="Responder ao cliente — ele vê esta mensagem" className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-xs dark:border-zinc-800 dark:bg-card" aria-label="Responder ao cliente" />
+      <input value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} placeholder="Responder ao cliente - ele vê esta mensagem" className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-xs dark:border-zinc-800 dark:bg-card" aria-label="Responder ao cliente" />
       <button type="submit" disabled={busy || !body.trim()} className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-bold dark:border-zinc-800">Responder</button>
     </form>
   );

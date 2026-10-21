@@ -12,12 +12,12 @@ import { CancelSurvey } from "./CancelSurvey";
 
 /**
  * Tela Faturamento (spec Billing Completo, item 3): assinatura atual,
- * método de pagamento e faturas — tudo REAL, vindo das rotas
+ * método de pagamento e faturas - tudo REAL, vindo das rotas
  * /api/billing/invoices e /api/billing/payment-method (guard manage).
  *
  * A assinatura atual vem do overview que a página de Configurações já
  * carrega (banco: subscriptions + billing_plans). Troca de cartão e
- * cancelamento pertencem ao Customer Portal do Stripe — nunca aqui.
+ * cancelamento pertencem ao Customer Portal do Stripe - nunca aqui.
  */
 
 const SUB_STATUS: Record<string, { label: string; className: string }> = {
@@ -50,7 +50,7 @@ const BRAND_LABELS: Record<string, string> = {
 };
 
 function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
+  return iso ? new Date(iso).toLocaleDateString("pt-BR") : "-";
 }
 
 function formatCardExpiry(card: BillingCard): string {
@@ -79,7 +79,7 @@ export function BillingSettingsTab({
 
   const load = useCallback(async () => {
     // Regra react-hooks/set-state-in-effect: todo setState acontece APÓS o
-    // primeiro await — nada síncrono no corpo do efeito que o chama.
+    // primeiro await - nada síncrono no corpo do efeito que o chama.
     try {
       const [invoicesData, cardData] = await Promise.all([
         accountSettingsService.getInvoices(),
@@ -95,14 +95,14 @@ export function BillingSettingsTab({
 
   useEffect(() => {
     // load é async: todo setState acontece APÓS o primeiro await (nenhum
-    // setState síncrono no corpo do efeito) — a regra não atravessa a
+    // setState síncrono no corpo do efeito) - a regra não atravessa a
     // chamada de função (mesmo padrão do TeamPanel).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
   async function retryLoad() {
-    // setState em event handler (não em efeito) — o carregamento vira skeleton.
+    // setState em event handler (não em efeito) - o carregamento vira skeleton.
     setStatus("loading");
     await load();
   }
@@ -124,7 +124,7 @@ export function BillingSettingsTab({
   }
 
   // Verdade efetiva vem do SERVIDOR (access.subscriptionActive =
-  // isSubscriptionEffective — status active E período vigente). Reler o
+  // isSubscriptionEffective - status active E período vigente). Reler o
   // relógio no client seria renderização impura e duplicaria a regra de
   // negócio; linha `active` com período vencido exibe como "Expirada".
   const subscription = overview.subscription;
@@ -152,7 +152,7 @@ export function BillingSettingsTab({
       {/* Assinatura atual */}
       <SettingsCard
         title="Assinatura atual"
-        description="Plano, situação e o fim do período vigente — do banco de assinaturas do Prisma Player."
+        description="Plano, situação e o fim do período vigente - do banco de assinaturas do Prisma Player."
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -171,7 +171,7 @@ export function BillingSettingsTab({
       {/* Método de pagamento */}
       <SettingsCard
         title="Método de pagamento"
-        description="O cartão salvo no Stripe usado nas renovações — a troca é feita no portal de cobrança."
+        description="O cartão salvo no Stripe usado nas renovações - a troca é feita no portal de cobrança."
       >
         {status === "ready" ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -193,7 +193,7 @@ export function BillingSettingsTab({
                   <CreditCard className="size-5" aria-hidden />
                 </span>
                 <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-                  Nenhum método salvo — ao assinar, seu cartão fica salvo no Stripe.
+                  Nenhum método salvo - ao assinar, seu cartão fica salvo no Stripe.
                 </p>
               </div>
             )}
@@ -215,13 +215,13 @@ export function BillingSettingsTab({
       {/* Faturas */}
       <SettingsCard
         title="Faturas"
-        description="Últimas 12 faturas — o PDF hospedado abre direto no Stripe."
+        description="Últimas 12 faturas - o PDF hospedado abre direto no Stripe."
       >
         {status !== "ready" ? (
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Carregando faturas…</p>
         ) : (invoices?.length ?? 0) === 0 ? (
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            Nenhuma fatura ainda — suas compras via Stripe aparecem aqui automaticamente.
+            Nenhuma fatura ainda - suas compras via Stripe aparecem aqui automaticamente.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-800">
@@ -268,7 +268,7 @@ export function BillingSettingsTab({
                             <Download size={14} aria-hidden /> PDF
                           </a>
                         ) : (
-                          <span className="text-slate-400 dark:text-zinc-500">—</span>
+                          <span className="text-slate-400 dark:text-zinc-500">-</span>
                         )}
                       </td>
                     </tr>

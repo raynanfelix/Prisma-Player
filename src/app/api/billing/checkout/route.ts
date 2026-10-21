@@ -17,11 +17,11 @@ const BILLING_PERIODS = new Set(["monthly", "annual"]);
 const NO_STORE = { "cache-control": "no-store" } as const;
 
 /**
- * POST /api/billing/checkout — cria a Checkout Session (mode subscription)
+ * POST /api/billing/checkout - cria a Checkout Session (mode subscription)
  * do plano escolhido e devolve `{ url }` para o client redirecionar.
  *
  * Regras da spec/skills travadas aqui:
- * - `payment_method_types` NUNCA é enviado (dynamic payment methods — o
+ * - `payment_method_types` NUNCA é enviado (dynamic payment methods - o
  *   Dashboard decide Pix/cartão/Link por cliente).
  * - `automatic_tax` desligado (Stripe Tax não cobre o Brasil).
  * - OwnerId no `client_reference_id` (campo oficial); metadata só como
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "price_not_found",
-          message: `Preço plano_${planSlug}_${billing} ainda não existe no Stripe — rode scripts/stripe-seed.mjs com a sua API key.`,
+          message: `Preço plano_${planSlug}_${billing} ainda não existe no Stripe - rode scripts/stripe-seed.mjs com a sua API key.`,
         },
         { status: 502, headers: NO_STORE },
       );
@@ -84,15 +84,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: session.url }, { headers: NO_STORE });
   } catch (error) {
     // Alerta operacional (hardening item 5): cliente com cartão na mão e
-    // Stripe fora é receita perdida em silêncio — o dono precisa saber.
+    // Stripe fora é receita perdida em silêncio - o dono precisa saber.
     await alertOperations({
       title: "Checkout de plano falhou",
-      detail: `owner ${ownerId} — motivo: ${error instanceof Error ? error.message : "unknown"}`,
+      detail: `owner ${ownerId} - motivo: ${error instanceof Error ? error.message : "unknown"}`,
       kind: "billing_checkout_failed",
     });
     if (!process.env.STRIPE_SECRET_KEY) {
       return NextResponse.json(
-        { error: "stripe_unavailable", message: "Stripe não configurado — defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
+        { error: "stripe_unavailable", message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
         { status: 503, headers: NO_STORE },
       );
     }

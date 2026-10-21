@@ -11,7 +11,7 @@ import { ApiError } from "@/services/http/client";
 
 /**
  * Tela Faturamento (spec Billing Completo, item 3) + pesquisa de churn
- * (item 4): render com o serviço mockado — dados reais das rotas, estados
+ * (item 4): render com o serviço mockado - dados reais das rotas, estados
  * vazios honestos e o fluxo completo de cancelamento (survey → oferta →
  * portal; a pesquisa NUNCA bloqueia o cancelamento).
  */
@@ -77,7 +77,7 @@ function renderSurvey(active = true): Root {
   return root;
 }
 
-/** React rastreia o value do input — setter nativo + evento input. */
+/** React rastreia o value do input - setter nativo + evento input. */
 function setValue(element: HTMLInputElement | HTMLTextAreaElement, value: string): void {
   const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")!.set!;
   setter.call(element, value);
@@ -108,7 +108,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("BillingSettingsTab — tela Faturamento (item 3)", () => {
+describe("BillingSettingsTab - tela Faturamento (item 3)", () => {
   it("assinatura ativa do Stripe: plano, status, cartão e faturas reais renderizam", async () => {
     renderOverview(OVERVIEW_ACTIVE_STRIPE);
     await act(async () => {
@@ -171,7 +171,7 @@ describe("BillingSettingsTab — tela Faturamento (item 3)", () => {
   });
 });
 
-describe("CancelSurvey — pesquisa de churn + oferta honesta (item 4)", () => {
+describe("CancelSurvey - pesquisa de churn + oferta honesta (item 4)", () => {
   it("inativo → não renderiza nada", () => {
     renderSurvey(false);
     expect(document.querySelector("button")).toBeNull();
@@ -234,7 +234,7 @@ describe("CancelSurvey — pesquisa de churn + oferta honesta (item 4)", () => {
     });
 
     expect(norm(document.body.textContent ?? "")).toContain("prefere mudar de plano");
-    expect(notifyMock).toHaveBeenCalledWith("Não foi possível registrar sua resposta — pode continuar com o cancelamento.");
+    expect(notifyMock).toHaveBeenCalledWith("Não foi possível registrar sua resposta - pode continuar com o cancelamento.");
   });
 
   it("CTAs da oferta chamam o portal; erro do portal vira aviso honesto", async () => {

@@ -150,7 +150,7 @@ afterEach(() => {
 });
 
 describe("POST /api/billing/checkout (plano)", () => {
-  it("cria session subscription e devolve { url } — sem payment_method_types (dynamic methods)", async () => {
+  it("cria session subscription e devolve { url } - sem payment_method_types (dynamic methods)", async () => {
     const response = await post("/api/billing/checkout", { planSlug: "pro", billing: "monthly" });
     const body = (await response.json()) as { url: string };
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 /**
  * Loader embed servido por /api/player-loader/[id]. Carrega os pixels de
- * browser (Meta/Google/TikTok) usando apenas os IDs públicos — tokens nunca
+ * browser (Meta/Google/TikTok) usando apenas os IDs públicos - tokens nunca
  * entram aqui. Em conversões, o transaction_id viaja como eventID (Meta) /
  * event_id (TikTok): a MESMA chave que o CAPI server-side
  * (services/ads/server-events) envia, para as plataformas deduplicarem

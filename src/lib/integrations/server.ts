@@ -8,10 +8,10 @@ const { accountIntegrations } = schema;
 
 /**
  * Integrações por CONTA (App Store de integrações). Fonte única de verdade:
- * tokens/chaves ficam aqui (server-side) — o client só vê status e eventos.
+ * tokens/chaves ficam aqui (server-side) - o client só vê status e eventos.
  * MÚLTIPLAS INSTÂNCIAS por provider: o dono pode cadastrar 5 domínios, 5
- * webhooks de Discord, N pixels — cada instância tem `instanceId` + `name`.
- * Vínculo pixel ↔ VSLs: `vslIds` (array de IDs de VSL) por instância —
+ * webhooks de Discord, N pixels - cada instância tem `instanceId` + `name`.
+ * Vínculo pixel ↔ VSLs: `vslIds` (array de IDs de VSL) por instância -
  * 1 pixel em N VSLs, N pixels em 1 VSL, combinações livres.
  */
 
@@ -36,7 +36,7 @@ export function isIntegrationProvider(value: unknown): value is IntegrationProvi
 
 /**
  * Campos de config que NUNCA saem do servidor com o valor cru: tokens de API,
- * API secrets e a URL de webhook (Discord/Telegram — quem tem a URL posta no
+ * API secrets e a URL de webhook (Discord/Telegram - quem tem a URL posta no
  * canal/bot do dono, então ela é um segredo operacional). A UI marca os mesmos
  * campos com `secret: true` no store-data; o teste de consistência em
  * tests/integrations-route.test.ts trava as duas listas juntas.
@@ -64,7 +64,7 @@ function isFilledValue(value: unknown): boolean {
 /**
  * Máscara para a fronteira cliente (GET /api/integrations e a page do
  * Marketplace): todo campo secreto sai como `""`; a resposta ganha
- * `hasToken`/`hasWebhookUrl` para a UI avisar "•••• preenchido — cole para
+ * `hasToken`/`hasWebhookUrl` para a UI avisar "•••• preenchido - cole para
  * trocar". O valor cru continua no banco (o embed/CAPI lê direto daqui de
  * dentro) e volta para a instância via merge do upsert, nunca via resposta.
  */
@@ -139,7 +139,7 @@ export function sanitizeIntegrationConfig(provider: IntegrationProvider, raw: un
   return {};
 }
 
-/** Eventos selecionáveis: { play: true, progress: false, … } — só chaves conhecidas. */
+/** Eventos selecionáveis: { play: true, progress: false, … } - só chaves conhecidas. */
 function sanitizeEvents(raw: unknown): Record<string, boolean> | null {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -154,7 +154,7 @@ function sanitizeEvents(raw: unknown): Record<string, boolean> | null {
 /**
  * Metadados do "Testar conexão" (Sprint 1 Pixel Verdadeiro): quando o dono
  * testa uma instância salva, o PUT normal chega com
- * config.lastVerifiedAt (ISO) + config.lastVerifyOk — preservados aqui para
+ * config.lastVerifiedAt (ISO) + config.lastVerifyOk - preservados aqui para
  * o badge "Verificada" da lista e da vitrine. Um re-save sem testar de novo
  * mantém os metadados anteriores (o dono continua vendo a última verificação).
  */
@@ -168,7 +168,7 @@ function withVerifyMeta(config: Record<string, unknown>, input: Record<string, u
   return config;
 }
 
-/** Nome de instância válido: 1–80 caracteres visíveis. */
+/** Nome de instância válido: 1-80 caracteres visíveis. */
 export function sanitizeInstanceName(raw: unknown): string {
   if (typeof raw !== "string") return "Principal";
   const clean = raw.trim().slice(0, 80);
@@ -182,7 +182,7 @@ export function sanitizeInstanceId(raw: unknown): string {
   return clean || "default";
 }
 
-/** vslIds válidos: array de strings sem duplicatas (o dono só vincula VSLs dele — a rota confere posse). */
+/** vslIds válidos: array de strings sem duplicatas (o dono só vincula VSLs dele - a rota confere posse). */
 export function sanitizeVslIds(raw: unknown): string[] | null {
   if (!Array.isArray(raw)) return null;
   const ids = raw.filter((item): item is string => typeof item === "string" && /^[0-9a-f-]{10,64}$/i.test(item.trim())).map((item) => item.trim());
@@ -235,7 +235,7 @@ export async function getIntegration(ownerId: string, provider: IntegrationProvi
 /**
  * Merge dos campos secretos no upsert (mesmo modelo do withVerifyMeta, para
  * valores): como o GET nunca devolve o valor cru, a edição chega com o campo
- * vazio — campo vazio/ausente MANTÉM o valor salvo da instância; campo
+ * vazio - campo vazio/ausente MANTÉM o valor salvo da instância; campo
  * preenchido substitui. Sem instância existente não há o que preservar.
  */
 async function mergeSecretConfig(
@@ -314,7 +314,7 @@ export async function deleteIntegration(ownerId: string, provider: IntegrationPr
 
 /**
  * Resolução para o EMBED: as integrações ATIVAS de uma VSL (vsl_ids contém o
- * id da VSL), de QUALQUER instância — todas as fatias de pixel/webhook ativas
+ * id da VSL), de QUALQUER instância - todas as fatias de pixel/webhook ativas
  * para o vídeo.
  */
 export async function resolveIntegrationsForVideo(ownerId: string, videoId: string): Promise<IntegrationRow[]> {

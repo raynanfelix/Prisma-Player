@@ -9,7 +9,7 @@ const { supportCases } = schema;
 
 /**
  * Tickets do cliente: abre caso vinculado a si mesmo. Sem acesso a casos
- * alheios — o user_id vem da sessão, nunca do body.
+ * alheios - o user_id vem da sessão, nunca do body.
  */
 export async function POST(request: Request) {
   const gate = await guard(request, { csrf: true });

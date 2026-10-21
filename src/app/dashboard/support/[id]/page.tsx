@@ -27,7 +27,7 @@ type NoteEntry = { divider: string } | { note: SupportNoteRow };
 /**
  * Agrupamento por dia extraído do JSX: reatribuir `lastDay` durante o render
  * disparava o lint react-compiler ("Cannot reassign variable after render
- * completes"). Função pura no escopo do módulo — mesmo output do flatMap
+ * completes"). Função pura no escopo do módulo - mesmo output do flatMap
  * original (divisor na virada de dia, na ordem das notas).
  */
 function groupNotesByDay(notes: SupportNoteRow[], dayLabel: (date: Date) => string): NoteEntry[] {
@@ -90,7 +90,7 @@ export default async function SupportDetailPage({ params }: { params: Promise<{ 
     <header><p className="text-[11px] font-semibold uppercase tracking-[.14em] text-prisma-blue dark:text-white">Ticket</p><h1 className="mt-1 text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">{item.subject}</h1><p className="mt-1 text-[12px] themeable-text-ink-muted-48">{statusLabel[item.status] ?? item.status} · {item.category} · prioridade {item.priority}{lastReply ? ` · equipe respondeu em ${lastReply.toLocaleString("pt-BR")}` : ""}</p></header>
     <section aria-label="Conversa" className="space-y-3">
       {notes.length === 0 ? (
-        <p className="rounded-2xl border p-5 text-center text-[13px] themeable-border-hairline themeable-text-ink-muted-48">Recebemos seu ticket. A equipe responde aqui mesmo — pode escrever abaixo se lembrar de mais detalhes.</p>
+        <p className="rounded-2xl border p-5 text-center text-[13px] themeable-border-hairline themeable-text-ink-muted-48">Recebemos seu ticket. A equipe responde aqui mesmo - pode escrever abaixo se lembrar de mais detalhes.</p>
       ) : (
         <MessageScrollerProvider>
           <MessageScroller className="h-[min(65dvh,560px)] rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-card">

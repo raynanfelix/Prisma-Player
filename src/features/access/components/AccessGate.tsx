@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { LockKeyhole, LoaderCircle, Sparkles } from "lucide-react";
 
 // Rotas livres de plano/trial no dashboard: billing e settings são o óbvio;
-// inbox e suporte (ajuda) também — o backend já as trata como livres
+// inbox e suporte (ajuda) também - o backend já as trata como livres
 // (/api/account/inbox e /api/support/* sem exigência de plano). O usuário
 // precisa conseguir ler mensagens da equipe e pedir ajuda mesmo sem plano.
 const FREE_ROUTES = ["/dashboard/billing", "/dashboard/settings", "/dashboard/inbox", "/dashboard/support"];
