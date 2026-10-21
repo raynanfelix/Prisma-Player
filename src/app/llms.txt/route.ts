@@ -1,71 +1,49 @@
-import { NextResponse } from "next/server";
-import { asc, eq } from "drizzle-orm";
-import { db, schema } from "@/lib/db";
-
-const { billingPlans } = schema;
+const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
 
 /**
- * Contexto legível por IAs (convenção llms.txt): lido do catálogo vigente,
- * nunca hardcodado - o preço aqui é sempre o preço real.
+ * Contexto legível por IAs (convenção llms.txt) - item 3 do relatório
+ * "Is Agentic" / Ora. Conteúdo estático e honesto: descreve o produto real,
+ * quando usar (e quando NÃO usar) e aponta os recursos de descoberta. Os
+ * valores vigentes de planos vivem no catálogo do banco e são expostos em
+ * /pricing - este arquivo nunca hardcoda preço (ele envelheceria).
  */
-export async function GET() {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
-  let plans: Array<{ slug: string; name: string; description: string; amount_cents: number; included_plays: number; storage_gb: number; prisma_ai_analyses: number; team_seats: number }> = [];
-  try {
-    const rows = await db
-      .select({
-        slug: billingPlans.slug,
-        name: billingPlans.name,
-        description: billingPlans.description,
-        amountCents: billingPlans.amountCents,
-        includedPlays: billingPlans.includedPlays,
-        storageGb: billingPlans.storageGb,
-        prismaAiAnalyses: billingPlans.prismaAiAnalyses,
-        teamSeats: billingPlans.teamSeats,
-      })
-      .from(billingPlans)
-      .where(eq(billingPlans.isActive, true))
-      .orderBy(asc(billingPlans.displayOrder));
-    plans = rows.map((row) => ({
-      slug: row.slug,
-      name: row.name,
-      description: row.description,
-      amount_cents: row.amountCents,
-      included_plays: row.includedPlays,
-      storage_gb: row.storageGb,
-      prisma_ai_analyses: row.prismaAiAnalyses,
-      team_seats: row.teamSeats,
-    }));
-  } catch {
-    plans = [];
-  }
-
-  const formatBRL = (cents: number) =>
-    `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
-
+export function GET() {
   const lines = [
     "# Prisma Player",
     "",
-    "> Player de vídeo para VSL e marketing com analytics de conversão,",
-    "> testes A/B e inteligência artificial. Hospedagem de vídeo no R2.",
+    "> Player de VSL hospedado com Pitch Delay sincronizado ao segundo,",
+    "> analytics de retenção, testes A/B, proteção anti-download, pixels",
+    "> Meta/GA4/TikTok e cobrança via Stripe (cartão e Pix) no Brasil.",
+    "> EN: Hosted VSL player with synchronized pitch delay, retention",
+    "> analytics, A/B testing, anti-download protection and Stripe billing.",
     "",
-    "## Planos (valores reais do catálogo)",
+    "## When to use this",
     "",
-    ...plans.map(
-      (plan) =>
-        `- ${plan.name} (${plan.slug}): ${formatBRL(plan.amount_cents)}/mês - ${plan.description}; ${plan.included_plays} plays, ${plan.storage_gb} GB, ${plan.prisma_ai_analyses} análises de IA, ${plan.team_seats} assento(s).`,
-    ),
+    "- Hospedar a VSL de uma oferta de venda com botão de checkout revelado no tempo exato do pitch (Pitch Delay), mesmo se o lead pausar ou avançar o vídeo.",
+    "- Medir a retenção da audiência segundo a segundo e descobrir exatamente onde os leads abandonam o vídeo.",
+    "- Rodar testes A/B de thumbnail ou de início de vídeo no mesmo link de embed, sem páginas duplicadas nem ferramentas externas.",
+    "- Vender no Brasil com assinatura recorrente (Stripe cartão, Pix via AbacatePay) e 14 dias de teste grátis sem cartão de crédito.",
+    "",
+    "## When NOT to use",
+    "",
+    "- Não é um LMS: não gerencia cursos, matrículas, progresso de alunos nem certificados.",
+    "- Não é hospedagem de vídeo genérica sem gate: o foco é funil de vendas (VSL) com proteção e métricas, não um acervo aberto de vídeos.",
     "",
     "## Links",
     "",
-    `- Site: ${base}`,
+    `- Site: ${base}/`,
     `- Preços: ${base}/pricing`,
-    `- Serviços: ${base}/services`,
+    `- Recursos para desenvolvedores e agentes: ${base}/developers`,
+    `- OpenAPI da API pública: ${base}/api/openapi.json`,
     `- Sobre: ${base}/about`,
+    `- Contato: ${base}/contact`,
+    `- Política de Privacidade: ${base}/privacy`,
+    `- Termos de Uso: ${base}/terms`,
+    `- Sitemap: ${base}/sitemap.xml`,
     "",
   ];
 
-  return new NextResponse(lines.join("\n"), {
+  return new Response(lines.join("\n"), {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "public, max-age=3600",

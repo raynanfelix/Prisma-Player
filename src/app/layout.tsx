@@ -17,21 +17,23 @@ export const metadata: Metadata = {
     template: "%s | Prisma Player",
   },
   description:
-    "Publique, personalize e otimize suas VSLs com analytics de retenção, testes A/B, proteção, automações e inteligência para aumentar conversões.",
+    "Player de VSL com Pitch Delay sincronizado ao segundo, analytics de retenção, testes A/B e proteção anti-download para publicar, otimizar e aumentar as conversões das suas VSLs.",
   keywords: [
     "player de vídeo",
+    "player de VSL",
+    "pitch delay",
+    "analytics de retenção",
     "conversão de vendas",
     "VSL",
     "video sales letter",
     "aumentar conversão",
-    "player VSL",
     "otimização de vídeo",
   ],
   metadataBase: new URL(siteUrl),
   openGraph: {
     title: "Player de VSL para aumentar conversões | Prisma Player",
     description:
-      "Analytics, testes A/B, proteção e inteligência para transformar sua VSL em uma operação de conversão.",
+      "Player de VSL com Pitch Delay sincronizado, analytics de retenção, testes A/B, proteção e inteligência para transformar sua VSL em uma operação de conversão.",
     url: siteUrl,
     siteName: "Prisma Player",
     locale: "pt_BR",
@@ -49,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Player de VSL para aumentar conversões | Prisma Player",
     description:
-      "Analytics, testes A/B, proteção e inteligência para transformar sua VSL em uma operação de conversão.",
+      "Player de VSL com Pitch Delay sincronizado, analytics de retenção, testes A/B, proteção e inteligência para transformar sua VSL em uma operação de conversão.",
     images: ["/opengraph-image"],
   },
   robots: {
