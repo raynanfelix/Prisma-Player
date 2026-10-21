@@ -1,5 +1,6 @@
 import { markdownNotFoundBody } from "@/lib/markdown/pages";
 import { markdownResponse } from "@/lib/markdown/respond";
+import { API_VERSION } from "@/lib/api/version";
 
 /**
  * GET /api/markdown/404?path=X - destino do rewrite do proxy quando um agente
@@ -12,5 +13,5 @@ import { markdownResponse } from "@/lib/markdown/respond";
  */
 export function GET(request: Request) {
   const path = new URL(request.url).searchParams.get("path") ?? "/";
-  return markdownResponse(markdownNotFoundBody(path), 404, "no-store");
+  return markdownResponse(markdownNotFoundBody(path), 404, "no-store", { "x-api-version": API_VERSION });
 }

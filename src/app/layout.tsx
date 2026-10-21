@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import { headers } from "next/headers";
 import ThemeScript from "@/components/ThemeScript";
 import { AppProviders } from "@/providers/AppProviders";
-import { softwareApplicationJsonLd } from "@/lib/security/inline-scripts";
+import { organizationJsonLd, softwareApplicationJsonLd } from "@/lib/security/inline-scripts";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +82,13 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: softwareApplicationJsonLd(siteUrl),
+          }}
+        />
+        <script
+          nonce={nonce ?? undefined}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: organizationJsonLd(siteUrl),
           }}
         />
       </head>

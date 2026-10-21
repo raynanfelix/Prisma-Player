@@ -46,13 +46,23 @@ function clientIp(request: Request): string {
 }
 
 /**
- * Headers padrão de rate limit (`X-RateLimit-*` de facto + `RateLimit-Policy`
- * do draft IETF). Sem eles o cliente não tem como se auto-regular e só descobre
- * o limite quando leva 429 - o que, num player embutido em site de terceiro,
- * vira chamado de suporte.
+ * Headers padrão de rate limit: o trio do draft IETF
+ * (`RateLimit-Limit/Remaining/Reset`), o `RateLimit-Policy` do mesmo draft e
+ * o `X-RateLimit-*` de facto que clientes legados já leem. Sem eles o cliente
+ * não tem como se auto-regular e só descobre o limite quando leva 429 - o
+ * que, num player embutido em site de terceiro, vira chamado de suporte.
+ *
+ * O mapa completo hoje sai garantido no 429 (que o guard aplica a TODA rota
+ * autenticada) e nos limites públicos próprios. No caminho PERMITIDO este
+ * mapa é retornado no `RateLimitResult`, mas expor por rota exigiria reescrever
+ * cada handler que monta a própria Response: invasivo, então a política
+ * documentada no OpenAPI é o conjunto completo de headers no 429.
  */
 function limitHeaders(max: number, remaining: number, resetEpochSeconds: number): Record<string, string> {
   return {
+    "RateLimit-Limit": String(max),
+    "RateLimit-Remaining": String(Math.max(0, remaining)),
+    "RateLimit-Reset": String(resetEpochSeconds),
     "X-RateLimit-Limit": String(max),
     "X-RateLimit-Remaining": String(Math.max(0, remaining)),
     "X-RateLimit-Reset": String(resetEpochSeconds),

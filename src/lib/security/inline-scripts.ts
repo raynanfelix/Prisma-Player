@@ -26,3 +26,33 @@ export function softwareApplicationJsonLd(siteUrl: string) {
     },
   });
 }
+
+/**
+ * Organization JSON-LD (item 4 da spec Agentic v2): entidade da marca para
+ * rich results eKnowledge Panel. Deliberadamente enxuto e honesto: endereço
+ * só com país (nada de rua/cidade inventadas), logo é o arquivo real em
+ * public/logo.png, e o e-mail de suporte é o atual do dono marcado como
+ * pendência para troca.
+ */
+export function organizationJsonLd(siteUrl: string) {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Prisma Player",
+    url: siteUrl,
+    logo: `${siteUrl}/logo.png`,
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        // TODO(dono): trocar pelo e-mail oficial de suporte quando existir.
+        email: "raynanbarbosa803@gmail.com",
+        availableLanguage: ["pt-BR"],
+      },
+    ],
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "BR",
+    },
+  });
+}

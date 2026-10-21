@@ -115,9 +115,12 @@ export default function DevelopersPage() {
               Negociação Markdown: qualquer agente que envie o header{" "}
               <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs text-[#B9FF66]">Accept: text/markdown</code>{" "}
               recebe as páginas públicas em Markdown automaticamente (ex.:{" "}
-              <a href="/api/markdown?path=/" className="font-bold text-[#B9FF66] underline underline-offset-4 hover:opacity-80">
+              {/* Link (e não <a>) porque o endpoint /api/markdown é rota do
+                  app: o eslint-plugin-next exige Link para caminhos internos e
+                  prefetch={false} evita pré-busca de API no hover. */}
+              <Link prefetch={false} href="/api/markdown?path=/" className="font-bold text-[#B9FF66] underline underline-offset-4 hover:opacity-80">
                 /api/markdown?path=/
-              </a>
+              </Link>
               ).
             </li>
           </ul>

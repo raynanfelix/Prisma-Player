@@ -1,3 +1,5 @@
+import { API_VERSION } from "@/lib/api/version";
+
 const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
 
 /**
@@ -8,17 +10,60 @@ const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.
  * render pp_embed) - não são uma API de chave pública. Toda a API autenticada
  * (/api/account/*, /api/videos/*, /api/billing/*, /api/analytics internos)
  * responde 401 fora da sessão e está fora deste documento.
+ *
+ * Item 3 da spec Agentic v2: erros tipados com components.schemas.Error
+ * (o corpo real das rotas é {error: código} e, quando existe, message/hint -
+ * por isso só `error` é required no schema), versão por data em info.version
+ * e header X-API-Version nas respostas públicas baratas.
  */
+const errorSchemaRef = { $ref: "#/components/schemas/Error" };
+
+const errorResponse = (description: string) => ({
+  description,
+  content: { "application/json": { schema: errorSchemaRef } },
+});
+
 const document = {
   openapi: "3.1.0",
   info: {
     title: "Prisma Player - API pública",
-    version: "1.0.0",
+    version: API_VERSION,
     description:
       "Superfície pública do Prisma Player (player de VSL com Pitch Delay, analytics de retenção e testes A/B). " +
-      "Não requer autenticação de conta; os endpoints de embed validam o contexto de origem do player publicado.",
+      "Não requer autenticação de conta; os endpoints de embed validam o contexto de origem do player publicado.\n\n" +
+      "POLÍTICA DE VERSÃO: a versão é uma data e viaja no header `X-API-Version` das respostas públicas baratas " +
+      "(/api/health, /api/markdown, /api/openapi.json), igual a info.version deste documento. Breaking changes exigem " +
+      "aviso prévio de 90 dias, sinalizado pelo header `Sunset` e anunciado no changelog em /developers; nunca entram " +
+      "sem esse aviso. Não existe versão /v1 no path hoje porque a superfície pública é estável e pequena.\n\n" +
+      "CONTRATO DE ERROS: toda resposta de erro JSON segue components.schemas.Error (código machine-readable em " +
+      "`error`; `message` humano e `hint` quando existem). Endpoints /api/* desconhecidos respondem 404 JSON " +
+      "(error: not_found) apontando para este documento. Respostas 429 trazem os headers RateLimit-Limit, " +
+      "RateLimit-Remaining: 0, RateLimit-Reset (epoch do fim da janela) e Retry-After.",
   },
   servers: [{ url: base, description: "Produção (configurável via NEXT_PUBLIC_SITE_URL)" }],
+  components: {
+    schemas: {
+      Error: {
+        type: "object",
+        description:
+          "Erro da API. `error` é o código machine-readable (ex.: not_found, rate_limited, invalid_origin); " +
+          "`message` é texto humano quando a rota o fornece; `hint` orienta o chamador quando aplicável.",
+        properties: {
+          error: { type: "string", description: "Código machine-readable do erro" },
+          message: { type: "string", description: "Mensagem humana, quando a rota a fornece" },
+          hint: { type: "string", description: "Dica de resolução, quando aplicável" },
+        },
+        required: ["error"],
+        examples: [
+          {
+            error: "not_found",
+            message: "Endpoint inexistente.",
+            hint: "Veja /api/openapi.json para a lista de endpoints públicos",
+          },
+        ],
+      },
+    },
+  },
   paths: {
     "/api/health": {
       get: {
@@ -44,10 +89,10 @@ const document = {
         parameters: [{ name: "id", in: "path", required: true, description: "ID do player (UUID)", schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": { description: "Configuração do player", content: { "application/json": { schema: { type: "object" } } } },
-          "401": { description: "Contexto de origem ausente ou inválido" },
-          "402": { description: "Assinatura do titular sem acesso (pausa/cancelamento)" },
-          "403": { description: "Origem/domínio não permitido para este player" },
-          "404": { description: "Player não publicado ou inexistente" },
+          "401": errorResponse("Contexto de origem ausente ou inválido"),
+          "402": errorResponse("Assinatura do titular sem acesso (pausa/cancelamento)"),
+          "403": errorResponse("Origem/domínio não permitido para este player"),
+          "404": errorResponse("Player não publicado ou inexistente"),
         },
       },
     },
@@ -59,10 +104,10 @@ const document = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": { description: "Manifest de reprodução", content: { "application/json": { schema: { type: "object" } } } },
-          "401": { description: "Contexto de origem ausente ou inválido" },
-          "402": { description: "Sem acesso pago ao player" },
-          "403": { description: "Origem/dominio não permitido" },
-          "404": { description: "Player inexistente" },
+          "401": errorResponse("Contexto de origem ausente ou inválido"),
+          "402": errorResponse("Sem acesso pago ao player"),
+          "403": errorResponse("Origem/dominio não permitido"),
+          "404": errorResponse("Player inexistente"),
         },
       },
     },
@@ -76,8 +121,8 @@ const document = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": { description: "Token de sessão emitido", content: { "application/json": { schema: { type: "object" } } } },
-          "403": { description: "Token de origem inválido, origem divergente ou render não confirmado" },
-          "404": { description: "ID inválido" },
+          "403": errorResponse("Token de origem inválido, origem divergente ou render não confirmado"),
+          "404": errorResponse("ID inválido"),
         },
       },
     },
@@ -109,9 +154,12 @@ const document = {
         },
         responses: {
           "200": { description: "Evento aceito" },
-          "400": { description: "Evento inválido" },
-          "403": { description: "Origem inválida" },
-          "429": { description: "Limite por sessão excedido" },
+          "400": errorResponse("Evento inválido"),
+          "403": errorResponse("Origem inválida"),
+          "404": errorResponse("Variante do teste não encontrada"),
+          "409": errorResponse("Teste ou vídeo não estão ativos/prontos"),
+          "429": errorResponse("Limite por sessão excedido"),
+          "500": errorResponse("Falha ao registrar o evento"),
         },
       },
     },
@@ -144,6 +192,9 @@ const document = {
 
 export function GET() {
   return Response.json(document, {
-    headers: { "cache-control": "public, max-age=3600" },
+    headers: {
+      "cache-control": "public, max-age=3600",
+      "x-api-version": API_VERSION,
+    },
   });
 }

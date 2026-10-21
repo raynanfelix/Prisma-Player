@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { API_VERSION } from "@/lib/api/version";
+
 /**
  * Liveness público para monitor de uptime (Plano H da análise de escala).
  *
@@ -13,6 +15,8 @@ import { NextResponse } from "next/server";
 export function GET() {
   return NextResponse.json(
     { ok: true },
-    { headers: { "cache-control": "no-store" } },
+    // X-API-Version (item 3 da spec Agentic v2): prova, em produção, a mesma
+    // versão de data que o /api/openapi.json declara em info.version.
+    { headers: { "cache-control": "no-store", "x-api-version": API_VERSION } },
   );
 }

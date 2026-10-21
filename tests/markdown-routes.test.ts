@@ -3,7 +3,9 @@ import { GET as getMarkdown } from "@/app/api/markdown/route";
 import { GET as getMarkdown404 } from "@/app/api/markdown/404/route";
 import { GET as getLlmsTxt } from "@/app/llms.txt/route";
 import { GET as getOpenApi } from "@/app/api/openapi.json/route";
+import { GET as getHealth } from "@/app/api/health/route";
 import { MARKDOWN_PAGES } from "@/lib/markdown/pages";
+import { API_VERSION } from "@/lib/api/version";
 
 /**
  * Itens 2, 3 e 4 "Is Agentic" (Ora): handlers /api/markdown (200) e
@@ -128,5 +130,88 @@ describe("GET /api/openapi.json", () => {
   it("declara 401 na nota das APIs autenticadas (honestidade Ora)", async () => {
     const document = JSON.parse(await (await getOpenApi()).text()) as { "x-note": string };
     expect(document["x-note"]).toContain("401");
+  });
+});
+
+describe("OpenAPI: versão por data, Error schema e política (spec Agentic v2, item 3)", () => {
+  const document = async () =>
+    JSON.parse(await (await getOpenApi()).text()) as {
+      info: { version: string; description: string };
+      components: {
+        schemas: {
+          Error: {
+            type: string;
+            properties: Record<string, { type: string }>;
+            required: string[];
+            examples: Array<Record<string, string>>;
+          };
+        };
+      };
+      paths: Record<string, { get?: { responses?: Record<string, unknown> }; post?: { responses?: Record<string, unknown> } }>;
+    };
+
+  it("info.version é a data da API e casa com o header X-API-Version", async () => {
+    const response = await getOpenApi();
+    const doc = await document();
+    expect(doc.info.version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(doc.info.version).toBe(API_VERSION);
+    expect(response.headers.get("x-api-version")).toBe(API_VERSION);
+  });
+
+  it("descrição carrega a política de versão (X-API-Version, Sunset 90 dias, sem /v1 no path)", async () => {
+    const doc = await document();
+    expect(doc.info.description).toContain("X-API-Version");
+    expect(doc.info.description).toContain("Sunset");
+    expect(doc.info.description).toContain("90 dias");
+    expect(doc.info.description).toContain("/developers");
+    expect(doc.info.description).toContain("/v1");
+  });
+
+  it("components.schemas.Error existe com código obrigatório e exemplo completo", async () => {
+    const doc = await document();
+    const errorSchema = doc.components.schemas.Error;
+    expect(errorSchema.type).toBe("object");
+    expect(errorSchema.properties.error.type).toBe("string");
+    expect(errorSchema.properties.message.type).toBe("string");
+    expect(errorSchema.properties.hint.type).toBe("string");
+    expect(errorSchema.required).toEqual(["error"]);
+    expect(errorSchema.examples[0]?.error).toBe("not_found");
+    expect(errorSchema.examples[0]?.hint).toContain("/api/openapi.json");
+  });
+
+  it("erros reais de embed, session e ab-events referenciam o schema Error", async () => {
+    const doc = await document();
+    const assertRef = (response: unknown, status: string) => {
+      const typed = response as { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+      expect(typed.content?.["application/json"]?.schema?.$ref, `status ${status}`).toBe("#/components/schemas/Error");
+    };
+    for (const status of ["401", "402", "403", "404"]) {
+      assertRef(doc.paths["/api/embed/{id}"]?.get?.responses?.[status], `embed ${status}`);
+      assertRef(doc.paths["/api/embed/{id}/manifest"]?.get?.responses?.[status], `manifest ${status}`);
+    }
+    assertRef(doc.paths["/api/embed/{id}/session"]?.post?.responses?.["403"], "session 403");
+    for (const status of ["400", "403", "404", "409", "429", "500"]) {
+      assertRef(doc.paths["/api/ab-events"]?.post?.responses?.[status], `ab-events ${status}`);
+    }
+  });
+
+  it("descrição declara o contrato 429 (RateLimit-Reset e Retry-After)", async () => {
+    const doc = await document();
+    expect(doc.info.description).toContain("RateLimit-Reset");
+    expect(doc.info.description).toContain("Retry-After");
+  });
+});
+
+describe("X-API-Version nas respostas públicas baratas (spec Agentic v2, item 3)", () => {
+  it("health, markdown 200 e markdown 404 carregam o header da versão", async () => {
+    const health = await getHealth();
+    expect(health.headers.get("x-api-version")).toBe(API_VERSION);
+
+    const markdown = await getMarkdown(new Request("http://localhost:3000/api/markdown"));
+    expect(markdown.headers.get("x-api-version")).toBe(API_VERSION);
+
+    const markdown404 = await getMarkdown404(new Request("http://localhost:3000/api/markdown/404"));
+    expect(markdown404.status).toBe(404);
+    expect(markdown404.headers.get("x-api-version")).toBe(API_VERSION);
   });
 });
