@@ -54,7 +54,7 @@ function buttonTexts() {
 
 describe("UserActions - suspender depende de assinatura", () => {
   it("sem assinatura (subStatus null): não oferece Suspender e mostra estado honesto", async () => {
-    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus={null} />);
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus={null} subProvider={null} />);
     openPanel();
     expect(buttonTexts()).not.toContain("Suspender");
     expect(document.body.textContent).toContain("Trial / sem assinatura");
@@ -63,16 +63,42 @@ describe("UserActions - suspender depende de assinatura", () => {
   });
 
   it("com assinatura ativa: oferece Suspender", async () => {
-    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="active" />);
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="active" subProvider="stripe" />);
     openPanel();
     expect(buttonTexts()).toContain("Suspender");
     expect(document.body.textContent).not.toContain("Trial / sem assinatura");
   });
 
   it("com assinatura suspensa: oferece Reativar (não Suspender)", async () => {
-    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="suspended" />);
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="suspended" subProvider="stripe" />);
     openPanel();
     expect(buttonTexts()).toContain("Reativar");
     expect(buttonTexts()).not.toContain("Suspender");
+  });
+});
+
+describe("UserActions - botão Reembolsar último pagamento (spec Pagamentos, item 4)", () => {
+  it("assinatura stripe ativa: oferece reembolso", async () => {
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="active" subProvider="stripe" />);
+    openPanel();
+    expect(buttonTexts()).toContain("Reembolsar último pagamento");
+  });
+
+  it("assinatura stripe past_due: oferece reembolso (dunning ainda no grace)", async () => {
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="past_due" subProvider="stripe" />);
+    openPanel();
+    expect(buttonTexts()).toContain("Reembolsar último pagamento");
+  });
+
+  it("assinatura legada AbacatePay: NÃO oferece reembolso (só Stripe)", async () => {
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="active" subProvider="abacatepay" />);
+    openPanel();
+    expect(buttonTexts()).not.toContain("Reembolsar último pagamento");
+  });
+
+  it("assinatura cancelada (stripe): NÃO oferece reembolso", async () => {
+    await mount(<UserActions userId={userId} email="cliente@teste.dev" plans={plans} subStatus="cancelled" subProvider="stripe" />);
+    openPanel();
+    expect(buttonTexts()).not.toContain("Reembolsar último pagamento");
   });
 });

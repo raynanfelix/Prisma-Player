@@ -40,6 +40,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     db.select({
       status: subscriptions.status,
       billingMethod: subscriptions.billingMethod,
+      provider: subscriptions.provider,
       currentPeriodStart: subscriptions.currentPeriodStart,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
       planSlug: billingPlans.slug,
@@ -84,6 +85,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const subscription = subscriptionRows[0] ? {
     status: subscriptionRows[0].status,
     billing_method: subscriptionRows[0].billingMethod,
+    provider: subscriptionRows[0].provider,
     current_period_start: isoOrNull(subscriptionRows[0].currentPeriodStart),
     current_period_end: isoOrNull(subscriptionRows[0].currentPeriodEnd),
     plan: subscriptionRows[0].planSlug ? {
@@ -155,7 +157,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       <AdminMetric label="Créditos IA" value={(wallet?.balance ?? 0).toLocaleString("pt-BR")} detail={`usados ${(wallet?.lifetimeUsed ?? 0).toLocaleString("pt-BR")} · eventos ${eventsCount}`} icon={Wallet} />
     </section>
 
-    <div className="mt-6"><AdminPanel title="Ações de suporte" description="Toda ação exige confirmação e motivo, e entra na trilha abaixo."><div className="max-w-xl p-5"><UserActions userId={id} email={profile.email} plans={plans} subStatus={subscription?.status ?? null} /></div></AdminPanel></div>
+    <div className="mt-6"><AdminPanel title="Ações de suporte" description="Toda ação exige confirmação e motivo, e entra na trilha abaixo."><div className="max-w-xl p-5"><UserActions userId={id} email={profile.email} plans={plans} subStatus={subscription?.status ?? null} subProvider={subscription?.provider ?? null} /></div></AdminPanel></div>
 
     <div className="mt-6 grid gap-5 xl:grid-cols-2">
       <AdminPanel title="Assinatura e pagamentos" description="Ciclo, método e checkouts da conta."><div className="space-y-2 p-5 text-[12px]">

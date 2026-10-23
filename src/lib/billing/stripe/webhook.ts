@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 
 import { CATALOG_CREDIT_PACKAGES, CATALOG_PLANS } from "@/lib/billing/catalog";
@@ -9,7 +9,7 @@ import { alertOperations } from "@/lib/security/alert-webhook";
 import { db, schema } from "@/lib/db";
 import { safeLog } from "@/lib/utils/log";
 
-const { aiCreditLedger, aiCreditWallets, billingPlans, profiles, subscriptions } = schema;
+const { aiCreditLedger, aiCreditWallets, billingPlans, profiles, subscriptions, userInbox } = schema;
 
 /**
  * Fulfillment dos webhooks do Stripe (Opção A). A ROTA valida a assinatura e
@@ -307,7 +307,16 @@ async function applyRenewalPaid(invoice: Stripe.Invoice): Promise<StripeEventOut
   return applySubscriptionState(subscription);
 }
 
-/** invoice.payment_failed → past_due (dunning/retry é do Stripe, não cancela). */
+/**
+ * invoice.payment_failed → past_due (dunning/retry é do Stripe, não cancela)
+ * + recado de dunning no inbox (spec Pagamentos, item 1).
+ *
+ * O update só carimba `updatedAt` na TRANSIÇÃO para past_due: cada retry do
+ * mesmo invoice reemite invoice.payment_failed e, se renovasse o carimbo, o
+ * cron dos 7 dias (cancelPastDueSubscriptions) nunca veria a tolerância
+ * vencer. Com a transição condicional, `updatedAt` guarda o timestamp do
+ * PRIMEIRO evento fallido - a âncora confiável do grace (spec, item 2).
+ */
 async function markSubscriptionPastDue(invoice: Stripe.Invoice): Promise<StripeEventOutcome> {
   const subscriptionId = subscriptionIdOfInvoice(invoice);
   if (!subscriptionId) {
@@ -317,16 +326,55 @@ async function markSubscriptionPastDue(invoice: Stripe.Invoice): Promise<StripeE
   const rows = await db
     .update(subscriptions)
     .set({ status: "past_due", updatedAt: new Date() })
-    .where(eq(subscriptions.providerSubscriptionId, subscriptionId))
-    .returning({ id: subscriptions.id });
-  if (rows.length === 0) safeLog("stripe_subscription_desconhecida", { subscriptionId, status: "past_due" });
+    .where(and(eq(subscriptions.providerSubscriptionId, subscriptionId), ne(subscriptions.status, "past_due")))
+    .returning({ id: subscriptions.id, userId: subscriptions.userId });
+  let ownerId: string | null = rows[0]?.userId ?? null;
+  if (rows.length === 0) {
+    // Já estava past_due (retry do Stripe ou subscription.updated que chegou
+    // antes): recupera o dono sem renovar o carimbo do grace.
+    const [row] = await db
+      .select({ userId: subscriptions.userId })
+      .from(subscriptions)
+      .where(eq(subscriptions.providerSubscriptionId, subscriptionId))
+      .limit(1);
+    ownerId = row?.userId ?? null;
+    if (!ownerId) safeLog("stripe_subscription_desconhecida", { subscriptionId, status: "past_due" });
+  }
+  if (ownerId) await insertDunningInboxMessage(ownerId, invoice.id);
   return "processed";
+}
+
+/**
+ * Dunning no inbox (spec Pagamentos, item 1): mensagem única por episódio de
+ * falha - a idempotência é por actionUrl (padrão notifyTrialsEndingSoon),
+ * que carrega o id do invoice: retries do MESMO invoice não duplicam, um
+ * ciclo novo que falha abre mensagem nova. O CTA leva para a aba
+ * Faturamento, onde o botão "Atualizar cartão" abre o Customer Portal.
+ */
+async function insertDunningInboxMessage(ownerId: string, invoiceId: string): Promise<void> {
+  const actionUrl = `/dashboard/settings?section=billing&dunning=failed&ref=${encodeURIComponent(invoiceId)}`;
+  const existing = await db
+    .select({ id: userInbox.id })
+    .from(userInbox)
+    .where(and(eq(userInbox.userId, ownerId), eq(userInbox.kind, "billing"), eq(userInbox.actionUrl, actionUrl)))
+    .limit(1);
+  if (existing.length) return;
+  await db.insert(userInbox).values({
+    userId: ownerId,
+    kind: "billing",
+    title: "Seu pagamento falhou",
+    message: "Seu pagamento falhou - atualize seu cartão para não perder o acesso; você tem 7 dias.",
+    actionLabel: "Atualizar cartão",
+    actionUrl,
+  });
 }
 
 /**
  * Risk-side (dispute/refund/fraud warning): alerta operacional (item 5) +
  * disputa SUSPENDE a assinatura ativa em past_due (item 6); refund e Radar
- * ficam SÓ no alerta - reativação é decisão manual do dono.
+ * não suspendem ninguém - reativação é decisão manual do dono. O refund
+ * confirmado também deixa recado no inbox do CLIENTE (spec Pagamentos,
+ * item 4); disputa e Radar não geram recado.
  * Resolução pelo ownership boundary real: charge → Customer →
  * profiles.stripe_customer_id → conta local (e a subscription stripe dela,
  * se existir). Sem customer no charge (raríssimo), o log segue com o que houver.
@@ -413,5 +461,34 @@ async function handleRiskEvent(event: Stripe.Event): Promise<StripeEventOutcome>
     detail: `Evento ${event.type} (${event.id})${chargeId ? ` - charge ${chargeId}` : ""}${ownerId ? `, owner ${ownerId}` : ", owner não resolvido"}${subscriptionId ? `, subscription ${subscriptionId}` : ""}${suspended ? " - assinatura suspensa (past_due)" : ""}`,
     kind: `stripe_risk:${event.type}`,
   });
+
+  // Spec Pagamentos, item 4: o estorno confirmado avisava só o dono - o
+  // cliente também precisa saber que o reembolso está a caminho.
+  if (event.type === "charge.refunded" && ownerId) {
+    const refundId = typeof object["id"] === "string" ? object["id"] : chargeId;
+    if (refundId) await insertRefundedInboxMessage(ownerId, refundId);
+  }
   return "processed";
+}
+
+/**
+ * Recado de reembolso no inbox (spec Pagamentos, item 4): idempotente por
+ * actionUrl, que carrega o id do refund (reentrega do evento não duplica).
+ */
+async function insertRefundedInboxMessage(ownerId: string, refundId: string): Promise<void> {
+  const actionUrl = `/dashboard/settings?section=billing&ref=${encodeURIComponent(refundId)}`;
+  const existing = await db
+    .select({ id: userInbox.id })
+    .from(userInbox)
+    .where(and(eq(userInbox.userId, ownerId), eq(userInbox.kind, "billing"), eq(userInbox.actionUrl, actionUrl)))
+    .limit(1);
+  if (existing.length) return;
+  await db.insert(userInbox).values({
+    userId: ownerId,
+    kind: "billing",
+    title: "Reembolso processado",
+    message: "Reembolso processado - o valor volta no cartão de pagamento em até 10 dias úteis.",
+    actionLabel: "Ver faturamento",
+    actionUrl,
+  });
 }

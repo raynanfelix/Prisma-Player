@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminConfirm from "@/components/admin/AdminConfirm";
 import AdminSelect from "@/components/ui/custom/AdminSelect";
+import { REFUND_WINDOW_DAYS } from "@/lib/billing/catalog";
 
 type Plan = { slug: string; name: string };
 type Pending =
@@ -12,7 +13,8 @@ type Pending =
   | { kind: "reactivate" }
   | { kind: "trial_extend" }
   | { kind: "trial_reset" }
-  | { kind: "credits" };
+  | { kind: "credits" }
+  | { kind: "refund" };
 
 async function post(path: string, body: Record<string, unknown>) {
   const response = await fetch(path, {
@@ -26,7 +28,7 @@ async function post(path: string, body: Record<string, unknown>) {
 }
 
 /** Ações de suporte por conta, com modal de confirmação e motivo auditado. */
-export default function UserActions({ userId, email, plans, subStatus }: { userId: string; email: string; plans: Plan[]; subStatus: string | null }) {
+export default function UserActions({ userId, email, plans, subStatus, subProvider }: { userId: string; email: string; plans: Plan[]; subStatus: string | null; subProvider: string | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -44,6 +46,7 @@ export default function UserActions({ userId, email, plans, subStatus }: { userI
       let result: { warning?: string } = {};
       if (pending.kind === "plan") result = await post("/api/admin/users/plan", { userId, planSlug, reason });
       else if (pending.kind === "credits") result = await post("/api/admin/credits/adjust", { userId, delta: Number(delta), reason });
+      else if (pending.kind === "refund") result = await post("/api/admin/users/refund", { userId, reason });
       else if (pending.kind === "trial_extend") result = await post("/api/admin/users/status", { userId, action: "trial_extend", days: 14, reason });
       else result = await post("/api/admin/users/status", { userId, action: pending.kind, reason });
       setNotice(result.warning ?? "Feito.");
@@ -63,6 +66,7 @@ export default function UserActions({ userId, email, plans, subStatus }: { userI
     trial_extend: { title: "Estender trial", consequence: "Trial ativo por mais 14 dias a partir do vencimento atual.", confirm: "Estender" },
     trial_reset: { title: "Resetar trial", consequence: "Volta para disponível. Use com critério: não contorna elegibilidade.", confirm: "Resetar", danger: true },
     credits: { title: "Ajustar créditos", consequence: "Movimento auditado no ledger. Saldo nunca fica negativo.", confirm: "Aplicar" },
+    refund: { title: "Reembolsar último pagamento", consequence: `Devolve 100% do pagamento mais recente via Stripe, só dentro da janela de ${REFUND_WINDOW_DAYS} dias. O acesso não muda: cancelar é ação separada.`, confirm: "Reembolsar", danger: true },
   };
 
   if (!open) {
@@ -87,6 +91,11 @@ export default function UserActions({ userId, email, plans, subStatus }: { userI
         )}
         <button type="button" onClick={() => { setReason(""); setPending({ kind: "trial_extend" }); }} className="h-8 rounded-lg border border-slate-200 px-2.5 text-[11px] font-semibold dark:border-zinc-800">Trial +14d</button>
         <button type="button" onClick={() => { setReason(""); setPending({ kind: "trial_reset" }); }} className="h-8 rounded-lg border border-slate-200 px-2.5 text-[11px] font-semibold dark:border-zinc-800">Reset trial</button>
+        {subProvider === "stripe" && (subStatus === "active" || subStatus === "past_due") && (
+          // Spec Pagamentos, item 4: reembolso manual só faz sentido para
+          // assinatura Stripe cobrada (ativa ou em dunning) dentro da janela.
+          <button type="button" onClick={() => { setReason(""); setPending({ kind: "refund" }); }} className="h-8 rounded-lg border border-red-300 px-2.5 text-[11px] font-semibold text-red-600 dark:border-red-900">Reembolsar último pagamento</button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <input value={delta} onChange={(event) => setDelta(event.target.value)} inputMode="numeric" className="h-8 w-20 rounded-lg border border-slate-200 bg-white px-2 text-[11px] dark:border-zinc-800 dark:bg-card" aria-label="Créditos (+/-)" />

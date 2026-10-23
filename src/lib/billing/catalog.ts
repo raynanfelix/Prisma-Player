@@ -126,6 +126,14 @@ export const CATALOG_CREDIT_PACKAGES: CreditPackage[] = [
  */
 export const TRIAL_PLAN_SLUG = "escala";
 
+/**
+ * Janela para o reembolso manual do último pagamento (spec Pagamentos,
+ * item 4): a rota /api/admin/users/refund e o botão do admin recusam
+ * estornos de charges pagos há mais de `REFUND_WINDOW_DAYS` dias. Dado
+ * puro de política - rota (server) e UI (client) importam do mesmo lugar.
+ */
+export const REFUND_WINDOW_DAYS = 7;
+
 const sharedFeatures = [
   "Todas as funcionalidades de personalização e conversão",
   "Analytics completo, retenção e funil da VSL",

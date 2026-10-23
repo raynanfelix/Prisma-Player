@@ -24,6 +24,8 @@ const { dbState, stripeState, consoleSpy, alertCalls } = vi.hoisted(() => ({
     ledgerReferences: new Set<string>(),
     profilesRows: [] as Array<Record<string, unknown>>,
     subscriptionsRows: [] as Array<Record<string, unknown>>,
+    inboxInserts: [] as Array<Record<string, unknown>>,
+    inboxRows: [] as Array<Record<string, unknown>>,
   },
   stripeState: {
     subscriptionsRetrieve: null as null | ((id: string) => Promise<unknown>),
@@ -74,6 +76,14 @@ vi.mock("@/lib/db", async () => {
       dbState.subscriptionInserts.push({ values, set: mode.set ?? null });
       return [];
     }
+    if (table === "user_inbox") {
+      // Dunning/refund inbox: o insert também alimenta o select (o dedupe por
+      // actionUrl do handler lê a própria tabela).
+      const row = { id: `inbox-${dbState.inboxInserts.length + 1}`, ...values };
+      dbState.inboxInserts.push(values);
+      dbState.inboxRows.push(row);
+      return [row];
+    }
     if (table === "ai_credit_wallets" && tx) {
       tx.wallet.push({ values, set: mode.set ?? null });
       return [];
@@ -101,9 +111,15 @@ vi.mock("@/lib/db", async () => {
   const updateApi = (table: string) => ({
     set: (set: Record<string, unknown>) => ({
       where: () => ({
-        returning: () => {
+        returning: (projection?: Record<string, unknown>) => {
           applyUpdate(table, set);
-          return Promise.resolve([{ id: 1 }]);
+          // Honra a projeção pedida (o handler de dunning lê o userId daqui);
+          // userId ganha um valor estável para as asserções de inbox.
+          const row: Record<string, unknown> = {};
+          for (const key of projection ? Object.keys(projection) : ["id"]) {
+            row[key] = key === "userId" ? "user-1" : `row-${key}`;
+          }
+          return Promise.resolve([row]);
         },
         ...promiseLike(() => {
           applyUpdate(table, set);
@@ -138,6 +154,7 @@ vi.mock("@/lib/db", async () => {
       if (table === "billing_plans") return dbState.planRows;
       if (table === "profiles") return dbState.profilesRows;
       if (table === "subscriptions") return dbState.subscriptionsRows;
+      if (table === "user_inbox") return dbState.inboxRows;
       return [];
     };
     const chain: Record<string, unknown> = {
@@ -226,6 +243,8 @@ function resetDbState(): void {
   dbState.ledgerReferences.clear();
   dbState.profilesRows = [];
   dbState.subscriptionsRows = [];
+  dbState.inboxInserts = [];
+  dbState.inboxRows = [];
   stripeState.subscriptionsRetrieve = null;
   stripeState.sessionsRetrieve = null;
   stripeState.chargesRetrieve = null;
@@ -350,7 +369,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(dbState.profileUpdates).toEqual([]);
   });
 
-  it("invoice.payment_failed → status past_due (não cancela - dunning é do Stripe)", async () => {
+  it("invoice.payment_failed → status past_due + mensagem de dunning no inbox (spec Pagamentos, item 1)", async () => {
     const event = webhookEvent("invoice.payment_failed", {
       id: "in_failed_001",
       parent: { type: "subscription", subscription_details: { subscription: "sub_001", metadata: null } },
@@ -361,6 +380,31 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(dbState.subscriptionUpdates[0]).toMatchObject({ status: "past_due" });
     expect(dbState.events.get(event.eventId)?.status).toBe("processed");
+    // Item 1: recado único por invoice com CTA para atualizar o cartão
+    // (a aba Faturamento hospeda o botão que abre o Customer Portal).
+    expect(dbState.inboxInserts).toHaveLength(1);
+    expect(dbState.inboxInserts[0]).toMatchObject({
+      userId: "user-1",
+      kind: "billing",
+      title: "Seu pagamento falhou",
+      actionLabel: "Atualizar cartão",
+    });
+    expect(String(dbState.inboxInserts[0]!.message)).toContain("7 dias");
+    expect(String(dbState.inboxInserts[0]!.actionUrl)).toContain("section=billing");
+    expect(String(dbState.inboxInserts[0]!.actionUrl)).toContain("in_failed_001");
+  });
+
+  it("retry do MESMO invoice (evento novo) → não cancela e não duplica mensagem de dunning", async () => {
+    const invoice = {
+      id: "in_failed_retry",
+      parent: { type: "subscription", subscription_details: { subscription: "sub_001", metadata: null } },
+    };
+    await postWebhook(webhookEvent("invoice.payment_failed", invoice, "evt_failed_first"));
+    const retry = await postWebhook(webhookEvent("invoice.payment_failed", invoice, "evt_failed_retry"));
+
+    expect(retry.status).toBe(200);
+    expect(dbState.inboxInserts).toHaveLength(1);
+    expect(dbState.events.get("evt_failed_retry")?.status).toBe("processed");
   });
 
   it("customer.subscription.deleted → status cancelled com cancelledAt", async () => {
@@ -394,9 +438,11 @@ describe("POST /api/webhooks/stripe", () => {
     expect(alertCalls[0]!.detail).toContain("ch_001");
     expect(alertCalls[0]!.detail).toContain("owner-1");
     expect(alertCalls[0]!.detail).toContain("past_due");
+    // Dunning/refund inbox: disputa NÃO gera recado para o cliente.
+    expect(dbState.inboxInserts).toEqual([]);
   });
 
-  it("charge.refunded → SÓ alerta (sem suspensão - reativação é decisão manual do dono)", async () => {
+  it("charge.refunded → SÓ alerta pro dono (sem suspensão) + recado de reembolso no inbox (spec Pagamentos, item 4)", async () => {
     dbState.profilesRows = [{ id: "owner-1" }];
     dbState.subscriptionsRows = [{ id: "sub_001" }];
     stripeState.chargesRetrieve = async () => ({ id: "ch_002", customer: "cus_001", payment_intent: null });
@@ -409,6 +455,16 @@ describe("POST /api/webhooks/stripe", () => {
     expect(dbState.subscriptionUpdates).toEqual([]);
     expect(alertCalls[0]).toMatchObject({ kind: "stripe_risk:charge.refunded", title: "Estorno (refund) confirmado no Stripe" });
     expect(alertCalls[0]!.detail).not.toContain("suspensa");
+    // Item 4: o webhook também avisa o CLIENTE de que o reembolso vem a caminho.
+    expect(dbState.inboxInserts).toHaveLength(1);
+    expect(dbState.inboxInserts[0]).toMatchObject({
+      userId: "owner-1",
+      kind: "billing",
+      title: "Reembolso processado",
+      actionLabel: "Ver faturamento",
+    });
+    expect(String(dbState.inboxInserts[0]!.message)).toContain("dias úteis");
+    expect(String(dbState.inboxInserts[0]!.actionUrl)).toContain("re_001");
   });
 
   it("radar.early_fraud_warning.created → alerta de fraude sem suspensão", async () => {

@@ -8,6 +8,7 @@ import { isoOrNull } from "@/lib/datetime";
 import { getAccountPlan } from "@/lib/access/service";
 import { deliverWebhook } from "@/lib/webhooks/delivery";
 import { sendOperationalReport } from "@/lib/email/operational-report";
+import { getStripe } from "@/lib/billing/stripe/client";
 import { reconcileSubscriptions } from "@/lib/billing/stripe/reconcile";
 
 const { videoLiveSessions, subscriptions, videoEvents, intelligenceControls, videos, userInbox, accountTeamInvites, accountAccess } = schema;
@@ -32,6 +33,10 @@ export type CronMaintenanceResult = {
   reconcileDivergences: number;
   /** Avisos de "seu teste termina em breve" criados nesta passada (spec Billing Completo, item 5). */
   trialReminders: number;
+  /** Lembretes de dunning (dia 3 e dia 6 do grace) criados nesta passada (spec Pagamentos, item 3). */
+  pastDueReminders: number;
+  /** Assinaturas stripe past_due canceladas no provedor nesta passada (spec Pagamentos, item 2). */
+  pastDueCancellations: number;
   timedOut: boolean;
   errors: string[];
 };
@@ -112,7 +117,7 @@ async function counts(videoIds: string[], from: Date, to?: Date): Promise<Period
 export async function runCronMaintenance(): Promise<CronMaintenanceOutcome> {
   const now = new Date();
   const ctx: MaintenanceContext = {
-    result: { reports: 0, emails: 0, alerts: 0, webhooks: 0, skipped: 0, processed: 0, reconcileChecked: 0, reconcileDivergences: 0, trialReminders: 0, timedOut: false, errors: [] },
+    result: { reports: 0, emails: 0, alerts: 0, webhooks: 0, skipped: 0, processed: 0, reconcileChecked: 0, reconcileDivergences: 0, trialReminders: 0, pastDueReminders: 0, pastDueCancellations: 0, timedOut: false, errors: [] },
     startedAt: Date.now(),
     now,
     currentFrom: new Date(now.getTime() - 24 * 3_600_000),
@@ -123,6 +128,7 @@ export async function runCronMaintenance(): Promise<CronMaintenanceOutcome> {
   await expireOutdatedTrials(ctx);
   await notifyTrialsEndingSoon(ctx);
   await runSubscriptionReconcile(ctx);
+  await cancelPastDueSubscriptions(ctx);
   await runDailyStatsRollup(ctx);
   await runRetentionPurges(ctx);
   await expireTeamInvites(ctx);
@@ -206,6 +212,82 @@ export async function notifyTrialsEndingSoon(ctx: MaintenanceContext): Promise<v
     }
   } catch (error) {
     ctx.result.errors.push(`trial_reminders: ${errorMessageOf(error)}`);
+  }
+}
+
+/** Tolerância de past_due antes do auto-cancel (política do dono, spec Pagamentos, itens 2 e 3). */
+const PAST_DUE_GRACE_DAYS = 7;
+/** Dias do grace que ganham lembrete de dunning no inbox. */
+const PAST_DUE_REMINDER_DAYS = [3, 6];
+
+/**
+ * Dunning do grace de 7 dias (spec Pagamentos, itens 2 e 3): assinatura
+ * stripe `past_due` vencida a tolerância é CANCELADA no provedor
+ * (`prorate: false` - nada mais é cobrado); o webhook
+ * `customer.subscription.deleted` que já existe sincroniza o local. No
+ * caminho, os dias 3 e 6 do MESMO grace ganham um lembrete no inbox
+ * (idempotente por dia: o actionUrl carrega o dia e a âncora do grace).
+ *
+ * A âncora do grace é `subscriptions.updatedAt`, carimbado pelo webhook na
+ * TRANSIÇÃO para past_due (retries do mesmo invoice não renovam o carimbo).
+ * O re-cheque por linha de provider/status protege as assinaturas legadas
+ * da AbacatePay (nunca canceladas aqui) mesmo que a linha mude entre o
+ * select e o processamento. Sem Stripe configurado a passada é skip
+ * silencioso (não há assinatura stripe para gerenciar).
+ */
+export async function cancelPastDueSubscriptions(ctx: MaintenanceContext): Promise<void> {
+  if (!process.env.STRIPE_SECRET_KEY) return;
+  try {
+    const rows = await db
+      .select({
+        userId: subscriptions.userId,
+        provider: subscriptions.provider,
+        status: subscriptions.status,
+        providerSubscriptionId: subscriptions.providerSubscriptionId,
+        updatedAt: subscriptions.updatedAt,
+      })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.status, "past_due"), eq(subscriptions.provider, "stripe")))
+      .limit(200);
+    for (const row of rows) {
+      if (row.provider !== "stripe" || row.status !== "past_due" || !row.providerSubscriptionId || !row.updatedAt) continue;
+      const days = Math.floor((ctx.now.getTime() - row.updatedAt.getTime()) / 86_400_000);
+      if (days >= PAST_DUE_GRACE_DAYS) {
+        try {
+          await getStripe().subscriptions.cancel(row.providerSubscriptionId, { prorate: false });
+          ctx.result.pastDueCancellations += 1;
+        } catch (error) {
+          ctx.result.errors.push(`past_due_cancel:${row.providerSubscriptionId}: ${errorMessageOf(error)}`);
+        }
+        continue;
+      }
+      if (!PAST_DUE_REMINDER_DAYS.includes(days)) continue;
+      const actionUrl = `/dashboard/settings?section=billing&dunning=${days}&ref=${row.providerSubscriptionId}-${row.updatedAt.getTime()}`;
+      try {
+        const existing = await db
+          .select({ id: userInbox.id })
+          .from(userInbox)
+          .where(and(eq(userInbox.userId, row.userId), eq(userInbox.kind, "billing"), eq(userInbox.actionUrl, actionUrl)))
+          .limit(1);
+        if (existing.length) continue;
+        const finalReminder = days >= PAST_DUE_GRACE_DAYS - 1;
+        await db.insert(userInbox).values({
+          userId: row.userId,
+          kind: "billing",
+          title: finalReminder ? "Último lembrete: pagamento pendente" : `Pagamento pendente há ${days} dias`,
+          message: finalReminder
+            ? `Seu pagamento falhou há ${days} dias e este é o último lembrete. Atualize seu cartão agora: a assinatura é cancelada automaticamente após ${PAST_DUE_GRACE_DAYS} dias.`
+            : `Seu pagamento falhou há ${days} dias. Atualize seu cartão para não perder o acesso: a assinatura é cancelada automaticamente após ${PAST_DUE_GRACE_DAYS} dias.`,
+          actionLabel: "Atualizar cartão",
+          actionUrl,
+        });
+        ctx.result.pastDueReminders += 1;
+      } catch (error) {
+        ctx.result.errors.push(`past_due_reminder:${row.providerSubscriptionId}: ${errorMessageOf(error)}`);
+      }
+    }
+  } catch (error) {
+    ctx.result.errors.push(`past_due_grace: ${errorMessageOf(error)}`);
   }
 }
 

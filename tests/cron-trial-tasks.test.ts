@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Trial 100% (spec Billing Completo, item 5): o cron agora marca trials
@@ -60,8 +60,26 @@ vi.mock("@/lib/db", async () => {
   return { db, pool: {}, schema };
 });
 
-import { expireOutdatedTrials, notifyTrialsEndingSoon, type CronMaintenanceResult } from "@/lib/cron-tasks/tasks";
+import { expireOutdatedTrials, notifyTrialsEndingSoon, cancelPastDueSubscriptions, type CronMaintenanceResult } from "@/lib/cron-tasks/tasks";
 import { getAccountAccess } from "@/lib/access/service";
+
+const { stripeState } = vi.hoisted(() => ({
+  stripeState: {
+    envKey: "sk_test_fake_cron_key",
+    cancelCalls: [] as Array<{ id: string; params: Record<string, unknown> }>,
+  },
+}));
+
+vi.mock("@/lib/billing/stripe/client", () => ({
+  getStripe: () => ({
+    subscriptions: {
+      cancel: (id: string, params: Record<string, unknown>) => {
+        stripeState.cancelCalls.push({ id, params });
+        return Promise.resolve({ id, status: "canceled" });
+      },
+    },
+  }),
+}));
 
 const DAY_MS = 86_400_000;
 
@@ -76,6 +94,8 @@ function makeCtx(now: Date) {
     reconcileChecked: 0,
     reconcileDivergences: 0,
     trialReminders: 0,
+    pastDueReminders: 0,
+    pastDueCancellations: 0,
     timedOut: false,
     errors: [],
   };
@@ -94,6 +114,12 @@ beforeEach(() => {
   dbState.failOnUpdate = false;
   updateCalls.length = 0;
   insertCalls.length = 0;
+  process.env.STRIPE_SECRET_KEY = stripeState.envKey;
+  stripeState.cancelCalls.length = 0;
+});
+
+afterEach(() => {
+  delete process.env.STRIPE_SECRET_KEY;
 });
 
 describe("expireOutdatedTrials - cron marca trial vencido como expired", () => {
@@ -163,6 +189,124 @@ describe("notifyTrialsEndingSoon - aviso de fim próximo no inbox", () => {
     await notifyTrialsEndingSoon(ctx);
 
     expect(String(insertCalls[0]!.message)).toContain("termina em 1 dia");
+  });
+});
+
+describe("cancelPastDueSubscriptions - grace de 7 dias com dunning (spec Pagamentos, itens 2 e 3)", () => {
+  const now = new Date("2026-10-20T12:00:00.000Z");
+
+  function pastDueRow(overrides: Record<string, unknown> = {}) {
+    return {
+      userId: "u-owner",
+      provider: "stripe",
+      status: "past_due",
+      providerSubscriptionId: "sub_past_due",
+      updatedAt: new Date(now.getTime() - 3 * DAY_MS),
+      ...overrides,
+    };
+  }
+
+  it("past_due há 7d+1 (stripe) → cancela no provedor com prorate false e sem lembrete", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow({ updatedAt: new Date(now.getTime() - (7 * DAY_MS + 3_600_000)) })], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(stripeState.cancelCalls).toEqual([{ id: "sub_past_due", params: { prorate: false } }]);
+    expect(ctx.result.pastDueCancellations).toBe(1);
+    expect(insertCalls).toEqual([]);
+    expect(ctx.result.errors).toEqual([]);
+  });
+
+  it("past_due há 6d → NÃO cancela (ainda dentro da tolerância)", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow({ updatedAt: new Date(now.getTime() - 6 * DAY_MS) })], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(stripeState.cancelCalls).toEqual([]);
+    expect(ctx.result.pastDueCancellations).toBe(0);
+  });
+
+  it("sem STRIPE_SECRET_KEY → skip silencioso (nenhum cancel, nenhum erro)", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    dbState.selectRows = { subscriptions: [pastDueRow({ updatedAt: new Date(now.getTime() - 30 * DAY_MS) })], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(stripeState.cancelCalls).toEqual([]);
+    expect(insertCalls).toEqual([]);
+    expect(ctx.result.errors).toEqual([]);
+    expect(ctx.result.pastDueCancellations).toBe(0);
+    expect(ctx.result.pastDueReminders).toBe(0);
+  });
+
+  it("assinatura AbacatePay legada → ignorada (nunca cancelada aqui)", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow({ provider: "abacatepay", updatedAt: new Date(now.getTime() - 30 * DAY_MS) })], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(stripeState.cancelCalls).toEqual([]);
+    expect(insertCalls).toEqual([]);
+    expect(ctx.result.pastDueCancellations).toBe(0);
+    expect(ctx.result.pastDueReminders).toBe(0);
+  });
+
+  it("dia 3 do grace → cria lembrete de dunning (idempotente por actionUrl do dia)", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow()], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(stripeState.cancelCalls).toEqual([]);
+    expect(insertCalls).toHaveLength(1);
+    expect(insertCalls[0]).toMatchObject({
+      userId: "u-owner",
+      kind: "billing",
+      title: "Pagamento pendente há 3 dias",
+      actionLabel: "Atualizar cartão",
+    });
+    expect(String(insertCalls[0]!.message)).toContain("3 dias");
+    expect(String(insertCalls[0]!.actionUrl)).toContain("dunning=3");
+    expect(ctx.result.pastDueReminders).toBe(1);
+  });
+
+  it("dia 2 do grace → nenhum lembrete", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow({ updatedAt: new Date(now.getTime() - 2 * DAY_MS) })], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(insertCalls).toEqual([]);
+    expect(ctx.result.pastDueReminders).toBe(0);
+  });
+
+  it("dia 6 do grace → cria o último lembrete (título de urgência)", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow({ updatedAt: new Date(now.getTime() - 6 * DAY_MS) })], user_inbox: [] };
+
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(insertCalls).toHaveLength(1);
+    expect(insertCalls[0]).toMatchObject({ kind: "billing", title: "Último lembrete: pagamento pendente" });
+    expect(String(insertCalls[0]!.actionUrl)).toContain("dunning=6");
+    expect(ctx.result.pastDueReminders).toBe(1);
+  });
+
+  it("lembrete repetido no mesmo dia → não duplica (idempotente por dia)", async () => {
+    dbState.selectRows = { subscriptions: [pastDueRow()], user_inbox: [] };
+    const ctx = makeCtx(now);
+    await cancelPastDueSubscriptions(ctx);
+    expect(insertCalls).toHaveLength(1);
+
+    // Segunda passada no MESMO dia: o inbox já tem o lembrete (actionUrl igual).
+    dbState.selectRows.user_inbox = [{ id: "inbox-existing" }];
+    await cancelPastDueSubscriptions(ctx);
+
+    expect(insertCalls).toHaveLength(1);
+    expect(ctx.result.pastDueReminders).toBe(1);
   });
 });
 
