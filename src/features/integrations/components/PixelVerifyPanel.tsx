@@ -9,7 +9,7 @@ import type { StoreProviderId } from "./store-data";
 
 export type PixelVerifyProviderId = "meta_pixel" | "google_ads" | "tiktok";
 
-/** Resposta padronizada de POST /api/integrations/verify (docs/PIXEL_VERIFY_SPEC.md). */
+/** Resposta padronizada de POST /api/integrations/verify (docs/specs/PIXEL_VERIFY_SPEC.md). */
 export interface PixelVerifyResultDto {
   ok: boolean;
   platform: "meta" | "google" | "tiktok";

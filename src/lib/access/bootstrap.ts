@@ -40,7 +40,7 @@ async function fetchAuthUser(userId: string): Promise<BootstrapUser | null> {
 
 /**
  * Bootstrap de nova conta - equivalente aplicacional do antigo trigger
- * `on_auth_user_created_prisma_bootstrap` (docs/legacy-supabase/
+ * `on_auth_user_created_prisma_bootstrap` (docs/archive/legacy-supabase/
  * 20260717233000_intelligence_controls_and_resilient_signup.sql).
  *
  * O schema `neon_auth` é gerenciado pela Neon e não aceita triggers, então a

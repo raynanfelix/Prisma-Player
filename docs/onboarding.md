@@ -30,7 +30,7 @@ npm run dev   # http://localhost:3000
 - Aplicar: `npx drizzle-kit push` (ou `migrate`) **exige** `DATABASE_URL_UNPOOLED`
   — o PgBouncer em modo transação não suporta operações de sessão de migration.
 - Revise o SQL gerado antes de aplicar; nunca use produção como ambiente de teste.
-- `supabase/migrations/` é legado pré-Drizzle; o schema vigente é o Drizzle.
+- `docs/archive/legacy-supabase/migrations/` é legado pré-Drizzle; o schema vigente é o Drizzle.
 
 ## Verificar
 

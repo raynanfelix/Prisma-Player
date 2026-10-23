@@ -27,7 +27,7 @@ Proteção de domínio, token de acesso, bloqueio de proxy/VPN, URLs assinadas e
 
 ## Segurança e CSP
 
-- O player não recebe credenciais de storage, CDN ou Supabase.
+- O player não recebe credenciais de storage ou CDN.
 - O frontend recebe somente URLs reproduzíveis ou assinadas e identificadores públicos.
 - `media-src` libera as origens de mídia; `connect-src` libera manifests, segmentos e legendas.
 - HLS baseado em MSE exige `media-src blob:`; variantes com worker exigem `worker-src blob:`.

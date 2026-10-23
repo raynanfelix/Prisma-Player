@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Item 2 do hardening pós-audit (docs/SECURITY_HARDENING_SPEC.md): o
+ * Item 2 do hardening pós-audit (docs/specs/SECURITY_HARDENING_SPEC.md): o
  * GET /api/integrations nunca devolve segredo cru (token/api secret/webhook),
  * e o PUT com campo secreto vazio PRESERVA o valor salvo da instância
  * (a UI edita sem receber o token de volta). fake-db + guard/csrf/rate-limit

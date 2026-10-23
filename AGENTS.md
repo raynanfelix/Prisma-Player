@@ -46,6 +46,7 @@ módulo servidor novo recebe `import "server-only"` + entrada em
 - Execute os checks canônicos e teste regressões; correções precisam de reprodução quando viável.
 - Continue trabalho autorizado; pergunte somente o indispensável. Publicação, custos e ações destrutivas exigem autorização específica.
 - Um bloqueio afeta só as tarefas dependentes; conclua as independentes que forem seguras.
+- ARQUIVO NOVO DE FEATURE EXIGE SPEC: todo componente, rota ou módulo novo nasce de uma spec em `docs/specs/`, referenciada na mensagem do commit (pattern já usado na sessão: spec → implementação → validação). Gate: `scripts/check-spec.mjs` (warn no CI, nunca bloqueia).
 
 ## Documentação e ferramentas
 

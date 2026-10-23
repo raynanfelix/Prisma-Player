@@ -2,7 +2,7 @@
 /**
  * scripts/stripe-seed.mjs — catálogo Stripe do Prisma Player (Opção A).
  *
- * Cria os Products e Prices da spec (docs/STRIPE_INTEGRATION_SPEC.md) usando
+ * Cria os Products e Prices da spec (docs/specs/STRIPE_INTEGRATION_SPEC.md) usando
  * o `STRIPE_SECRET_KEY` do dono (use uma restricted API key — prefixo rk_).
  * Idempotente: lista antes de criar — pode rodar quantas vezes quiser.
  *

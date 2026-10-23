@@ -3,13 +3,13 @@
 ## ⚠️ NUNCA commite estes dados
 
 ### Secrets e chaves privadas
-- ❌ `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`
+- ❌ `NEON_AUTH_COOKIE_SECRET`
 - ❌ `EMBED_ORIGIN_SECRET`
 - ❌ `CLOUDFLARE_PURGE_SECRET` / `SHARED_PURGE_SECRET`
-- ❌ `ABACATEPAY_API_KEY`
-- ❌ `ABACATEPAY_WEBHOOK_SECRET`
 - ❌ `STRIPE_SECRET_KEY` (use restricted key `rk_` no env — nunca em código)
 - ❌ `STRIPE_WEBHOOK_SECRET`
+- ❌ `ALERT_WEBHOOK_URL` (webhook privado de alertas operacionais)
+- ❌ `META_CAPI_TOKENS_JSON` / `TIKTOK_EVENTS_TOKENS_JSON` (tokens CAPI por pixel)
 - ❌ `CRON_SECRET`
 - ❌ `RESEND_API_KEY`
 - ❌ `NVIDIA_API_KEY`
@@ -28,9 +28,8 @@
 ## ✅ O que PODE ser público
 
 ### URLs e chaves públicas (prefixo `NEXT_PUBLIC_`)
-- ✅ `NEXT_PUBLIC_SUPABASE_URL` → URL pública do projeto Supabase
-- ✅ `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → chave anônima (permite RLS)
 - ✅ `NEXT_PUBLIC_SITE_URL` → URL do app
+- ✅ `NEXT_PUBLIC_NEON_REALTIME_URL` → URL pública do WebSocket de Realtime do Neon (a URL é pública; o secret dela não)
 
 ### IDs de recursos (não são secrets)
 - ✅ ID do namespace KV do Cloudflare (em `wrangler.toml`)
@@ -46,7 +45,7 @@
 Cada ambiente (development, preview, production) deve ter secrets independentes:
 - `EMBED_ORIGIN_SECRET` diferente em dev e prod
 - `CLOUDFLARE_PURGE_SECRET` diferente em preview e prod
-- `ABACATEPAY_WEBHOOK_SECRET` diferente entre sandbox e produção
+- `STRIPE_WEBHOOK_SECRET` diferente entre sandbox e produção (e entre endpoints)
 
 ### 2. Rotação de secrets
 Quando rotacionar um secret:
@@ -74,7 +73,7 @@ require('crypto').randomBytes(32).toString('base64')
 ```
 
 ### 4. Separação de secrets por função
-- `SUPABASE_SECRET_KEY` → apenas para admin client (server-side)
+- `STRIPE_SECRET_KEY` → apenas nas rotas de billing no servidor (restricted key `rk_`)
 - `EMBED_ORIGIN_SECRET` → apenas para tokens de embed/eventos
 - `CLOUDFLARE_PURGE_SECRET` → apenas para invalidar cache Vercel↔Worker
 - **Nunca** reutilize um secret entre funções diferentes
@@ -108,8 +107,9 @@ Se encontrar algo, **NÃO commite**. Remova o valor e use variável de ambiente.
   própria sempre vence). Toda leitura/escrita filtra por esse dono.
 - Papéis: `viewer` lê; `editor` edita; `admin` gerencia (nunca promove a
   `admin` sem ser `owner`); `owner` é o titular.
-- RLS existe como rede de segurança, mas o servidor usa service-role: cada
-  `.eq("user_id", ...)` esquecido é vazamento. Revisar com
+- O filtro por `accountOwnerId` em toda query é a barreira principal; a RLS
+  do schema Neon é defesa em profundidade (ainda não validada contra o JWT
+  real de produção: `docs/SCALE_RUNBOOK.md` §d). Revisar com
   `tests/server-boundary.test.ts` + testes de IDOR.
 
 ## Isolamento verificado (auditoria de respostas de API — 20/10/2026)

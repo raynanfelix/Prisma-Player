@@ -1,7 +1,7 @@
 /**
  * Prisma Player — schema Drizzle (Lakebase Postgres / Neon).
  *
- * Consolidado de `docs/legacy-supabase/migrations/*.sql` (37 migrations, ordem
+ * Consolidado de `docs/archive/legacy-supabase/migrations/*.sql` (37 migrations, ordem
  * cronológica), respeitando drops posteriores:
  *   - tabelas do Better Auth legado ("user", "session", "account",
  *     "verification", "better_auth_*") foram dropadas — auth agora é

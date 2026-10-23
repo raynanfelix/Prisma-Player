@@ -41,7 +41,7 @@ Cloudflare R2). A base de código já está 100% migrada e validada
 | `EMBED_ORIGIN_SECRET` | segredo longo | assina tokens de embed |
 | `CRON_SECRET` | segredo longo | Bearer do Vercel Cron |
 | `CLOUDFLARE_R2_*` | do bucket | storage de vídeo |
-| `ABACATEPAY_*` | do provedor | billing |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe (restricted `rk_` + `whsec_`) | billing |
 | `NVIDIA_*`, `RESEND_*`, demais | ver `.env.example` | |
 
 O `.env.example` já está completo e sem nenhuma `SUPABASE_*`.
@@ -167,7 +167,7 @@ Guia oficial: https://neon.com/docs/auth/guides/setup-oauth.md
 2. `login` → `logout` (conta já verificada).
 3. Upload de vídeo → `ready` (R2) → `/embed/[id]` e `/embed/[id]/manifest`.
 4. Eventos: `/api/analytics-events` aceita o token do embed (não precisa sessão).
-5. Billing: webhook AbacatePay em sandbox (assinatura HMAC deve validar).
+5. Billing: webhook Stripe em test mode (assinatura HMAC deve validar).
 6. `GET /api/account/security` responde `{ factors: [] }` (2FA desabilitado).
 7. Webhook Neon: criar uma conta nova e confirmar nos logs que
    `ensureAccountBootstrap` rodou via `/api/webhooks/neon-auth` (200 + after).

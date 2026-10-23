@@ -10,7 +10,7 @@ Fonte das decisões: dono (voz/texto). Este documento é o contrato de build. Na
    - Aba "Pixels" do studio → REMOVIDA por inteiro (module, PixelTrackingPanel, campos por-VSL)
    - Painéis inline de webhook no motor de Inteligência → REMOVIDOS, substituídos por telas próprias
 4. **Vínculo pixel ↔ VSL flexível**: 1 pixel em N VSLs, N pixels em 1 VSL, ou qualquer combinação. No detalhe da integração, o cliente **seleciona as VSLs** alvo.
-5. Toda integração tem **tela própria**: Configurações + Eventos + Histórico de Ações + Como funciona (padrão App Store da AbacatePay adaptado ao design system Prisma — verde #B9FF66, escuro preto, PT-BR — não copiar o deles).
+5. Toda integração tem **tela própria**: Configurações + Eventos + Histórico de Ações + Como funciona (padrão App Store adaptado ao design system Prisma: verde #B9FF66, escuro preto, PT-BR; sem copiar padrões de terceiros).
 
 ## Dados (Drizzle + SQL)
 

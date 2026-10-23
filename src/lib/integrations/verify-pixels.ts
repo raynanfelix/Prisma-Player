@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * "Testar conexão" - Sprint 1 Pixel Verdadeiro (docs/PIXEL_VERIFY_SPEC.md).
+ * "Testar conexão" - Sprint 1 Pixel Verdadeiro (docs/specs/PIXEL_VERIFY_SPEC.md).
  *
  * Cada integração de anúncio dispara um evento de teste REAL na API oficial
  * da plataforma e devolve a resposta REAL padronizada em

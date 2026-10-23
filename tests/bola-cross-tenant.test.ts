@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 
 /**
- * Suíte BOLA cross-tenant (API1) - docs/SECURITY_HARDENING_SPEC.md, item 3.
+ * Suíte BOLA cross-tenant (API1) - docs/specs/SECURITY_HARDENING_SPEC.md, item 3.
  *
  * Duas contas (A e B) com objetos de cada uma; a SESSÃO é sempre de A
  * (guard/getCurrentUserId mockados). O fake-db aqui é mais fiel que o padrão

@@ -1,0 +1,21 @@
+# Segurança A — embed e CAPI (críticos C1+C2) — 23/10/2026
+
+EVIDÊNCIA: docs/reports/SECURITY_AUDIT_VALIDATION.md (validador 4800bb20, HEAD 130e0e1). Decisões do dono: muro = opção (a) hardening sem DRM; CAPI = server-side (token nunca sai). SEM travessões em textos novos. Set-Content proibido com acentos. Valide tsc+vitest por item.
+
+## P1 — C2: metaCapiToken NUNCA sai do servidor (vazamento ativo)
+1. PUT /api/player-configs (route.ts:67-83): jsonb livre → allowlist de chaves por seção (mesmas chaves que o embed precisa; rejeitar chaves desconhecidas com 400 invalid_config_key listando as permitidas).
+2. GET /api/embed/[id] (route.ts:124,238): FILTRAR o config no corpo com a MESMA lista do manifest (route.ts:57-80 do manifest — copie o modelo): metaCapiToken REMOVIDO antes de devolver; google/tiktok continuam (IDs, não segredos).
+3. EmbedPlayer.tsx:98-118: postMessage pra hospedeira deixa de levar integrations/capiToken (manda só o mínimo de estado que a página precisa — inspecione o que o host consome; se nada, remova o postMessage de integração).
+4. CAPI server-side: NOVO endpoint POST /api/embed/[id]/capi (público de embed, com session token + rate limit por sessão/IP 30/min): recebe {eventName, eventId?, eventSourceUrl?}; servidor lê o capiToken do CONFIG NO BANCO (nunca do request) e dispara pro Meta (padrão do lib/integrations/verify-pixels.ts — reuse o helper de CAPI que já existe em lib/player/pixels.ts:107 se houver; senão extraia). EmbedPlayer passa a chamar esse endpoint pros eventos de conversão (ViewContent etc. nos tempos configurados).
+5. Testes: PUT aceita só allowlist (400 nas outras); embed GET nunca contém capiToken (assert no JSON inteiro); capi endpoint dispara com token do banco (mock fetch/SDK) e 401/429.
+
+## P2 — C1: muro real contra script preguiçoso (sem DRM)
+Evidência: cookie pp_embed capturável via curl (proxy.ts:63-99), token mintado com host do Referer ESCOLHIDO (embed-origin.ts:19-21), R2 URLs no corpo (embed/[id]/route.ts:210,238). Meta: custo de raspagem sai de 2 requests HTTP pra sessão de navegador real.
+1. **Stream proxy**: corpo do embed NÃO devolve mais URLs R2 — devolve `streamUrl: /api/embed/{id}/stream?...` por source/variante. Rota NOVA GET /api/embed/[id]/stream: valida session token (o mesmo da session/route.ts, verificado server-side), paywall/estado do dono, geo (IP real), UA browser; responde **302 pra URL R2 assinada na hora com TTL 120s** (progressive MP4). Player (videojs) usa streamUrl como source. SE o source é HLS/m3u8: inspecione o formato real (docs/videojs-integration.md + player-configs) — se manifest contém URLs R2 absolutas, faça o stream endpoint servir o manifest reescrito (URLs de segmento → mesmo endpoint com assinatura própria) na primeira passagem SÓ se couber no dia; senão documente a limitação no relatório e mantenha MP4-only no proxy (e trate HLS como pendência).
+2. **Origin binding real**: no mint do session token (session/route.ts), o host vem validado: exigir header Origin/Referer PRESENTE e casar com allowedDomains do config (se o vídeo restringe domínios); assinar o host DENTRO do token (HMAC existente de embed-origin.ts); embed API + stream endpoint re-verify: Origin do request atual == host assinado no token.
+3. **Anti-script na porta**: session mint nega UA não-browser (regex mínima de browser real: Mozilla/Chrome|Safari|Firefox|Edg — log safeLog embed_session_blocked_ua) + rate limit de mint por IP aperta pra 10/min (hoje 60).
+4. **Paywall no stream**: o endpoint stream confere o estado (pitchDelay não, mas unlocked/paid do config) — geo e paywall na mesma porta da mídia.
+5. Testes: GET embed sem R2 no corpo; stream 302 com assinatura curta; sem sessão válida 401; Origin divergente do assinado 403; UA curl 403; paywall bloqueado 402; TTL presente.
+
+## Regras
+NÃO tocar: api/billing, lib/billing, lib/cron-tasks, UserActions.tsx, api/account/*, lib/account/team.ts, lib/auth/session.ts (esses são do agente SEC-B), landing, integrations. Zero deps. tsc 0 + vitest (632+ base, +seus) + lint 0. Sem build, sem push. Resposta: por item, testes, o formato real de source achado (MP4/HLS) e a decisão, o que mudou no embed publicamente (breaking pra embeds existentes? tokens antigos inválidos? reporte).

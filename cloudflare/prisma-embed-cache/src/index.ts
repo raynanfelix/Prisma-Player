@@ -10,7 +10,7 @@
  *   3. expoe `POST /__purge` para invalidar cache por tag quando
  *      um player_config e atualizado (chamado pela Vercel).
  *
- * Documento de referencia: docs/SYSTEM_DESIGN_SCALE.md (Seccao 4.1 e 6).
+ * Documento de referencia: docs/archive/SYSTEM_DESIGN_SCALE.md (Seccao 4.1 e 6).
  */
 
 interface Env {

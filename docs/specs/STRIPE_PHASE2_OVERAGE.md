@@ -1,6 +1,6 @@
 # Stripe — Fase 2: overage de plays (fora do escopo da Opção A)
 
-Decisão do dono (19/10/2026, docs/STRIPE_INTEGRATION_SPEC.md item 8): o overage
+Decisão do dono (19/10/2026, docs/specs/STRIPE_INTEGRATION_SPEC.md item 8): o overage
 de plays está FORA da fase 1. Hoje ele é INFORMATIVO no pricing
 (`billing_plans.play_overage_millicents` aparece na vitrine e nos cálculos de
 custo, mas NADA é cobrado por play excedente).

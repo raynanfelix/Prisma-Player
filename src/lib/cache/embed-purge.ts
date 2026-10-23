@@ -4,7 +4,7 @@ import "server-only";
  * quando um player_config é atualizado.
  *
  * Fase 1 do System Design Scale - Seção 6 (tag de cache) do
- * docs/SYSTEM_DESIGN_SCALE.md.
+ * docs/archive/SYSTEM_DESIGN_SCALE.md.
  *
  * Variáveis de ambiente necessárias:
  *   CLOUDFLARE_PURGE_URL          -> ex. https://prisma-embed-cache.<account>.workers.dev/__purge

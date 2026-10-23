@@ -12,7 +12,7 @@ src/
 │   ├── api/             # Route Handlers: auth → guard → serviço → resposta
 │   ├── dashboard/       # Páginas autenticadas (Server + Client Components)
 │   ├── embed/           # Páginas públicas do player (token + cookie de render)
-│   └── admin/           # Exige requireAdmin() + AAL2
+│   └── admin/           # Exige requireAdmin() (papel admin da sessão)
 ├── features/            # Domínios: videos, player, embeds, studio, analytics,
 │                        # teams(account), billing, auth, inbox, intelligence…
 ├── components/          # UI compartilhada (ui/ = shadcn/Base UI, dashboard/, charts/)
@@ -21,8 +21,8 @@ src/
 │                        # `import "server-only"` na primeira linha.
 ├── services/            # Clientes HTTP do frontend (*/client.ts) + exceções
 │                        # server-side nomeadas `server-*` (ex.: ads/server-events)
-├── proxy.ts             # Sessão Supabase + CSP com nonce + cookie de render
-├── supabase/            # Migrations, RLS, triggers atômicos de quota, seed
+├── proxy.ts             # Sessão Neon Auth + CSP com nonce + cookie de render
+drizzle/                 # Schema Drizzle + migrations SQL (banco: Neon/Lakebase)
 tests/                   # Vitest: unidade, regressão, fronteira, IDOR/paywall
 docs/                    # Arquitetura, segurança, design system
 ```
@@ -33,7 +33,7 @@ docs/                    # Arquitetura, segurança, design system
 |---|---|---|
 | Client Components (`"use client"`, `services/*/client.ts`) | UI, fetch às `/api/*`, validação de UX | Importar `lib/**` privilegiado, ler secrets, decidir autorização |
 | Route Handlers | `guard()` → serviço → `NextResponse` | Regra de negócio inline, confiar em ID do cliente |
-| `lib/**` servidor | Service-role, secrets, RLS bypass consciente | Ser importado pelo cliente (`server-only` quebra o build) |
+| `lib/**` servidor | Client `db`, secrets, acesso privilegiado consciente | Ser importado pelo cliente (`server-only` quebra o build) |
 | `lib/billing/catalog.ts`, `lib/player/pixels.ts`, `lib/analytics/*` (puros) | Importados por ambos os lados | Receber secrets (não têm) |
 
 `tests/server-boundary.test.ts` trava a fronteira: todo módulo da lista
@@ -46,8 +46,8 @@ importá-los. Quebrou o teste = PR bloqueado.
 Browser → proxy.ts (sessão + nonce CSP + cookie pp_embed)
   → Server Component (requireUser/requireAdmin) ou /api/* (guard())
   → guard(): CSRF → sessão → getTeamAccountContext → getAccountPlan
-  → serviço lib/* com createAdminClient + filtro user_id = accountOwnerId
-  → Supabase (RLS como rede de segurança; triggers atômicos p/ quotas)
+  → serviço lib/* com client db (Drizzle) + filtro accountOwnerId
+  → Neon Postgres (Lakebase; RLS de defesa em profundidade no schema)
 ```
 
 Identidade sempre da sessão. `user_id`/`owner_id`/`team_id` do body são
@@ -55,23 +55,28 @@ ignorados para autorização. UUID identifica, não autoriza.
 
 ## Autenticação e autorização
 
-- Supabase Auth (email/senha) via `@supabase/ssr`. Sem Better Auth/Clerk.
+- Neon Auth gerenciado (Managed Better Auth) via `@neondatabase/auth`; login
+  com Google opcional. Sem MFA no Managed.
 - `guard(request, { csrf, role: read|edit|manage, paid })` é a porta única
   (`src/lib/api/guard.ts`). `paid:true` em toda escrita e entrega de valor.
 - Equipes: `getTeamAccountContext` — equipe própria sempre vence; dono =
   `accountOwnerId`; toda query escopa por ele.
-- Admin: `requireAdmin()` + AAL2 (MFA).
+- Admin: `requireAdmin()` (papel admin da sessão; MFA indisponível no Managed).
 - CSRF: `csrfGuard` em toda mutação com cookie; webhooks usam HMAC;
   telemetria pública usa `validateOrigin` + tokens HMAC amarrados.
 
 ## Dados e armazenamento
 
-- Service-role em todo acesso servidor; RLS decorativa porém íntegra.
-- Quotas com dupla barreira: pré-check amigável na API + trigger atômico
-  (`pg_advisory_xact_lock`) no banco. Nunca só contagem prévia.
-- Storage: R2 (principal) + Supabase Storage. Paths montados no servidor
+- Acesso servidor com client `db`; toda query filtra por `accountOwnerId`.
+  RLS existe no schema Neon como defesa em profundidade (validação contra o
+  JWT real de produção pendente: docs/SCALE_RUNBOOK.md §d).
+- Quotas checadas na camada de API (`getAccountPlan`, `getMonthPlaysUsed`);
+  locks atômicos pontuais no banco (`pg_advisory_xact_lock`) onde há corrida
+  real (ex.: seed de inbox).
+- Storage: Cloudflare R2 (único). Paths montados no servidor
   (`<owner>/<uuid>-<nome>`); `ownedAssetPaths()` filtra `config.assets`.
-- `included_plays` = cota com overage cobrado (não bloqueio); medida via
+- `included_plays` = cota com excedente informativo (não bloqueio, não
+  cobrado; fase 2: docs/specs/STRIPE_PHASE2_OVERAGE.md); medida via
   `getMonthPlaysUsed()` e exposta em headers + overview.
 
 ## Nova funcionalidade (checklist)
@@ -97,7 +102,7 @@ ignorados para autorização. UUID identifica, não autoriza.
 - Sem acesso: lista visível (LGPD), mas sem URL assinada/plays/config/
   diagnósticos; suporte (`/api/support/*`, ajuda) sempre livre, sem `paid`.
 - Quotas: vídeos+assets somam no `storage_gb` (API + trigger atômico);
-  plays = overage cobrado; créditos IA debitados antes do provedor.
+  plays = excedente informativo (cobrança é fase 2); créditos IA debitados antes do provedor.
 
 ## Admin (`/admin`, `/api/admin/*`)
 
@@ -106,8 +111,9 @@ ignorados para autorização. UUID identifica, não autoriza.
   `failClosed`) e operam cross-tenant por desenho.
 - Toda mutação de suporte grava `admin_audit_log` (quem, o quê, em quem).
 - Ações manuais (plano, status, trial, créditos) NÃO tocam o provedor
-  (AbacatePay): conciliar cobrança lá. Avanços de plano/assim por diante
-  valem a partir da escrita no banco + triggers de quota.
+  (Stripe): divergências caem no reconcile diário do cron (alerta via
+  `ALERT_WEBHOOK_URL`; conferir no painel Stripe). Avanços de plano valem a
+  partir da escrita no banco.
 - SEO: `seo_targets` + `visibility_checks` (taxa = citados ÷ execuções);
   base técnica verificada em runtime (robots, sitemap, llms.txt, pricing).
 - Suporte: `support_cases` + `support_notes` (internas, sem envio externo);

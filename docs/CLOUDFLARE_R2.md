@@ -6,7 +6,7 @@
 - O navegador envia partes de 25 MiB diretamente ao endpoint S3 do R2.
 - A API cria URLs pré-assinadas de 15 minutos; as chaves S3 nunca chegam ao cliente.
 - A reprodução usa uma URL GET temporária de seis horas para suportar VSLs longas e requisições HTTP Range tardias.
-- Vídeos antigos continuam no Supabase Storage por meio de `videos.storage_provider`.
+- O bucket R2 é a única origem de vídeo (sem fallback de storage).
 - Uploads incompletos são abortados pela aplicação e pelo lifecycle padrão do R2 após sete dias.
 
 ## Configuração no Cloudflare
@@ -75,8 +75,10 @@ Depois de alterar qualquer variável na Vercel, faça um novo deploy. Confirme t
 
 ## Banco e produção
 
-- Execute `20260718000500_cloudflare_r2_video_storage.sql` antes do deploy.
-- Sem as quatro variáveis obrigatórias, a aplicação mantém o fallback do Supabase Storage.
+- Banco: schema vigente em `drizzle/schema.ts` (aplicação via Neon SQL Editor com
+  `docs/neon-migration/neon-schema.sql` ou drizzle-kit; sem migration avulsa de R2).
+- As quatro variáveis R2 são obrigatórias: sem elas, upload e assinatura de vídeo
+  falham (fail-closed; sem fallback).
 - Não use `r2.dev` em produção; ele possui rate limit.
 - Para VSLs, use Standard. Infrequent Access cobra recuperação e tem permanência mínima.
 - Monitore Storage, Class A e Class B. O egress é gratuito, mas armazenamento e operações não são.

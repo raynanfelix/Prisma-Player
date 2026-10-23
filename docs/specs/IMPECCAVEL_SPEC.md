@@ -22,7 +22,7 @@ Gere com base em GREP REAL do código (não invente):
 Não gere política de privacidade (checkpoint skill exige revisão jurídica) — só os dois documentos técnicos.
 
 ## 6. Runbooks de escala (docs/SCALE_RUNBOOK.md)
-Curto e operacional: (a) quando ativar Cloudflare na frente (>1M plays/mês) — passos; (b) quando rollups de analytics (>10M eventos/mês — video_daily_stats já existe, plano de migração das queries); (c) overage Metronome — como abrir a conta e o que conecta onde (STRIPE_PHASE2_OVERAGE.md já tem a spec, referencie); (d) RLS real: POR QUE ainda não (exige validar policies contra JWT real de produção — risco de lockout; a suíte BOLA cobre a trincheira principal) e o passo a passo pra quando decidir.
+Curto e operacional: (a) quando ativar Cloudflare na frente (>1M plays/mês) — passos; (b) quando rollups de analytics (>10M eventos/mês — video_daily_stats já existe, plano de migração das queries); (c) overage Metronome — como abrir a conta e o que conecta onde (docs/specs/STRIPE_PHASE2_OVERAGE.md já tem a spec, referencie); (d) RLS real: POR QUE ainda não (exige validar policies contra JWT real de produção — risco de lockout; a suíte BOLA cobre a trincheira principal) e o passo a passo pra quando decidir.
 
 ## Regras
 - NÃO toque: features/landing-page, auth, assets, .github (CI novo está ok), lib/integrations, api/integrations (outro agente voou ali).

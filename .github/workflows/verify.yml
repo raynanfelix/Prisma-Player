@@ -1,6 +1,6 @@
 name: Verify
 
-# Hardening pós-audit (docs/SECURITY_HARDENING_SPEC.md, item 1): pipeline de
+# Hardening pós-audit (docs/specs/SECURITY_HARDENING_SPEC.md, item 1): pipeline de
 # verificação em push/PR para a main. SEM build — a Vercel buildia todo push
 # de qualquer forma; o CI fica rápido e roda o que a Vercel não roda
 # (tsc, lint, testes, quality gates e audit de dependências).
@@ -24,6 +24,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # fetch-depth 0: o gate anti-sprawl (check-spec) precisa da
+          # merge-base com main para listar os arquivos novos do PR/push.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -45,11 +49,20 @@ jobs:
       - name: Regras de qualidade (eslint-rules quality/*)
         run: node scripts/verify-quality-rules.mjs
 
+      # Anti-sprawl (docs/specs/ORGANIZACAO_ANTI_SPRAWL_SPEC.md, item 4): warn
+      # quando arquivo novo de feature (src/features|src/app) nasce sem spec
+      # citada na mensagem do commit. NUNCA falha o CI (exit 0 sempre): o
+      # aviso fica no log para o revisor.
+      - name: Anti-sprawl (spec em feature nova, warn)
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title }}
+        run: node scripts/check-spec.mjs
+
       # Falha somente em vulnerabilidade high/critical. Em 19/10/2026 o audit
       # ainda acusa 2 cadeias de DEV-TOOLS sem correção dentro do range atual
       # (tinypool via vitest 3 — correção é vitest 5, breaking; braces via
       # shadcn CLI/eslint — sem versão corrigida publicada). Dependências de
       # produção estão limpas após `npm audit fix`. Ver pendências em
-      # docs/SECURITY_HARDENING_SPEC.md.
+      # docs/specs/SECURITY_HARDENING_SPEC.md.
       - name: Audit de dependências (falha só em high/critical)
         run: npm audit --audit-level=high
