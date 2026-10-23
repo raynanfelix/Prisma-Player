@@ -7,6 +7,8 @@ import { readJsonBody } from "@/lib/api/request";
 import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { recordSecurityEvent } from "@/lib/security/auth-events";
+import { alertOperations } from "@/lib/security/alert-webhook";
+import { getStripe } from "@/lib/billing/stripe/client";
 import { deleteR2Object } from "@/lib/storage/r2";
 
 /**
@@ -20,6 +22,13 @@ import { deleteR2Object } from "@/lib/storage/r2";
  * cascade automático ao apagar o usuário da auth. A deleção de cada tabela de
  * produto é EXPLÍCITA aqui, dentro de uma transação - é o que garante o
  * direito do titular.
+ *
+ * ANTES do wipe, uma assinatura Stripe VIVA é cancelada no provedor
+ * (LGPD, art. 18, VI + boa-fé do art. 6º): apagar a conta e deixar a
+ * cobrança ativa continuaria faturando um titular sem relação. O
+ * cancelamento é IMEDIATO (não cancel_at_period_end) porque a conta está
+ * sendo eliminada; sem cancelamento confirmado o wipe NÃO acontece
+ * (fail-closed: o titular tenta de novo e nenhum dado é perdido).
  *
  * Storage é somente R2 desde a migração (CHECK em `videos.storage_provider`),
  * então os objetos de vídeo são removidos via deleteR2Object antes da deleção
@@ -71,6 +80,54 @@ export async function POST(request: Request) {
       .limit(1);
     if (remaining.length > 0) {
       return NextResponse.json({ error: "team_not_empty", message: "Remova os outros membros da equipe antes de excluir a conta." }, { status: 409 });
+    }
+  }
+
+  // Assinatura Stripe viva: cancelada ANTES do wipe. Status que seguem
+  // faturando no provedor: active, past_due e suspended (pausada, retomável).
+  // O id local morre no wipe - depois dele não haveria como cancelar.
+  const [subscription] = await db
+    .select({
+      provider: schema.subscriptions.provider,
+      providerSubscriptionId: schema.subscriptions.providerSubscriptionId,
+      status: schema.subscriptions.status,
+    })
+    .from(schema.subscriptions)
+    .where(eq(schema.subscriptions.userId, userId))
+    .limit(1);
+
+  const liveStripeSubscriptionId =
+    subscription?.provider === "stripe" &&
+    ["active", "past_due", "suspended"].includes(subscription.status) &&
+    subscription.providerSubscriptionId
+      ? subscription.providerSubscriptionId
+      : null;
+
+  if (liveStripeSubscriptionId) {
+    try {
+      await getStripe().subscriptions.cancel(liveStripeSubscriptionId, { prorate: false });
+    } catch (reason) {
+      // resource_missing = a assinatura já não existe na Stripe (cancelada
+      // fora, expirada): o efeito desejado já foi alcançado, segue o wipe.
+      const code = (reason as { code?: string } | null)?.code;
+      if (code !== "resource_missing") {
+        await alertOperations({
+          title: "Exclusão de conta bloqueada: falha ao cancelar assinatura Stripe",
+          detail: `subscription ${liveStripeSubscriptionId} do user ${userId}`,
+          kind: "account_delete_stripe_cancel_failed",
+        });
+        await recordSecurityEvent("account_delete_stripe_cancel_failed", {
+          userId,
+          metadata: { subscriptionId: liveStripeSubscriptionId },
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_cancel_failed",
+            message: "Não foi possível cancelar sua assinatura no Stripe agora. Nenhum dado foi apagado; tente novamente em instantes.",
+          },
+          { status: 503 },
+        );
+      }
     }
   }
 

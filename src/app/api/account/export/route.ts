@@ -6,8 +6,12 @@ import { db, schema } from "@/lib/db";
 
 const {
   accountAccess,
+  accountTeamInvites,
+  accountTeamMembers,
   aiCreditLedger,
   aiCreditWallets,
+  billingChurnSurveys,
+  billingCheckouts,
   intelligenceControls,
   playerConfigs,
   profiles,
@@ -19,12 +23,20 @@ const {
 } = schema;
 
 /**
- * Exportação dos dados pessoais do titular (LGPD, art. 18, V - portabilidade).
+ * Exportação dos dados pessoais do titular (LGPD, art. 18, II e V - acesso e
+ * portabilidade; resposta completa no prazo do art. 19, II).
  *
  * Devolve apenas dados do próprio usuário, em JSON legível. Não inclui eventos
  * de espectadores das VSLs: esses são dados de terceiros, dos quais o cliente é
  * controlador e a Prisma operadora - a exportação deles sai pelo relatório de
  * público, não por aqui.
+ *
+ * Cobertura da conta: perfil, acesso, assinatura, controles, créditos+ledger,
+ * vídeos, pastas, players, inbox, eventos de segurança, participação em
+ * equipes, convites enviados, checkouts e pesquisas de churn (feedback é dado
+ * do titular). Dados mantidos por OPERADORES (Stripe, PostHog) não são
+ * replicados aqui: o dump informa isso em `thirdPartyData` com o canal para
+ * pedido direto ao provedor (art. 18, VII - compartilhamento).
  */
 
 const camelToSnake = (key: string) => key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
@@ -47,7 +59,23 @@ export async function GET(request: Request) {
   const limited = await rateLimit(request, `account-export:${userId}`, { max: 5, windowMs: 60 * 60_000 });
   if (limited) return limited;
 
-  const [profileRows, accessRows, subscriptionRows, videoRows, folderRows, playerRows, walletRows, ledgerRows, inboxRows, securityEventRows, controlRows] = await Promise.all([
+  const [
+    profileRows,
+    accessRows,
+    subscriptionRows,
+    videoRows,
+    folderRows,
+    playerRows,
+    walletRows,
+    ledgerRows,
+    inboxRows,
+    securityEventRows,
+    controlRows,
+    teamMemberRows,
+    teamInviteRows,
+    checkoutRows,
+    churnRows,
+  ] = await Promise.all([
     db.select().from(profiles).where(eq(profiles.id, userId)).limit(1),
     db.select().from(accountAccess).where(eq(accountAccess.userId, userId)).limit(1),
     db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1),
@@ -59,6 +87,10 @@ export async function GET(request: Request) {
     db.select({ kind: userInbox.kind, title: userInbox.title, message: userInbox.message, createdAt: userInbox.createdAt, readAt: userInbox.readAt }).from(userInbox).where(eq(userInbox.userId, userId)).limit(500),
     db.select({ eventType: securityEvents.eventType, createdAt: securityEvents.createdAt }).from(securityEvents).where(eq(securityEvents.userId, userId)).orderBy(desc(securityEvents.createdAt)).limit(500),
     db.select().from(intelligenceControls).where(eq(intelligenceControls.userId, userId)).limit(1),
+    db.select({ teamId: accountTeamMembers.teamId, role: accountTeamMembers.role, status: accountTeamMembers.status, joinedAt: accountTeamMembers.joinedAt }).from(accountTeamMembers).where(eq(accountTeamMembers.userId, userId)).limit(100),
+    db.select({ id: accountTeamInvites.id, email: accountTeamInvites.email, role: accountTeamInvites.role, status: accountTeamInvites.status, invitedBy: accountTeamInvites.invitedBy, expiresAt: accountTeamInvites.expiresAt, createdAt: accountTeamInvites.createdAt }).from(accountTeamInvites).where(eq(accountTeamInvites.invitedBy, userId)).limit(200),
+    db.select({ id: billingCheckouts.id, checkoutType: billingCheckouts.checkoutType, amountCents: billingCheckouts.amountCents, currency: billingCheckouts.currency, status: billingCheckouts.status, paidAt: billingCheckouts.paidAt, receiptUrl: billingCheckouts.receiptUrl, createdAt: billingCheckouts.createdAt }).from(billingCheckouts).where(eq(billingCheckouts.userId, userId)).orderBy(desc(billingCheckouts.createdAt)).limit(200),
+    db.select({ reason: billingChurnSurveys.reason, feedback: billingChurnSurveys.feedback, createdAt: billingChurnSurveys.createdAt }).from(billingChurnSurveys).where(eq(billingChurnSurveys.userId, userId)).orderBy(desc(billingChurnSurveys.createdAt)).limit(50),
   ]);
 
   const payload = {
@@ -74,6 +106,16 @@ export async function GET(request: Request) {
     players: playerRows.map(toJsonRow),
     inbox: inboxRows.map(toJsonRow),
     securityEvents: securityEventRows.map(toJsonRow),
+    teamMemberships: teamMemberRows.map(toJsonRow),
+    teamInvites: teamInviteRows.map(toJsonRow),
+    billingCheckouts: checkoutRows.map(toJsonRow),
+    churnSurveys: churnRows.map(toJsonRow),
+    thirdPartyData: {
+      note: "Dados tratados por operadores (Stripe: customer, assinaturas, faturas; PostHog: analytics de produto) permanecem nos sistemas deles e não são replicados neste arquivo. Para exercer direitos sobre esses dados, solicite também diretamente ao provedor, ou pelo nosso canal de privacidade.",
+      providers: ["Stripe", "PostHog"],
+      privacyPolicyUrl: "/privacy",
+      privacyContactEmail: "privacidade@prismaplayer.com.br",
+    },
   };
 
   return new NextResponse(JSON.stringify(payload, null, 2), {
