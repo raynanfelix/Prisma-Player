@@ -7,11 +7,16 @@ const { authState, dbState, stripeState, rateLimitCalls, alertCalls, securityEve
     userId: "user-session" as string | null,
     email: "titular@prisma.test",
     passwordValid: true,
+    otpValid: true,
+    sendOtpError: null as Record<string, unknown> | null,
     signInEmailArgs: [] as Array<Record<string, unknown>>,
+    signInOtpArgs: [] as Array<Record<string, unknown>>,
+    sendOtpArgs: [] as Array<Record<string, unknown>>,
   },
   dbState: {
     selectRows: {} as Record<string, unknown[]>,
     wipedTables: [] as string[],
+    updatedSets: [] as Array<{ table: string; set: Record<string, unknown> }>,
     executeCount: 0,
   },
   stripeState: {
@@ -43,6 +48,16 @@ vi.mock("@/lib/auth/server", () => ({
       email: vi.fn(async (input: Record<string, unknown>) => {
         authState.signInEmailArgs.push(input);
         return authState.passwordValid ? { error: null } : { error: { message: "credenciais inválidas" } };
+      }),
+      emailOtp: vi.fn(async (input: Record<string, unknown>) => {
+        authState.signInOtpArgs.push(input);
+        return authState.otpValid ? { error: null, data: { session: {} } } : { error: { message: "código inválido" } };
+      }),
+    },
+    emailOtp: {
+      sendVerificationOtp: vi.fn(async (input: Record<string, unknown>) => {
+        authState.sendOtpArgs.push(input);
+        return authState.sendOtpError ? { error: authState.sendOtpError } : { error: null };
       }),
     },
     getSession: vi.fn(async () => ({
@@ -92,10 +107,20 @@ vi.mock("@/lib/db", async () => {
     },
   });
 
+  const updateOf = () => (table: unknown) => ({
+    set: (values: Record<string, unknown>) => ({
+      where: () => {
+        dbState.updatedSets.push({ table: getTableName(table as Parameters<typeof getTableName>[0]), set: values });
+        return Promise.resolve();
+      },
+    }),
+  });
+
   const db = {
     select: () => selectChain(),
     delete: deleteOf(),
-    transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({ delete: deleteOf() }),
+    update: updateOf(),
+    transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({ delete: deleteOf(), update: updateOf() }),
     execute: async () => {
       dbState.executeCount += 1;
       return {};
@@ -143,9 +168,14 @@ beforeEach(() => {
   authState.userId = "user-session";
   authState.email = "titular@prisma.test";
   authState.passwordValid = true;
+  authState.otpValid = true;
+  authState.sendOtpError = null;
   authState.signInEmailArgs = [];
+  authState.signInOtpArgs = [];
+  authState.sendOtpArgs = [];
   dbState.selectRows = {};
   dbState.wipedTables = [];
+  dbState.updatedSets = [];
   dbState.executeCount = 0;
   stripeState.envMissing = false;
   stripeState.cancelCalls = [];
@@ -312,5 +342,123 @@ describe("POST /api/account/delete - cancelamento de assinatura Stripe antes do 
     expect((await response.json()).error).toBe("confirmation_required");
     expect(stripeState.cancelCalls).toEqual([]);
     expect(dbState.wipedTables).toEqual([]);
+  });
+});
+
+describe("POST /api/account/delete - resíduos do wipe (P1 da spec de conta)", () => {
+  it("wipe apaga integrações (tokens), churn survey e convites com o e-mail do titular", async () => {
+    dbState.selectRows = {
+      account_teams: [],
+      subscriptions: [],
+      videos: [],
+    };
+
+    const response = await deleteRequest({ password: "senha-correta", confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(200);
+    expect(dbState.wipedTables).toContain("account_integrations");
+    expect(dbState.wipedTables).toContain("billing_churn_surveys");
+    // Convites: além do acceptedBy (linha existente), o e-mail do titular sai
+    // da tabela (pendentes de outras equipes ainda concederiam entrada).
+    expect(dbState.wipedTables).toContain("account_team_invites");
+  });
+
+  it("scrub do payment_webhook_events usa os ids do provedor da conta (payload limpo, erro anulado)", async () => {
+    dbState.selectRows = {
+      account_teams: [],
+      subscriptions: [{ provider: "stripe", providerSubscriptionId: "sub_scrub_1", status: "cancelled" }],
+      billing_customers: [{ providerCustomerId: "cus_scrub_9" }],
+      videos: [],
+    };
+
+    const response = await deleteRequest({ password: "senha-correta", confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(200);
+    const scrubs = dbState.updatedSets.filter((entry) => entry.table === "payment_webhook_events");
+    expect(scrubs).toHaveLength(2);
+    for (const scrub of scrubs) {
+      expect(scrub.set.processingError).toBeNull();
+      // payload é a expressão SQL de esvaziamento (jsonb '{}' via template),
+      // não um valor string cru.
+      expect(typeof scrub.set.payload).toBe("object");
+    }
+  });
+
+  it("sem ids de provedor (nunca assinou) nenhum scrub é tentado e o wipe segue", async () => {
+    dbState.selectRows = { account_teams: [], subscriptions: [], videos: [] };
+
+    const response = await deleteRequest({ password: "senha-correta", confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(200);
+    expect(dbState.updatedSets).toEqual([]);
+    expect(dbState.wipedTables).toContain("profiles");
+  });
+});
+
+describe("POST /api/account/delete - step-up OTP para conta SSO-only (P1)", () => {
+  it("sem senha e sem OTP: 400 password_or_otp_required, nada é apagado", async () => {
+    const response = await deleteRequest({ confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("password_or_otp_required");
+    expect(stripeState.cancelCalls).toEqual([]);
+    expect(dbState.wipedTables).toEqual([]);
+  });
+
+  it("OTP válido substitui a senha: signIn.emailOtp confirma a identidade e o wipe segue", async () => {
+    dbState.selectRows = { account_teams: [], subscriptions: [], videos: [] };
+
+    const response = await deleteRequest({ otp: "123456", confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(200);
+    expect(authState.signInOtpArgs).toEqual([{ email: "titular@prisma.test", otp: "123456" }]);
+    expect(authState.signInEmailArgs).toEqual([]);
+    expect(dbState.wipedTables).toContain("profiles");
+  });
+
+  it("OTP inválido: 400 invalid_otp, evento de segurança, sem Stripe e sem wipe", async () => {
+    authState.otpValid = false;
+
+    const response = await deleteRequest({ otp: "999999", confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("invalid_otp");
+    expect(securityEvents[0]).toMatchObject({ eventType: "account_delete_denied" });
+    expect(stripeState.cancelCalls).toEqual([]);
+    expect(dbState.wipedTables).toEqual([]);
+  });
+
+  it("OTP fora do formato: 400 invalid_otp_format sem chamar o Auth", async () => {
+    const response = await deleteRequest({ otp: "12ab", confirm: "EXCLUIR" });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("invalid_otp_format");
+    expect(authState.signInOtpArgs).toEqual([]);
+  });
+
+  it("stage request-otp: envia o código para o e-mail da sessão (mesmo mecanismo da troca de senha)", async () => {
+    const response = await deleteRequest({ stage: "request-otp" });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(authState.sendOtpArgs).toEqual([{ email: "titular@prisma.test", type: "email-verification" }]);
+  });
+
+  it("falha no envio do código: 400 otp_send_failed com evento de segurança", async () => {
+    authState.sendOtpError = { message: "smtp fora" };
+
+    const response = await deleteRequest({ stage: "request-otp" });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("otp_send_failed");
+    expect(securityEvents[0]).toMatchObject({ eventType: "account_delete_otp_send_failed" });
+  });
+
+  it("stage request-otp tem balde próprio apertado (e-mail real dispara a cada chamada)", async () => {
+    await deleteRequest({ stage: "request-otp" });
+
+    const otpBucket = rateLimitCalls.find((call) => call.scope.startsWith("account-delete-otp"));
+    expect(otpBucket).toBeTruthy();
+    expect(otpBucket!.options).toMatchObject({ max: 3, failClosed: true });
   });
 });

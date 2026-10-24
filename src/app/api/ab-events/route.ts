@@ -26,21 +26,17 @@ export async function POST(request: Request) {
   const progressPercent = Number(body?.progressPercent ?? 0);
   const watchedSeconds = Math.max(0, Math.min(Number(body?.watchedSeconds ?? 0), 86400));
   if (![testId, variantId, sessionId].every((id) => uuid.test(id)) || !allowedEvents.has(eventType) || ![0, 25, 50, 75, 100].includes(progressPercent)) return NextResponse.json({ error: "invalid_event" }, { status: 400 });
-  // Anti-CGNAT: espectadores de operadora móvel compartilham o mesmo IP
-  // público; identifier por IP fazia o limite acompanhar o IP da operadora,
-  // multiplicando buckets a cada troca de IP da mesma sessão. O corpo já
-  // traz sessionId validado como UUID acima (fora disso a rota devolve 400
-  // antes de chegar aqui), então o bucket passa a ser por SESSÃO.
-  const sessionIdentifier = `s:${sessionId}`;
-  const limited = await rateLimit(request, `ab:${testId}:${variantId}:${sessionId}`, { max: 120, windowMs: 60_000, identifier: sessionIdentifier });
-  if (limited) return limited;
-  // Decisão do Lead (review do Plano E): a segunda barreira "global" por IP
-  // foi REMOVIDA - com identifier por sessão ela ficava ofuscada pelo
-  // limite de 120/min acima (código morto custando 1 write no Neon por
-  // request) e restaurá-la por IP reabrira o problema de CGNAT que o Plano
-  // E fechou. Camadas anti-abuso reais desta rota: validateOrigin acima,
-  // este teto por sessão, e o dedupe ON CONFLICT DO NOTHING do insert
-  // (chave test_id+variant_id+session_id+event_type+progress_percent).
+  // M5 (auditoria): teto AGREGADO por IP ANTES de qualquer IO. O limite por
+  // sessão abaixo continua existindo, mas a sessão é auto-declarada no corpo:
+  // sem este teto, um eventToken legítimo + cookie de render permitiam
+  // ingestão ilimitada rotacionando UUIDs de sessão (custo de writes no
+  // Neon sem teto). O IP é lido só dos cabeçalhos que a plataforma injeta
+  // (clientIp do rate-limit), nunca do cliente.
+  const ipLimited = await rateLimit(request, "ab-events-ip", {
+    max: ANALYTICS.INGEST_IP_RATE_LIMIT_MAX_REQUESTS,
+    windowMs: ANALYTICS.INGEST_IP_RATE_LIMIT_WINDOW_MS,
+  });
+  if (ipLimited) return ipLimited;
 
   let variant: { userId: string; videoId: string } | undefined;
   try {
@@ -51,9 +47,12 @@ export async function POST(request: Request) {
   if (!variant) return NextResponse.json({ error: "variant_not_found" }, { status: 404 });
   // Same proof-of-embed requirement as /api/analytics-events, bound to the
   // video actually served for this variant. A sessão A/B (persistida entre
-  // visitas) é intencionalmente distinta da sessão de analytics do viewer, por
-  // isso não exigimos sessão no token aqui - temos que evitar quebrar o
-  // sorteio consistente de variante. Sem efeito lateral pago, não há prejuízo.
+  // visitas) é intencionalmente distinta da sessão de analytics do viewer
+  // (que o token carrega), por isso a sessão do CORPO não pode ser comparada
+  // com a do token aqui - a comparação rejeitaria o sorteio consistente de
+  // variante. O que amarramos ao token é o TETO de ingestão: o bucket abaixo
+  // usa a sessão HMAC-atestada do token quando ela existe, então rotacionar
+  // UUIDs de sessão no corpo não cria bucket novo (M5).
   const eventToken = typeof body?.eventToken === "string" ? body.eventToken : null;
   const verifiedEvent = verifyEmbedEventTokenContext(eventToken, { videoId: variant.videoId });
   if (!verifiedEvent) return NextResponse.json({ error: "invalid_event_token" }, { status: 403 });
@@ -61,6 +60,13 @@ export async function POST(request: Request) {
   if (!verifiedEvent.nonce || !verifyEmbedRenderCookie(request.headers, verifiedEvent.nonce)) return NextResponse.json({ error: "invalid_event_token" }, { status: 403 });
   // Origin presente e não-self precisa concordar com o host do token.
   if (verifiedEvent.host && originHeaderDisagrees(request.headers, verifiedEvent.host, new URL(request.url).origin)) return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
+  // Anti-CGNAT: o bucket é por identidade de RENDER, não por IP. Quando o
+  // token carrega a sessão do viewer, ela é a identidade inescritível (o
+  // corpo não consegue forjar outra); tokens legados sem o claim caem no
+  // sessionId do corpo, validado como UUID no topo da rota.
+  const identity = verifiedEvent.sessionId ? `t:${verifiedEvent.sessionId}` : `s:${sessionId}`;
+  const limited = await rateLimit(request, `ab:${testId}:${variantId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS, identifier: identity });
+  if (limited) return limited;
 
   let testStatus: string | undefined, videoStatus: string | undefined, playerId: string | undefined;
   try {

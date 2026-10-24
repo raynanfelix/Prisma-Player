@@ -81,7 +81,7 @@ function SettingsContent() {
 
       {activeTab === "preferences" && <PreferencesSettingsTab />}
 
-      {activeTab === "security" && <SecurityPanel notify={notify} adminMfaRequired={adminMfaRequired} />}
+      {activeTab === "security" && <SecurityPanel notify={notify} adminMfaRequired={adminMfaRequired} email={profile?.email} />}
     </main>
   );
 }

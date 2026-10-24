@@ -80,6 +80,28 @@ export const accountSettingsService = {
       body: { currentPassword, password, otp },
     });
   },
+  /**
+   * Estágio 1 do step-up da exclusão de conta (contas SSO-only, sem senha):
+   * envia o código OTP para o e-mail da sessão (mesmo mecanismo da troca de
+   * senha).
+   */
+  requestDeleteOtp() {
+    return apiRequest<{ ok?: boolean }>("/api/account/delete", {
+      method: "POST",
+      body: { stage: "request-otp" },
+    });
+  },
+  /**
+   * Exclusão definitiva da conta (LGPD): a rota exige confirm "EXCLUIR" e
+   * OU senha OU o código OTP do step-up. Sucesso encerra a sessão no
+   * servidor; o client deve sair da sessão (redirecionamento completo).
+   */
+  deleteAccount(input: { password: string } | { otp: string }) {
+    return apiRequest<{ deleted?: boolean; storageWarnings?: number }>("/api/account/delete", {
+      method: "POST",
+      body: { confirm: "EXCLUIR", ...input },
+    });
+  },
   /** Tela Faturamento (spec Billing Completo, item 3). */
   getInvoices() {
     return apiRequest<{ invoices: BillingInvoice[] }>("/api/billing/invoices", {

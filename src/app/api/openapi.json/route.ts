@@ -82,16 +82,17 @@ const document = {
       get: {
         summary: "Configuração do player para render no embed",
         description:
-          "Retorna a configuração dinâmica do player publicado (cores, autoplay, Pitch Delay, teste A/B ativo). " +
-          "Exige o contexto de origem do embed (token de origem assinado e cookie de render pp_embed emitidos ao " +
-          "carregar /embed/{id} em um navegador real); não é uma API de chave pública.",
+          "Retorna a configuração pública do player publicado (cores, autoplay, CTA, teste A/B ativo) e a porta da mídia " +
+          "streamUrl (/api/embed/{id}/stream). URLs do storage NÃO saem no corpo. Exige o contexto de origem do embed " +
+          "(token de origem assinado e cookie de render pp_embed emitidos ao carregar /embed/{id} em um navegador real) " +
+          "E um sessionToken mintado em /api/embed/{id}/session; não é uma API de chave pública.",
         operationId: "getEmbedConfig",
         parameters: [{ name: "id", in: "path", required: true, description: "ID do player (UUID)", schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Configuração do player", content: { "application/json": { schema: { type: "object" } } } },
+          "200": { description: "Configuração do player com streamUrl", content: { "application/json": { schema: { type: "object" } } } },
           "401": errorResponse("Contexto de origem ausente ou inválido"),
           "402": errorResponse("Assinatura do titular sem acesso (pausa/cancelamento)"),
-          "403": errorResponse("Origem/domínio não permitido para este player"),
+          "403": errorResponse("Origem/domínio não permitido ou sessão ausente para este player"),
           "404": errorResponse("Player não publicado ou inexistente"),
         },
       },
@@ -99,7 +100,7 @@ const document = {
     "/api/embed/{id}/manifest": {
       get: {
         summary: "Manifest de reprodução do embed",
-        description: "Manifest (fontes de vídeo assinadas de curta duração, faixas e configuração) consumido pelo player no iframe do embed.",
+        description: "Manifest (cosméticos públicos sanitizados + poster) consumido pelo shell do iframe do embed.",
         operationId: "getEmbedManifest",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
@@ -113,16 +114,59 @@ const document = {
     },
     "/api/embed/{id}/session": {
       post: {
-        summary: "Mint do token de sessão do DRM",
+        summary: "Mint do token de sessão do embed",
         description:
-          "Emite token de sessão assinado (camada adicional do toggle 'Exigir Token Assinado por Sessão'). " +
-          "Mesmo pipeline de origem do embed: token de origem + header Origin/Referer coerente + cookie de render.",
+          "Emite o token de sessão assinado, amarrado a player, viewer, sessão, nonce do render e host assinado. " +
+          "Obrigatório para a config dinâmica e para a porta da mídia. Mesmo pipeline de origem do embed: token de " +
+          "origem + header Origin/Referer presente + cookie de render + UA de navegador real; rate limit de 10/min por IP.",
         operationId: "postEmbedSession",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": { description: "Token de sessão emitido", content: { "application/json": { schema: { type: "object" } } } },
-          "403": errorResponse("Token de origem inválido, origem divergente ou render não confirmado"),
+          "403": errorResponse("Token de origem inválido, origem ausente/divergente, domínio não permitido, render não confirmado ou UA não navegador"),
           "404": errorResponse("ID inválido"),
+          "429": errorResponse("Limite de mint por IP excedido"),
+        },
+      },
+    },
+    "/api/embed/{id}/stream": {
+      get: {
+        summary: "Porta da mídia do embed (302 para URL assinada de curta duração)",
+        description:
+          "Valida sessão assinada, paywall do titular, regras de tráfego (país/dispositivo/idioma/VPN) e UA de navegador, " +
+          "e responde 302 para uma URL do storage assinada na hora (TTL 120s). A URL assinada nunca aparece em corpo de " +
+          "resposta; o corpo do embed carrega apenas este caminho.",
+        operationId: "getEmbedStream",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "302": { description: "Redirecionamento para a URL assinada de curta duração" },
+          "401": errorResponse("Sessão inválida ou ausente"),
+          "402": errorResponse("Assinatura do titular sem acesso"),
+          "403": errorResponse("Origem/domínio não permitido, render não confirmado, regra de tráfego ou UA não navegador"),
+          "404": errorResponse("Player ou vídeo não publicado/ready"),
+          "415": errorResponse("Formato não suportado no proxy (HLS é pendência)"),
+          "429": errorResponse("Limite por IP excedido"),
+        },
+      },
+    },
+    "/api/embed/{id}/capi": {
+      post: {
+        summary: "Eventos CAPI server-side (Meta) do embed",
+        description:
+          "Dispara eventos da API de Conversões da Meta a partir do embed (ViewContent, PrismaVideoPlay, PrismaVideoProgress, " +
+          "PrismaVideoComplete, Lead, Purchase). O token da Meta é lido do config NO BANCO e nunca sai do servidor; o player " +
+          "envia apenas {eventName, eventId?, eventSourceUrl?}. Mesma autoridade da config: token de origem + render + sessão. " +
+          "Rate limit de 30/min por IP.",
+        operationId: "postEmbedCapiEvent",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "200": { description: "Resultado da entrega", content: { "application/json": { schema: { type: "object" } } } },
+          "400": errorResponse("Nome de evento fora da allowlist"),
+          "401": errorResponse("Sessão inválida ou ausente"),
+          "402": errorResponse("Assinatura do titular sem acesso"),
+          "403": errorResponse("Contexto de origem/domínio inválido"),
+          "404": errorResponse("Player inexistente"),
+          "429": errorResponse("Limite por IP excedido"),
         },
       },
     },

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import type { MfaFactor } from "@/features/account/model/types";
 import { apiRequest, ApiError } from "@/services/http/client";
+import { DangerZone } from "./DangerZone";
 import { InfoRow, SettingsCard } from "./SettingsUi";
 
 interface SecurityState {
@@ -18,9 +19,11 @@ interface SecurityState {
 export function SecurityPanel({
   notify,
   adminMfaRequired,
+  email,
 }: {
   notify: (message: string) => void;
   adminMfaRequired: boolean;
+  email?: string;
 }) {
   const [factors, setFactors] = useState<MfaFactor[]>([]);
   const [qr, setQr] = useState("");
@@ -159,6 +162,7 @@ export function SecurityPanel({
           <InfoRow icon={Shield} title="Conta isolada" detail="Seus vídeos e métricas não ficam acessíveis a outras contas." />
         </div>
       </SettingsCard>
+      <DangerZone email={email} notify={notify} />
       {confirmDialog}
     </div>
   );

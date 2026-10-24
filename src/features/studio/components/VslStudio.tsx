@@ -258,6 +258,7 @@ const initialConfig: StudioConfig = {
 const playerConfigSaveErrors: Record<string, string> = {
   invalid_payload: "Os dados do player são inválidos. Revise as configurações e tente novamente.",
   config_too_large: "A configuração excede o tamanho máximo permitido.",
+  invalid_config_key: "A configuração contém chaves não suportadas. Recarregue a página e salve novamente.",
   invalid_pixel_config: "A configuração de pixels informada é inválida.",
   video_not_found: "O vídeo não foi encontrado. Recarregue a página e tente novamente.",
   config_save_failed: "Não foi possível salvar a configuração. Tente novamente em instantes.",

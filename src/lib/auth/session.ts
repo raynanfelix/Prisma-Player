@@ -1,5 +1,5 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { NEON_AUTH_SESSION_COOKIE_NAME } from "@neondatabase/auth/server";
 import { getAuth } from "./server";
 
@@ -50,7 +50,22 @@ export async function updateSession(request: NextRequest, requestHeaders?: Heade
   const { pathname } = request.nextUrl;
 
   if (isProtectedRoute(pathname)) {
-    const response = await getAuth().middleware({ loginUrl: LOGIN_PATH })(request);
+    // M10 (auditoria de segurança): o middleware do SDK reconstrói os headers
+    // a partir do request que recebe (`new Headers(request.headers)` no adapter
+    // Next do SDK) e devolve `NextResponse.next({ request: { headers } })` com
+    // o que reconstruiu. Chamado com a request ORIGINAL, ele descarta o
+    // `x-nonce` e o CSP que o proxy já tinha setado na cópia `requestHeaders`,
+    // e o ThemeScript (dark mode) nasce sem nonce em /dashboard, /studio e
+    // /admin - bloqueado pelo CSP da resposta.
+    //
+    // Repassamos um clone SEM body carregando os headers já preparados pelo
+    // proxy: o SDK só lê url/headers/cookies (processAuthMiddleware), então o
+    // clone é equivalente para a decisão de sessão e a resposta "allow" volta
+    // a propagar o nonce adiante. Redirecionamentos continuam saindo da
+    // request original (withNextParam usa a URL real).
+    const headers = requestHeaders ?? request.headers;
+    const requestForSdk = new NextRequest(request.url, { headers });
+    const response = await getAuth().middleware({ loginUrl: LOGIN_PATH })(requestForSdk);
     if (response.status >= 300 && response.status < 400) return withNextParam(response, request);
     return response;
   }

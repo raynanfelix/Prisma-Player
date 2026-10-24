@@ -58,7 +58,8 @@ export async function POST(request: Request) {
   if (limited) return limited;
   if (!membership || !["owner", "admin"].includes(membership.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (seats <= 1) return NextResponse.json({ error: "team_not_in_plan" }, { status: 403 });
-  return respondToInviteOutcome(await inviteTeamMember(userId, membership.team_id, seats, body?.email, body?.role));
+  // M1: o papel do INVITADOR viaja junto - só o owner cria admin por convite.
+  return respondToInviteOutcome(await inviteTeamMember(membership.role, userId, membership.team_id, seats, body?.email, body?.role));
 }
 
 export async function PATCH(request: Request) {
@@ -106,6 +107,7 @@ function respondToInviteOutcome(outcome: InviteMemberOutcome): NextResponse {
   switch (outcome.status) {
     case "invited": return NextResponse.json({ invited: true });
     case "invalid_invite": return NextResponse.json({ error: "invalid_invite" }, { status: 400 });
+    case "owner_required_for_admin_role": return NextResponse.json({ error: "owner_required_for_admin_role" }, { status: 403 });
     case "seat_limit_reached": return NextResponse.json({ error: "seat_limit_reached" }, { status: 409 });
     case "invite_create_failed": return NextResponse.json({ error: "invite_create_failed" }, { status: 500 });
   }

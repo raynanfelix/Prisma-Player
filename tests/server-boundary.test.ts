@@ -25,6 +25,7 @@ const PRIVILEGED = [
   "lib/security/rate-limit.ts",
   "lib/security/self-origins.ts",
   "lib/security/embed-origin.ts",
+  "lib/security/browser-ua.ts",
   "lib/security/auth-events.ts",
   "lib/security/neon-webhook.ts",
   "lib/security/alert-webhook.ts",
@@ -47,6 +48,8 @@ const PRIVILEGED = [
   "lib/admin/search.ts",
   "lib/api/request.ts",
   "lib/player/assets.ts",
+  "lib/player/config-keys.ts",
+  "lib/player/embed-traffic.ts",
   "services/ads/server-events.ts",
 ];
 
@@ -56,7 +59,7 @@ const PRIVILEGED_IMPORT = new RegExp(
   // sem db, sem segredo) e as telas de plano no client precisam dele - o ban
   // continua cobrindo 100% dos módulos privilegiados do billing (lista
   // PRIVILEGED acima não mudou).
-  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|auth-events|self-origins|neon-webhook|alert-webhook)|storage/|webhooks|email/|cache/|posthog-server|billing/(service|ai-credits|stripe)|ai/nvidia|api/(guard|request)|player/assets|integrations/verify-pixels)|services/ads/server-events)`,
+  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|browser-ua|auth-events|self-origins|neon-webhook|alert-webhook)|storage/|webhooks|email/|cache/|posthog-server|billing/(service|ai-credits|stripe)|ai/nvidia|api/(guard|request)|player/(assets|config-keys|embed-traffic)|integrations/verify-pixels)|services/ads/server-events)`,
 );
 
 function allFiles(dir: string): string[] {

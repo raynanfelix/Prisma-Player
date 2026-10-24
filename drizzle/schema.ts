@@ -1332,3 +1332,29 @@ export const accountIntegrations = pgTable(
     ),
   ],
 );
+
+/**
+ * Roadmap admin: fila kanban de tarefas/pedidos (Backlog / Faremos /
+ * Estamos preparando / Pronto) em /admin/roadmap. Superfície platform-level:
+ * só admins leem e movem (adminGuard), então não há coluna de dono por conta.
+ * `stage` é o identificador da coluna no kanban.
+ */
+export const roadmapTasks = pgTable(
+  "roadmap_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    description: text("description"),
+    requesterName: text("requester_name"),
+    stage: text("stage").notNull().default("backlog"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("roadmap_tasks_stage_idx").on(t.stage, t.updatedAt),
+    check(
+      "roadmap_tasks_stage_check",
+      sql`${t.stage} in ('backlog', 'faremos', 'preparando', 'pronto')`,
+    ),
+  ],
+);

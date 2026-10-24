@@ -13,6 +13,15 @@ export const ANALYTICS = {
   MAX_EVENT_PAYLOAD_BYTES: 4096,
   RATE_LIMIT_WINDOW_MS: 60_000,
   RATE_LIMIT_MAX_REQUESTS: 120,
+  // M5 (auditoria de segurança): teto AGREGADO por IP das rotas de ingestão
+  // (ab-events e analytics-events). O limite por sessão é auto-declarado no
+  // corpo da request, então a rotação de UUIDs de sessão contornava o teto
+  // com custo ilimitado de writes; este teto por IP (lido só dos cabeçalhos
+  // que a plataforma injeta) fecha o custo total por origem. 600/min fica
+  // acima do tráfego legítimo de um espectador (7 eventos por sessão) e
+  // abaixo de qualquer rajada de script.
+  INGEST_IP_RATE_LIMIT_MAX_REQUESTS: 600,
+  INGEST_IP_RATE_LIMIT_WINDOW_MS: 60_000,
   MAX_EVENTS_PER_ANALYSIS: 50000,
   ANALYSIS_ACTIVE_JOB_TIMEOUT_MS: 120_000,
   ANALYSIS_10MIN_LIMIT: 3,
@@ -30,6 +39,9 @@ export const AI = {
 export const VIDEO = {
   MAX_TITLE_LENGTH: 200,
   R2_SIGNED_URL_EXPIRY_SECONDS: 900,
+  // Porta da mídia (C1): o proxy /api/embed/:id/stream assina na hora com TTL
+  // curto; a URL nunca sai no corpo de nenhuma resposta, só no Location 302.
+  R2_STREAM_URL_EXPIRY_SECONDS: 120,
   LIST_PAGE_SIZE: 30,
   R2_DEFAULT_MAX_UPLOAD_BYTES: 20 * 1024 ** 3,
   SUPPORTED_MIME_PREFIXES: ["video/", "application/vnd.apple.mpegurl"],

@@ -33,9 +33,13 @@ function noStore(body: unknown, status = 200) {
  * campo secreto vazio preserva o valor salvo). DELETE: remove uma.
  * Tokens/chaves ficam server-side (a rota é do próprio dono, mas a resposta
  * nunca circula fora daqui - no-store).
+ *
+ * M7 (auditoria): instalar/editar/remover integrações carrega tokens de API
+ * da conta - as MESMAS barreiras do player-configs: papel "edit" na equipe e
+ * acesso pago ativo (viewer/analyst e conta sem trial/assinatura levam 403).
  */
 export async function GET(request: Request) {
-  const gate = await guard(request);
+  const gate = await guard(request, { csrf: true, role: "edit", paid: true });
   if (!gate.ok) return gate.response;
   const ownerId = gate.account.accountOwnerId;
   const limited = await rateLimit(request, `integrations:${ownerId}`, { max: 60, windowMs: 60_000 });
@@ -62,7 +66,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   const csrf = csrfGuard(request);
   if (csrf) return csrf;
-  const gate = await guard(request);
+  const gate = await guard(request, { csrf: true, role: "edit", paid: true });
   if (!gate.ok) return gate.response;
   const ownerId = gate.account.accountOwnerId;
   const limited = await rateLimit(request, `integrations:${ownerId}`, { max: 30, windowMs: 60_000, failClosed: true });
@@ -98,7 +102,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   const csrf = csrfGuard(request);
   if (csrf) return csrf;
-  const gate = await guard(request);
+  const gate = await guard(request, { csrf: true, role: "edit", paid: true });
   if (!gate.ok) return gate.response;
   const ownerId = gate.account.accountOwnerId;
   const limited = await rateLimit(request, `integrations:${ownerId}`, { max: 30, windowMs: 60_000 });

@@ -45,13 +45,13 @@ const sendToProviders=(eventType,detail,configured)=>{
   for(const integration of cleanIntegrations(configured)){
     const name=eventNames[integration.provider]?.[eventType];if(!name)continue;
     if(integration.provider==='meta'&&typeof window.fbq==='function'){
-      const custom=name.startsWith('Prisma');const dedupeId=detail.transaction_id||'';window.fbq(custom?'trackSingleCustom':'trackSingle',integration.id,name,detail,dedupeId?{eventID:dedupeId}:undefined);
+      const custom=name.startsWith('Prisma');const dedupeId=detail.transaction_id||detail.event_id||'';window.fbq(custom?'trackSingleCustom':'trackSingle',integration.id,name,detail,dedupeId?{eventID:dedupeId}:undefined);
     }else if(integration.provider==='google'&&typeof window.gtag==='function'){
       const destination=eventType==='conversion'&&integration.conversionDestination?integration.conversionDestination:integration.id;const googleDetail=eventType==='conversion'?{...detail,items:[{item_id:detail.player_id,item_name:'Prisma Player VSL',price:detail.value,quantity:1}]}:detail;
       window.gtag('event',name,{...googleDetail,send_to:destination});
     }else if(integration.provider==='tiktok'&&window.ttq){
       const tracker=typeof window.ttq.instance==='function'?window.ttq.instance(integration.id):window.ttq;
-      if(tracker&&typeof tracker.track==='function')tracker.track(name,detail,detail.transaction_id||undefined);
+      if(tracker&&typeof tracker.track==='function')tracker.track(name,detail,detail.transaction_id||detail.event_id||undefined);
     }
   }
 };
@@ -64,7 +64,7 @@ addEventListener('message',event=>{
   const frame=frames.find(item=>item.frame.contentWindow===event.source);if(!frame||event.origin!==loaderOrigin||event.data?.playerId!==frame.playerId)return;
   if(event.data?.type==='prisma-player:resize'){const height=Number(event.data.height);if(Number.isFinite(height)&&height>0){frame.root.style.paddingTop='0';frame.root.style.height=Math.ceil(height)+'px'}return}
   if(event.data?.type!=='prisma-player:pixel-event')return;
-  const d=event.data;const integrations=rememberIntegrations(d.integrations);const settings=rememberConsentConfig(d.consent);rememberAnalytics(d.analyticsContext);const detail={video_id:String(d.videoId||''),player_id:String(d.playerId||''),progress_percent:Number(d.progressPercent)||0,pixel_name:String(d.pixelName||''),value:Number(d.value)||undefined,currency:String(d.currency||'').toUpperCase()||undefined,transaction_id:String(d.transactionId||'')||undefined};publish(String(d.eventType||''),detail,integrations,settings);
+  const d=event.data;const integrations=rememberIntegrations(d.integrations);const settings=rememberConsentConfig(d.consent);rememberAnalytics(d.analyticsContext);const detail={video_id:String(d.videoId||''),player_id:String(d.playerId||''),progress_percent:Number(d.progressPercent)||0,pixel_name:String(d.pixelName||''),event_id:typeof d.eventId==='string'?d.eventId.slice(0,120):'',value:Number(d.value)||undefined,currency:String(d.currency||'').toUpperCase()||undefined,transaction_id:String(d.transactionId||'')||undefined};publish(String(d.eventType||''),detail,integrations,settings);
 },false);
 for(const root of [...document.querySelectorAll('[data-prisma-player="'+PLAYER_ID+'"]')].filter(element=>!element.dataset.prismaMounted)){
   root.dataset.prismaMounted='true';root.style.background='transparent';root.style.border='0';root.style.boxShadow='none';root.style.overflow='hidden';root.style.lineHeight='0';

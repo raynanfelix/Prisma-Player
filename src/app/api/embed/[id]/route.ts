@@ -8,7 +8,9 @@ import { signR2ReadUrl } from "@/lib/storage/r2";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { isValidViewerId } from "@/lib/player/viewer-id";
-import { clientIpFromHeaders, isVpnOrProxy } from "@/lib/security/vpn";
+import { clientIpFromHeaders } from "@/lib/security/vpn";
+import { embedTrafficViolation } from "@/lib/player/embed-traffic";
+import { filterConfigForEmbed } from "@/lib/player/config-keys";
 import { envInt } from "@/lib/config/env";
 import { VIDEO } from "@/lib/constants";
 
@@ -48,17 +50,6 @@ async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | 
     db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
   ]);
   return byPlayerId ?? byVideoId;
-}
-
-function requestDevice(userAgent: string) {
-  if (/ipad|tablet/i.test(userAgent)) return "tablet";
-  if (/android|iphone|mobile/i.test(userAgent)) return "mobile";
-  return "desktop";
-}
-
-function csvValues(value: unknown) {
-  if (typeof value !== "string") return [];
-  return value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
 }
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -121,99 +112,86 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const domains = Array.isArray(playerConfig.allowedDomains) ? playerConfig.allowedDomains.map((domain) => domain.trim()).filter(Boolean) : [];
   if (domains.length > 0 && !domainAllowed(host, domains)) return NextResponse.json({ error: "domain_not_allowed" }, { status: 403 });
 
-  const config = playerConfig.config && typeof playerConfig.config === "object" ? { ...playerConfig.config } as Record<string, unknown> : {};
-
-  // DRM: "Exigir Token Assinado por Sessão" - quando o dono ativa, a config só
-  // é entregue a requisições identificadas pelo player real (viewerId + sessionId
-  // no query, como o EmbedPlayer sempre envia). Chamadas de API sem sessão são
-  // rejeitadas. Legado (chave ausente) mantém o comportamento atual.
-  if (config.drmSignedTokenEnabled === true) {
-    const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
-    const rawSession = requestUrl.searchParams.get("sessionId") ?? "";
-    if (!isValidViewerId(rawViewer) || !uuid.test(rawSession)) {
-      return NextResponse.json({ error: "session_required" }, { status: 403 });
-    }
-    // Review de segurança (MEDIUM): validar só o FORMATO dos ids não prova
-    // nada - viewerId/sessionId são gerados no cliente e forjáveis; quem tem
-    // originToken+cookie aprovava qualquer par de UUIDs no query. Com o toggle
-    // ativo, a config exige também um sessionToken HMAC mintado pelo servidor
-    // (POST /api/embed/:id/session), amarrado a ESTE player + viewer + sessão +
-    // nonce do render. O par certo sem assinatura do servidor morre aqui.
-    const sessionToken = requestUrl.searchParams.get("sessionToken");
-    if (!sessionToken || !verifyEmbedSessionToken(sessionToken, { playerId: id, viewerId: rawViewer, sessionId: rawSession, nonce: verifiedOrigin.nonce })) {
-      return NextResponse.json({ error: "session_required" }, { status: 403 });
-    }
+  // Sessão assinada obrigatória (C1 + toggle DRM): a config só sai para o
+  // player real (viewerId + sessionId no query) autenticado por um
+  // sessionToken HMAC mintado pelo servidor (POST /session), amarrado a
+  // ESTE player + viewer + sessão + nonce do render + host assinado. Com a
+  // porta da mídia (stream) exigindo o mesmo token, a sessão deixou de ser
+  // opcional do toggle drmSignedTokenEnabled: sem ela não existe streamUrl.
+  const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
+  const rawSession = requestUrl.searchParams.get("sessionId") ?? "";
+  if (!isValidViewerId(rawViewer) || !uuid.test(rawSession)) {
+    return NextResponse.json({ error: "session_required" }, { status: 403 });
+  }
+  const sessionToken = requestUrl.searchParams.get("sessionToken");
+  if (!sessionToken || !verifyEmbedSessionToken(sessionToken, { playerId: id, viewerId: rawViewer, sessionId: rawSession, nonce: verifiedOrigin.nonce, host })) {
+    return NextResponse.json({ error: "session_required" }, { status: 403 });
   }
 
-  if (Boolean(config.trafficEnabled)) {
-    const countryPolicy = String(config.allowedCountries || "Todos").trim().toLowerCase();
-    if (countryPolicy === "nenhum") return NextResponse.json({ error: "country_not_allowed" }, { status: 403 });
-    const allowedCountries = csvValues(config.allowedCountries).filter((item) => item !== "todos");
-    const country = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toLowerCase();
-    if (allowedCountries.length > 0 && (!country || !allowedCountries.includes(country))) return NextResponse.json({ error: "country_not_allowed" }, { status: 403 });
+  const rawConfig = playerConfig.config && typeof playerConfig.config === "object" ? playerConfig.config as Record<string, unknown> : {};
 
-    const allowedDevices = Array.isArray(config.allowedDevices) ? config.allowedDevices.filter((item): item is string => typeof item === "string") : [];
-    if (allowedDevices.length > 0 && !allowedDevices.includes(requestDevice(request.headers.get("user-agent") || ""))) return NextResponse.json({ error: "device_not_allowed" }, { status: 403 });
-
-    const requestedLanguage = String(config.browserLanguage || "Todos").toLowerCase();
-    const acceptedLanguage = (request.headers.get("accept-language") || "").toLowerCase();
-    const languagePrefix = requestedLanguage === "português" ? "pt" : requestedLanguage === "inglês" ? "en" : requestedLanguage === "espanhol" ? "es" : "";
-    if (languagePrefix && !acceptedLanguage.includes(languagePrefix)) return NextResponse.json({ error: "language_not_allowed" }, { status: 403 });
-
-    if (Boolean(config.blockVpn)) {
-      const ip = clientIpFromHeaders(request.headers);
-      if (await isVpnOrProxy(ip)) return NextResponse.json({ error: "vpn_not_allowed" }, { status: 403 });
-    }
-  }
+  // C2: o corpo leva SÓ as chaves públicas (mesmo modelo do manifest, com o
+  // conjunto completo que o EmbedPlayer consome). metaCapiToken e as chaves
+  // server-only (tráfego/DRM/restrições) ficam no banco; as regras de tráfego
+  // abaixo leem o rawConfig, nunca a cópia filtrada.
+  const trafficViolation = await embedTrafficViolation(rawConfig, request.headers);
+  if (trafficViolation) return NextResponse.json({ error: trafficViolation }, { status: 403 });
 
   // Fluxos simultâneos por navegador: conta sessões vivas (heartbeat ≤75s)
   // deste viewer neste vídeo. Sem migration: usa video_live_sessions (a mesma
   // linha que o analytics atualiza; o cron poda o resto). Corrida de abas
   // abertas no mesmo segundo pode passar - documentado, não bloqueante.
-  if (Boolean(config.limitConcurrentStreams)) {
-    const maxStreams = Math.max(1, Math.min(50, Math.floor(Number(config.maxConcurrentStreams) || 1)));
-    const rawViewer = requestUrl.searchParams.get("viewerId") ?? "";
-    const viewer = isValidViewerId(rawViewer) ? rawViewer : "";
-    const rawSession = requestUrl.searchParams.get("sessionId") ?? "";
-    const session = uuid.test(rawSession) ? rawSession : "";
-    if (viewer && session) {
-      const countryHeader = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toLowerCase();
-      const countryCode = countryHeader.length === 2 ? countryHeader.toUpperCase() : "XX";
-      try {
-        await db
-          .insert(videoLiveSessions)
-          .values({ videoId: playerConfig.videoId, userId: playerConfig.userId, sessionId: session, viewerId: viewer, countryCode, lastSeenAt: new Date() })
-          .onConflictDoUpdate({
-            target: [videoLiveSessions.videoId, videoLiveSessions.sessionId],
-            set: { viewerId: viewer, countryCode, lastSeenAt: new Date() },
-          });
-      } catch (error) {
-        console.error("live session upsert failed", error instanceof Error ? error.message : String(error));
-      }
-      const freshSince = new Date(Date.now() - 75_000);
-      const activeSessions = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(videoLiveSessions)
-        .where(and(
-          eq(videoLiveSessions.videoId, playerConfig.videoId),
-          eq(videoLiveSessions.viewerId, viewer),
-          ne(videoLiveSessions.sessionId, session),
-          gt(videoLiveSessions.lastSeenAt, freshSince),
-        ))
-        .then((rows) => rows[0]?.count ?? 0)
-        .catch(() => 0);
-      if (activeSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
+  if (Boolean(rawConfig.limitConcurrentStreams)) {
+    const maxStreams = Math.max(1, Math.min(50, Math.floor(Number(rawConfig.maxConcurrentStreams) || 1)));
+    const viewer = rawViewer;
+    const session = rawSession;
+    const countryHeader = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toLowerCase();
+    const countryCode = countryHeader.length === 2 ? countryHeader.toUpperCase() : "XX";
+    try {
+      await db
+        .insert(videoLiveSessions)
+        .values({ videoId: playerConfig.videoId, userId: playerConfig.userId, sessionId: session, viewerId: viewer, countryCode, lastSeenAt: new Date() })
+        .onConflictDoUpdate({
+          target: [videoLiveSessions.videoId, videoLiveSessions.sessionId],
+          set: { viewerId: viewer, countryCode, lastSeenAt: new Date() },
+        });
+    } catch (error) {
+      console.error("live session upsert failed", error instanceof Error ? error.message : String(error));
     }
+    const freshSince = new Date(Date.now() - 75_000);
+    const activeSessions = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(videoLiveSessions)
+      .where(and(
+        eq(videoLiveSessions.videoId, playerConfig.videoId),
+        eq(videoLiveSessions.viewerId, viewer),
+        ne(videoLiveSessions.sessionId, session),
+        gt(videoLiveSessions.lastSeenAt, freshSince),
+      ))
+      .then((rows) => rows[0]?.count ?? 0)
+      .catch(() => 0);
+    if (activeSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
   }
 
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });
-  const source = await signR2ReadUrl(video.objectPath, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
-  if (!source) return NextResponse.json({ error: "source_unavailable" }, { status: 503 });
 
+  // C1 (stream proxy): a URL do vídeo NÃO sai mais no corpo. O player recebe
+  // a porta da mídia relativa, que valida sessão/paywall/geo/UA e responde
+  // 302 para uma URL R2 assinada na hora com TTL curto.
+  const streamParams = new URLSearchParams({
+    originToken: originToken ?? "",
+    viewerId: rawViewer,
+    sessionId: rawSession,
+    sessionToken,
+  });
+  if (abTestId) streamParams.set("abTestId", abTestId);
+  const streamUrl = `/api/embed/${encodeURIComponent(id)}/stream?${streamParams.toString()}`;
+
+  const config = filterConfigForEmbed(rawConfig);
   if (Number(config.radius) === 12) config.radius = 0;
   // Só assina assets do próprio dono do player: `config` é jsonb livre gravado
   // pelo usuário e antes qualquer caminho colocado ali era assinado.
-  const assets = ownedAssetPaths(config.assets, video.userId);
+  const assets = ownedAssetPaths(rawConfig.assets, video.userId);
   const assetUrls: Record<string, string> = {};
   await Promise.all(Object.entries(assets).map(async ([kind, path]) => {
     const signedUrl = await signR2ReadUrl(path, VIDEO.R2_SIGNED_URL_EXPIRY_SECONDS).catch(() => null);
@@ -225,15 +203,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // RM-03: o eventToken é amarrado ao host do embed e à sessão do viewer (que
   // o player envia no query do próprio request de config). O endpoint de
   // analytics rejeita evento cuja sessionId do corpo não bata com o token.
-  const sessionIdParam = requestUrl.searchParams.get("sessionId");
-  const eventSessionId = sessionIdParam && uuid.test(sessionIdParam) ? sessionIdParam : undefined;
-  const eventToken = createBoundEmbedEventTokenSafely({ videoId: video.id, host, sessionId: eventSessionId, nonce: verifiedOrigin.nonce });
+  const eventToken = createBoundEmbedEventTokenSafely({ videoId: video.id, host, sessionId: rawSession, nonce: verifiedOrigin.nonce });
   // IP real do espectador para a marca d'água "Endereço IP". Review de
   // segurança (LOW-2): o campo só sai na resposta quando o dono ativou a
   // exibição de IP na marca d'água - sem isso era PII incondicional legível
   // por qualquer script da página hospedeira. Vazio quando o deploy não
   // repassa x-forwarded-for/x-real-ip.
-  const viewerIp = Boolean(config.watermarkShowIp) ? clientIpFromHeaders(request.headers) : "";
+  const viewerIp = Boolean(rawConfig.watermarkShowIp) ? clientIpFromHeaders(request.headers) : "";
 
-  return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.videoId, title: video.title, source, type: video.mimeType, config, eventToken, viewerIp }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
+  return NextResponse.json({ id: playerConfig.id, videoId: playerConfig.videoId, title: video.title, streamUrl, type: video.mimeType, config, eventToken, viewerIp }, { headers: { "cache-control": "private, no-store, max-age=0", "x-robots-tag": "noindex, nofollow, noarchive", "cloudflare-cdn-cache": "no-store" } });
 }

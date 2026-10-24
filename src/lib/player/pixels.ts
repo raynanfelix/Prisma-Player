@@ -109,3 +109,15 @@ export function pixelIntegrations(config: PixelConfigShape): PixelIntegration[] 
   if (normalized.tiktokPixelEnabled === true && TIKTOK_PIXEL_ID.test(String(normalized.tiktokPixelId))) result.push({ provider: "tiktok", id: String(normalized.tiktokPixelId) });
   return result;
 }
+
+/**
+ * Integrações na forma PÚBLICA que sai do iframe (C2): provider, id público e
+ * destino de conversão - jamais capiToken. O postMessage para a página
+ * hospedeira usa esta versão; qualquer segredo de CAPI vive só no servidor.
+ */
+export function publicPixelIntegrations(config: PixelConfigShape): PixelIntegration[] {
+  return pixelIntegrations(config).map((integration) => {
+    const { provider, id, conversionDestination } = integration;
+    return conversionDestination ? { provider, id, conversionDestination } : { provider, id };
+  });
+}

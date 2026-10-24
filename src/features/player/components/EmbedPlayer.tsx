@@ -6,11 +6,11 @@ import HeadlineBlock from "./HeadlineBlock";
 import AutoplayOverlay from "./AutoplayOverlay";
 import { resolveAutoplayCover } from "@/lib/player/autoplay-cover";
 import { hookLiveViewersCount } from "@/lib/player/mini-hooks";
-import { pixelIntegrations } from "@/lib/player/pixels";
+import { publicPixelIntegrations } from "@/lib/player/pixels";
 import { createAnalyticsBatcher } from "@/lib/player/analytics-batcher";
 import { getOrCreateViewerId } from "@/lib/player/viewer-id";
 
-interface Payload { videoId: string; title: string; source: string; type: string; config: Record<string, unknown>; eventToken?: string; viewerIp?: string }
+interface Payload { videoId: string; title: string; streamUrl: string; type: string; config: Record<string, unknown>; eventToken?: string; viewerIp?: string }
 
 interface Tracking { testId: string; variantId: string; sessionId: string }
 
@@ -85,13 +85,21 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   const lastResumeWriteRef = useRef(-1);
   const ctaUnlockWrittenRef = useRef("");
   const analyticsBatcherRef = useRef<ReturnType<typeof createAnalyticsBatcher> | null>(null);
+  const sessionTokenRef = useRef("");
   const trackingTestId = tracking?.testId;
   const trackingVariantId = tracking?.variantId;
   const trackingSessionId = tracking?.sessionId;
 
+  // Nomes Meta dos eventos do player (os mesmos que o loader dispara no
+  // browser). A chave compartilhada event_id (aqui embaixo) faz a plataforma
+  // colapsar browser + CAPI num evento único.
+  const pixelEventId = (eventType: string, progressPercent = 0) => `${sessionId.current}:${eventType}:${progressPercent}`;
+
   const publishPixelEvent = (eventType: "impression" | "play" | "progress" | "complete" | "cta_click" | "conversion", progressPercent = 0, commerce?: { value: number; currency: string; transactionId: string; advertisingConsent?: boolean }) => {
     if (!payload?.videoId) return;
-    const integrations = pixelIntegrations(payload.config);
+    // C2: integrations PÚBLICAS (sem capiToken) - o segredo nunca cruza o
+    // postMessage; a página hospedeira só precisa de provider + id público.
+    const integrations = publicPixelIntegrations(payload.config);
     if (integrations.length === 0) return;
     const targetOrigin = (() => { try { return new URL(document.referrer).origin; } catch { return ""; } })();
     if (!targetOrigin || window.parent === window) return;
@@ -101,6 +109,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       videoId: payload.videoId,
       eventType,
       progressPercent,
+      eventId: pixelEventId(eventType, progressPercent),
       pixelName: String(payload.config.pixelName ?? ""),
       integrations,
       value: commerce?.value,
@@ -118,6 +127,33 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     }, targetOrigin);
   };
 
+  // C2: CAPI server-side nos marcos de evento (ViewContent etc. nos tempos
+  // configurados). O endpoint lê o token da Meta do banco; o player só manda
+  // o nome do evento e a chave de dedupe. Purchase fica fora: continua pelo
+  // caminho do analytics (side effects com gate de consentimento).
+  const notifyServerCapi = (eventType: "impression" | "play" | "progress" | "complete" | "cta_click" | "conversion", progressPercent = 0) => {
+    if (!payload?.videoId || !sessionId.current || !sessionTokenRef.current) return;
+    const metaEventName = eventType === "impression" ? "ViewContent"
+      : eventType === "play" ? "PrismaVideoPlay"
+        : eventType === "progress" ? "PrismaVideoProgress"
+          : eventType === "complete" ? "PrismaVideoComplete"
+            : eventType === "cta_click" ? "Lead"
+              : "";
+    if (!metaEventName) return;
+    const params = new URLSearchParams();
+    if (originToken) params.set("originToken", originToken);
+    params.set("viewerId", viewerIdRef.current);
+    params.set("sessionId", sessionId.current);
+    params.set("sessionToken", sessionTokenRef.current);
+    if (trackingTestId) params.set("abTestId", trackingTestId);
+    void fetch(`/api/embed/${encodeURIComponent(playerId)}/capi?${params.toString()}`, {
+      method: "POST",
+      keepalive: true,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ eventName: metaEventName, eventId: pixelEventId(eventType, progressPercent), eventSourceUrl: document.referrer || undefined }),
+    }).catch(() => undefined);
+  };
+
   const track = (eventType: "impression" | "play" | "progress" | "complete", progressPercent = 0, watchedSeconds = 0) => {
     if (!tracking || !payload?.eventToken) return;
     const key = `${eventType}:${progressPercent}`;
@@ -132,6 +168,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
     if (analyticsEvents.current.has(key)) return;
     analyticsEvents.current.add(key);
     publishPixelEvent(eventType, progressPercent, commerce);
+    notifyServerCapi(eventType, progressPercent);
     const batcher = analyticsBatcherRef.current;
     if (!batcher) return;
     batcher.enqueue({
@@ -206,12 +243,12 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
   }, [playerId, payload]);
 
   useEffect(() => {
-    // DRM "Exigir Token Assinado por Sessão": quando o dono ativa o toggle, a
-    // config dinâmica recusa (403 session_required) chamadas sem um
-    // sessionToken HMAC mintado pelo servidor. Pede um via POST
-    // /api/embed/:id/session (mesmos viewerId/sessionId já gerados neste
-    // render) e refaz o fetch da config UMA única vez. Players com o toggle
-    // desligado nunca veem este caminho - seguem pagando 1 request como hoje.
+    // Sessão assinada obrigatória (C1): a config e a porta da mídia exigem um
+    // sessionToken HMAC mintado pelo servidor (POST /api/embed/:id/session,
+    // mesmos viewerId/sessionId gerados neste render + host + nonce do
+    // render). O mint vem ANTES do fetch da config: virou pré-requisito, não
+    // reação ao 403. Falha no mint deixa o fetch sem token, que erra com a
+    // mensagem amigável de sessão.
     const requestSessionToken = async (): Promise<string> => {
       const sessionParams = new URLSearchParams();
       if (originToken) sessionParams.set("originToken", originToken);
@@ -224,7 +261,9 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
         });
         if (!response.ok) return "";
         const data = await response.json().catch(() => null) as { sessionToken?: unknown } | null;
-        return typeof data?.sessionToken === "string" && data.sessionToken ? data.sessionToken : "";
+        const token = typeof data?.sessionToken === "string" && data.sessionToken ? data.sessionToken : "";
+        if (token) sessionTokenRef.current = token;
+        return token;
       } catch {
         return "";
       }
@@ -243,9 +282,9 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
       return fetch(`/api/embed/${encodeURIComponent(playerId)}${params.size ? `?${params.toString()}` : ""}`, { cache: "no-store" })
         .then(async (response) => {
           const data = await response.json().catch(() => null) as (Payload & { error?: string }) | null;
-          // Toggle DRM ativo e sem token ainda: a config só sai com sessão
-          // assinada pelo servidor. Pede o token e refaz UMA vez; falha
-          // repetida cai no erro amigável do mapa (session_required).
+          // Mint falhou (rede/503) e a config recusou sem sessão: tenta o mint
+          // UMA vez e refaz; falha repetida cai no erro amigável do mapa
+          // (session_required).
           if (response.status === 403 && data?.error === "session_required" && !sessionToken) {
             const token = await requestSessionToken();
             if (token) return fetchConfig(token);
@@ -277,7 +316,8 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
         .then((shell) => { if (shell && !payloadRef.current) setManifestShell({ playerId, config: shell.config, posterUrl: shell.posterUrl }); })
         .catch(() => { /* fast-path falhou: segue o fluxo atual */ });
     }
-    fetchConfig("")
+    requestSessionToken()
+      .then((token) => fetchConfig(token))
       .then((data) => {
         const config = { ...data.config };
         const variants = Array.isArray(config.headlineVariants) ? config.headlineVariants.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
@@ -588,7 +628,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
         />
       )}
       <div ref={videoBoxRef} className="relative order-2 mx-auto w-full overflow-hidden bg-transparent" style={{ borderRadius: `${Number(c.radius ?? 0)}px`, aspectRatio: String(videoRatio ?? initialRatio), ...(String(c.colorStyle) === "gradient" || (c.background && String(c.background).toLowerCase() !== "#000000" && String(c.background).toLowerCase() !== "#000") ? { background: String(c.colorStyle) === "gradient" ? `linear-gradient(135deg, ${String(c.background ?? "#000000")}, ${String(c.gradientEnd ?? "#2997ff")})` : String(c.background) } : {}) }} onContextMenu={handleVideoContextMenu}>
-      <VideoPlayer className={playerClasses} sources={[{ src: payload.source, type: payload.type }]} poster={thumbnailEnabled && assetUrls.thumbnailStart ? assetUrls.thumbnailStart : undefined} preload="auto" textTracks={Boolean(c.captionsEnabled) && assetUrls.captions ? [{ src: assetUrls.captions, kind: "subtitles", label: String(c.captionName || "Legendas"), srclang: "pt-BR", default: true }] : []} autoplay={smartAutoplay && resumeChecked && resumePoint === null && !autoplayActivated} muted={Boolean(c.muted) || (smartAutoplay && !autoplayActivated)} loop={Boolean(c.loop)} playbackRate={Number(c.playbackRate ?? 1)} bigPlayButton={c.bigPlay !== false} pauseWhenHidden={Boolean(c.smartPause)} playbackRates={[0.75, 1, 1.25, 1.5, 2]} startTime={startTime} restartWithSoundSignal={restartWithSoundSignal} resumePlaybackSignal={resumePlaybackSignal} onPlay={() => { isPlaying.current = true; track("play", 0, currentTime); trackAnalytics("play", 0, currentTime); setThumbnailOverlay(null); }} onPause={() => { isPlaying.current = false; if (thumbnailEnabled && assetUrls.thumbnailPause && currentTime > 0 && currentTime < duration) setThumbnailOverlay("pause"); }} onEnded={() => { isPlaying.current = false; track("complete", 100, duration); trackAnalytics("complete", 100, duration); if (!Boolean(c.loop)) localStorage.removeItem(resumeStorageKey); if (thumbnailEnabled && assetUrls.thumbnailEnd) setThumbnailOverlay("end"); }} onTimeUpdate={(time) => { if (Math.floor(time) !== renderedSecondRef.current) { renderedSecondRef.current = Math.floor(time); setCurrentTime(time); } liveProgress.current = { percent: duration > 0 ? Math.min(100, Math.round(time / duration * 100)) : 0, watchedSeconds: time }; if (resumeEnabled && time > 0 && Math.floor(time) !== lastResumeWriteRef.current) { lastResumeWriteRef.current = Math.floor(time); localStorage.setItem(resumeStorageKey, String(Math.floor(time))); } if (duration > 0) [10, 25, 50, 75, 90].forEach((point) => { if (time / duration * 100 >= point) { if ([25, 50, 75].includes(point)) track("progress", point, time); trackAnalytics("progress", point, time); } }); }} onLoadedMetadata={(metadata) => { setDuration(metadata.duration); if (metadata.width > 0 && metadata.height > 0) setVideoRatio(metadata.width / metadata.height); if (resumeEnabled) { const saved = Number(localStorage.getItem(resumeStorageKey)); if (Number.isFinite(saved) && saved >= 5 && saved < metadata.duration - 5) setResumePoint(saved); } setResumeChecked(true); }} controlVisibility={{ progressControl: !Boolean(c.smartProgress) && c.progressBar !== false, currentTimeDisplay: c.time !== false, durationDisplay: c.time !== false, volumePanel: c.volume !== false, fullscreenToggle: c.fullscreen !== false, pictureInPictureToggle: c.pictureInPicture !== false, playbackRateMenuButton: c.speedControl !== false, seekBackward: c.seekBackward === true, seekForward: c.seekForward === true }} />
+      <VideoPlayer className={playerClasses} sources={[{ src: payload.streamUrl, type: payload.type }]} poster={thumbnailEnabled && assetUrls.thumbnailStart ? assetUrls.thumbnailStart : undefined} preload="auto" textTracks={Boolean(c.captionsEnabled) && assetUrls.captions ? [{ src: assetUrls.captions, kind: "subtitles", label: String(c.captionName || "Legendas"), srclang: "pt-BR", default: true }] : []} autoplay={smartAutoplay && resumeChecked && resumePoint === null && !autoplayActivated} muted={Boolean(c.muted) || (smartAutoplay && !autoplayActivated)} loop={Boolean(c.loop)} playbackRate={Number(c.playbackRate ?? 1)} bigPlayButton={c.bigPlay !== false} pauseWhenHidden={Boolean(c.smartPause)} playbackRates={[0.75, 1, 1.25, 1.5, 2]} startTime={startTime} restartWithSoundSignal={restartWithSoundSignal} resumePlaybackSignal={resumePlaybackSignal} onPlay={() => { isPlaying.current = true; track("play", 0, currentTime); trackAnalytics("play", 0, currentTime); setThumbnailOverlay(null); }} onPause={() => { isPlaying.current = false; if (thumbnailEnabled && assetUrls.thumbnailPause && currentTime > 0 && currentTime < duration) setThumbnailOverlay("pause"); }} onEnded={() => { isPlaying.current = false; track("complete", 100, duration); trackAnalytics("complete", 100, duration); if (!Boolean(c.loop)) localStorage.removeItem(resumeStorageKey); if (thumbnailEnabled && assetUrls.thumbnailEnd) setThumbnailOverlay("end"); }} onTimeUpdate={(time) => { if (Math.floor(time) !== renderedSecondRef.current) { renderedSecondRef.current = Math.floor(time); setCurrentTime(time); } liveProgress.current = { percent: duration > 0 ? Math.min(100, Math.round(time / duration * 100)) : 0, watchedSeconds: time }; if (resumeEnabled && time > 0 && Math.floor(time) !== lastResumeWriteRef.current) { lastResumeWriteRef.current = Math.floor(time); localStorage.setItem(resumeStorageKey, String(Math.floor(time))); } if (duration > 0) [10, 25, 50, 75, 90].forEach((point) => { if (time / duration * 100 >= point) { if ([25, 50, 75].includes(point)) track("progress", point, time); trackAnalytics("progress", point, time); } }); }} onLoadedMetadata={(metadata) => { setDuration(metadata.duration); if (metadata.width > 0 && metadata.height > 0) setVideoRatio(metadata.width / metadata.height); if (resumeEnabled) { const saved = Number(localStorage.getItem(resumeStorageKey)); if (Number.isFinite(saved) && saved >= 5 && saved < metadata.duration - 5) setResumePoint(saved); } setResumeChecked(true); }} controlVisibility={{ progressControl: !Boolean(c.smartProgress) && c.progressBar !== false, currentTimeDisplay: c.time !== false, durationDisplay: c.time !== false, volumePanel: c.volume !== false, fullscreenToggle: c.fullscreen !== false, pictureInPictureToggle: c.pictureInPicture !== false, playbackRateMenuButton: c.speedControl !== false, seekBackward: c.seekBackward === true, seekForward: c.seekForward === true }} />
         {Boolean(c.watermarkEnabled) && watermarkArmed && <div className={`pointer-events-none absolute z-40 p-3 font-mono text-[11px] leading-tight select-none ${c.watermarkPosition === "top-left" ? "top-3 left-3 text-left" : c.watermarkPosition === "bottom-left" ? "bottom-3 left-3 text-left" : c.watermarkPosition === "bottom-right" ? "bottom-3 right-3 text-right" : c.watermarkPosition === "center" ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center" : "top-3 right-3 text-right"}`} style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 3px rgba(0,0,0,0.8)", opacity: Number(c.watermarkOpacity ?? 85) / 100 }}>
           {Boolean(c.watermarkShowUsername) && viewerIdentity?.viewerId && <div>ID: {viewerIdentity.viewerId.slice(0, 8)}</div>}
           {Boolean(c.watermarkShowIp) && (payload.viewerIp ? <div>IP: {payload.viewerIp}</div> : viewerIdentity?.session ? <div>Sessão: {viewerIdentity.session.slice(0, 8)}</div> : null)}

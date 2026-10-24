@@ -40,6 +40,7 @@ const { authState, authMocks } = vi.hoisted(() => {
     sendVerificationOtp: vi.fn(async () => authState.sendVerificationOtpResult),
     signInEmailOtp: vi.fn(async () => authState.signInEmailOtpResult),
     changePassword: vi.fn(async () => authState.changePasswordResult),
+    signOut: vi.fn(async () => ({ data: true, error: null })),
   };
   return { authState, authMocks };
 });
@@ -50,6 +51,7 @@ vi.mock("@/lib/auth/server", () => ({
     emailOtp: { sendVerificationOtp: authMocks.sendVerificationOtp },
     signIn: { emailOtp: authMocks.signInEmailOtp },
     changePassword: authMocks.changePassword,
+    signOut: authMocks.signOut,
   })),
 }));
 
@@ -164,6 +166,38 @@ describe("PATCH /api/account/password - troca de senha (estágio 2)", () => {
     expect(response.status).toBe(403);
     expect(await response.json()).toMatchObject({ error: "invalid_current_password" });
     expect(recordSecurityEvent).toHaveBeenCalledWith("password_change_denied", { userId: "user-1" });
+  });
+
+  it("V7: troca que falha após o OTP destrói a sessão criada pelo OTP (signOut no caminho de erro)", async () => {
+    authState.changePasswordResult = { data: null, error: { code: "INVALID_PASSWORD", message: "Invalid password" } };
+    const response = await patch(validBody);
+    expect(response.status).toBe(403);
+    // signIn.emailOtp fez auto sign-in (sessão nova): ela não pode sobreviver
+    // como resíduo quando a troca falha.
+    expect(authMocks.signInEmailOtp).toHaveBeenCalledTimes(1);
+    expect(authMocks.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("V7: falha genérica do changePassword também destrói a sessão do OTP", async () => {
+    authState.changePasswordResult = { data: null, error: { code: "RATE_LIMITED", message: "rate limited" } };
+    const response = await patch(validBody);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "password_update_failed" });
+    expect(authMocks.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("V7: troca bem sucedida NÃO chama signOut (a sessão do OTP vira a sessão atual)", async () => {
+    const response = await patch(validBody);
+    expect(response.status).toBe(200);
+    expect(authMocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it("V7: OTP inválido NÃO cria sessão e NÃO chama signOut", async () => {
+    authState.signInEmailOtpResult = { data: null, error: { code: "INVALID_OTP", message: "Invalid OTP" } };
+    const response = await patch(validBody);
+    expect(response.status).toBe(400);
+    expect(authMocks.changePassword).not.toHaveBeenCalled();
+    expect(authMocks.signOut).not.toHaveBeenCalled();
   });
 
   it("senha nova fraca → 400 weak_password sem chamar o Auth", async () => {

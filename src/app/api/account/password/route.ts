@@ -104,6 +104,14 @@ export async function PATCH(request: Request) {
   // revokeOtherSessions trocando para uma nova sessão preservando a atual.
   const { error } = await getAuth().changePassword({ currentPassword, newPassword: password, revokeOtherSessions: true });
   if (error) {
+    // V7 (auditoria de segurança): o signIn.emailOtp acima fez AUTO SIGN-IN
+    // e o SDK já gravou os cookies de uma sessão NOVA. Se a troca falha, essa
+    // sessão não pode sobreviver: seria um resíduo repetível a cada tentativa
+    // (o usuário errou a senha atual e ganha uma sessão extra ativa). O
+    // signOut revoga a sessão corrente - a criada pelo OTP - e limpa o
+    // cookie. Melhor esforço: se o signOut também falhar, o erro original
+    // da troca continua sendo a resposta.
+    await getAuth().signOut().catch(() => undefined);
     if (String(error.code ?? "").toUpperCase() === "INVALID_PASSWORD") {
       await recordSecurityEvent("password_change_denied", { userId: session.userId });
       return NextResponse.json({ error: "invalid_current_password", message: "A senha atual não confere." }, { status: 403, headers: NO_STORE });

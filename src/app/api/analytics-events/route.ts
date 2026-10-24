@@ -41,6 +41,17 @@ export async function POST(request: Request) {
   // tráfego de outra pessoa atrás do mesmo IP da operadora.
   const limited = await rateLimit(request, `analytics:${videoId}:${sessionId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS, identifier: `s:${sessionId}` });
   if (limited) return limited;
+  // M5 (auditoria): teto AGREGADO por IP além do por-sessão acima. O bucket
+  // por sessão já é amarrado ao eventToken (verifyEventToken exige que o
+  // token carregue EXATAMENTE este sessionId), mas múltiplos tokens/render
+  // de uma mesma origem ainda somavam sem teto: 600/min/IP fecha o custo
+  // total por origem sem tocar o espectador legítimo atrás de CGNAT
+  // (7 eventos por sessão estão muito abaixo do teto).
+  const ipLimited = await rateLimit(request, "analytics-events-ip", {
+    max: ANALYTICS.INGEST_IP_RATE_LIMIT_MAX_REQUESTS,
+    windowMs: ANALYTICS.INGEST_IP_RATE_LIMIT_WINDOW_MS,
+  });
+  if (ipLimited) return ipLimited;
   const outcome = await ingestAnalyticsEvents(ingestCommandFrom(request, { firstPartyOrigin, videoId, sessionId, events, body: parsed.body }));
   return respondToIngest(request, outcome);
 }

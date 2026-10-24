@@ -8,14 +8,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * mockados no padrão de tests/pixel-verify.test.ts.
  */
 
-const { gateState, csrfState, rateLimitState } = vi.hoisted(() => ({
+const { gateState, csrfState, rateLimitState, guardCalls } = vi.hoisted(() => ({
   gateState: { ok: true as boolean, ownerId: "owner-1", denyResponse: null as Response | null },
   csrfState: { blocked: null as Response | null },
   rateLimitState: { limited: null as Response | null },
+  /** Opções recebidas por cada chamada do guard (assert do item M7). */
+  guardCalls: [] as Array<Record<string, unknown> | undefined>,
 }));
 
 vi.mock("@/lib/api/guard", () => ({
-  guard: vi.fn(async () => {
+  guard: vi.fn(async (_request: Request, options?: Record<string, unknown>) => {
+    guardCalls.push(options);
     if (!gateState.ok) {
       gateState.denyResponse = gateState.denyResponse ?? new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
       return { ok: false, response: gateState.denyResponse };
@@ -39,7 +42,7 @@ vi.mock("@/lib/db", async () => {
   return { db: fake.db, pool: {}, schema };
 });
 
-import { GET, PUT } from "@/app/api/integrations/route";
+import { GET, PUT, DELETE } from "@/app/api/integrations/route";
 import { SECRET_CONFIG_KEYS, maskIntegrationConfig } from "@/lib/integrations/server";
 import { PROVIDER_APPS } from "@/features/integrations/components/store-data";
 import { currentFakeDb, insertedValues, resetFakeDb, type FakeDb } from "./helpers/fake-db";
@@ -78,7 +81,35 @@ beforeEach(() => {
   gateState.denyResponse = null;
   csrfState.blocked = null;
   rateLimitState.limited = null;
+  guardCalls.length = 0;
   resetFakeDb(fake());
+});
+
+describe("M7: integrações exigem papel edit e acesso pago (mesmas barreiras do player-configs)", () => {
+  it("GET, PUT e DELETE chamam o guard com { csrf: true, role: 'edit', paid: true }", async () => {
+    fake().state.selectRows["account_integrations"] = [integrationRow()];
+
+    await GET(request("GET"));
+    await PUT(request("PUT", { provider: "meta_pixel", config: { pixelId: "123456789012345", accessToken: "" }, vslIds: [] }));
+    await DELETE(request("DELETE", { provider: "meta_pixel" }));
+
+    expect(guardCalls).toHaveLength(3);
+    for (const options of guardCalls) {
+      expect(options).toEqual({ csrf: true, role: "edit", paid: true });
+    }
+  });
+
+  it("viewer sem acesso pago: o gate nega e a rota devolve a resposta 403 do guard sem tocar no banco", async () => {
+    gateState.ok = false;
+    gateState.denyResponse = new Response(JSON.stringify({ error: "team_role_forbidden" }), { status: 403 });
+
+    const response = await GET(request("GET"));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "team_role_forbidden" });
+    expect(guardCalls).toEqual([{ csrf: true, role: "edit", paid: true }]);
+    expect(fake().state.calls.filter((call) => call.op !== "select")).toEqual([]);
+  });
 });
 
 describe("GET /api/integrations - segredos mascarados", () => {

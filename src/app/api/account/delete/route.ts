@@ -14,9 +14,18 @@ import { deleteR2Object } from "@/lib/storage/r2";
 /**
  * Exclusão de conta e dos dados associados (LGPD, art. 18, VI).
  *
- * Operação irreversível: exige a senha atual (reautenticação no Managed
- * Better Auth via sign-in do próprio auth) e a confirmação textual "EXCLUIR",
- * para que uma sessão roubada não consiga apagar a conta.
+ * Operação irreversível: exige reautenticação (senha atual via sign-in do
+ * Managed Better Auth OU código OTP de e-mail, para contas SSO-only sem
+ * senha) e a confirmação textual "EXCLUIR", para que uma sessão roubada não
+ * consiga apagar a conta.
+ *
+ * Step-up OTP (P1 da spec de conta): o mesmo mecanismo de dois estágios da
+ * troca de senha (api/account/password): { stage: "request-otp" } envia o
+ * código (emailOtp.sendVerificationOtp, type "email-verification") e o POST
+ * de exclusão valida com signIn.emailOtp. A verificação acontece NO MOMENTO
+ * da exclusão (mais forte que confiar num claim de sessão recente, que teria
+ * janela de replay). A sessão extra criada pelo auto sign-in do OTP é
+ * destruída pelo signOut final (mesma lição do V7).
  *
  * O schema de produto NÃO tem FK para `neon_auth."user"`, então não existe
  * cascade automático ao apagar o usuário da auth. A deleção de cada tabela de
@@ -36,10 +45,17 @@ import { deleteR2Object } from "@/lib/storage/r2";
  * (mesma tolerância a órfãos do fluxo anterior).
  */
 
-/** Reautenticação: sign-in do Managed Better Auth valida a senha atual. */
+/** Reautenticação por senha: sign-in do Managed Better Auth valida a senha atual. */
 async function passwordMatches(email: string, password: string) {
   const { error } = await getAuth().signIn.email({ email, password });
   return !error;
+}
+
+/** E-mail da sessão (alvo do OTP e do cleanup de convites). */
+async function sessionEmail(): Promise<string | null> {
+  const session = await getAuth().getSession();
+  const email = session.data?.user?.email ?? null;
+  return email ? email.trim().toLowerCase() : null;
 }
 
 export async function POST(request: Request) {
@@ -48,21 +64,50 @@ export async function POST(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const parsed = await readJsonBody<{ password?: unknown; otp?: unknown; confirm?: unknown; stage?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+
+  // Estágio 1 do step-up (contas SSO-only): envia o código para o e-mail da
+  // sessão. Balde apertado porque dispara e-mail real (mesma calibragem da
+  // troca de senha).
+  if (body?.stage === "request-otp") {
+    const otpLimited = await rateLimit(request, `account-delete-otp:${userId}`, { max: 3, windowMs: 10 * 60_000, failClosed: true });
+    if (otpLimited) return otpLimited;
+    const email = await sessionEmail();
+    if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    const { error } = await getAuth().emailOtp.sendVerificationOtp({ email, type: "email-verification" });
+    if (error) {
+      await recordSecurityEvent("account_delete_otp_send_failed", { userId });
+      return NextResponse.json({ error: "otp_send_failed", message: "Não foi possível enviar o código. Tente novamente em alguns minutos." }, { status: 400, headers: { "cache-control": "no-store" } });
+    }
+    return NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } });
+  }
+
   const limited = await rateLimit(request, `account-delete:${userId}`, { max: 3, windowMs: 30 * 60_000, failClosed: true });
   if (limited) return limited;
 
-  const parsed = await readJsonBody<{ password?: unknown; confirm?: unknown }>(request);
-  if (!parsed.ok) return parsed.response;
-  const password = typeof parsed.body?.password === "string" ? parsed.body.password : "";
+  const password = typeof body?.password === "string" ? body.password : "";
+  const otp = typeof body?.otp === "string" ? body.otp.trim() : "";
   if (parsed.body?.confirm !== "EXCLUIR") return NextResponse.json({ error: "confirmation_required", message: 'Envie confirm: "EXCLUIR" para confirmar a exclusão.' }, { status: 400 });
-  if (!password) return NextResponse.json({ error: "password_required" }, { status: 400 });
+  if (!password && !otp) return NextResponse.json({ error: "password_or_otp_required", message: "Informe a senha ou o código de 6 dígitos enviado por e-mail." }, { status: 400 });
 
-  const session = await getAuth().getSession();
-  const email = session.data?.user?.email ?? null;
+  const email = await sessionEmail();
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (!(await passwordMatches(email, password))) {
-    await recordSecurityEvent("account_delete_denied", { userId });
-    return NextResponse.json({ error: "invalid_password" }, { status: 403 });
+  if (password) {
+    if (!(await passwordMatches(email, password))) {
+      await recordSecurityEvent("account_delete_denied", { userId });
+      return NextResponse.json({ error: "invalid_password" }, { status: 403 });
+    }
+  } else {
+    // Step-up OTP (contas SSO-only): signIn.emailOtp confirma a identidade
+    // pelo e-mail. Mesmo padrão da troca de senha (api/account/password).
+    if (!/^\d{6}$/.test(otp)) return NextResponse.json({ error: "invalid_otp_format", message: "Digite os 6 dígitos do código." }, { status: 400 });
+    const otpResult = await getAuth().signIn.emailOtp({ email, otp });
+    if (otpResult.error) {
+      await recordSecurityEvent("account_delete_denied", { userId });
+      return NextResponse.json({ error: "invalid_otp", message: "Código inválido ou expirado. Solicite um novo código." }, { status: 400, headers: { "cache-control": "no-store" } });
+    }
   }
 
   // Um titular com equipe apagaria o workspace inteiro junto: exige esvaziar a
@@ -94,6 +139,15 @@ export async function POST(request: Request) {
     })
     .from(schema.subscriptions)
     .where(eq(schema.subscriptions.userId, userId))
+    .limit(1);
+
+  // Id do provedor na tabela de customers: âncora do scrub de
+  // payment_webhook_events (a tabela não tem user_id; o PII do titular vive
+  // no payload jsonb, indexado pelos ids do provedor).
+  const [customer] = await db
+    .select({ providerCustomerId: schema.billingCustomers.providerCustomerId })
+    .from(schema.billingCustomers)
+    .where(eq(schema.billingCustomers.userId, userId))
     .limit(1);
 
   const liveStripeSubscriptionId =
@@ -183,8 +237,29 @@ export async function POST(request: Request) {
       await tx.delete(schema.supportCases).where(eq(schema.supportCases.userId, userId));
       await tx.delete(schema.accountTeamMembers).where(eq(schema.accountTeamMembers.userId, userId));
       await tx.delete(schema.accountTeamInvites).where(eq(schema.accountTeamInvites.acceptedBy, userId));
+      // Resíduo do e-mail do titular: convites emitidos por OUTRAS equipes
+      // para o e-mail dele não cascam pela equipe própria. Apaga TODOS os
+      // registros com esse e-mail (pendentes ainda concederiam entrada; os
+      // demais são só resíduo de PII).
+      await tx.delete(schema.accountTeamInvites).where(eq(schema.accountTeamInvites.email, email));
+      // Tokens de integração (webhooks com credenciais) e feedback de churn.
+      await tx.delete(schema.accountIntegrations).where(eq(schema.accountIntegrations.accountOwnerId, userId));
+      await tx.delete(schema.billingChurnSurveys).where(eq(schema.billingChurnSurveys.userId, userId));
       await tx.delete(schema.accountTeams).where(eq(schema.accountTeams.ownerId, userId));
       await tx.delete(schema.profiles).where(eq(schema.profiles.id, userId));
+      // Scrub do ledger de webhooks (idempotência preservada: providerEventId
+      // continua lá para deduplicar reenvio; o conteúdo PII sai). Sem coluna
+      // user_id em payment_webhook_events, a atribuição é pelos ids do
+      // provedor conhecidos da conta. Sem ids conhecidos (nunca assinou e
+      // nunca abriu checkout) não há linhas atribuíveis: pendência
+      // documentada, não é silêncio.
+      const providerIds = [subscription?.providerSubscriptionId, customer?.providerCustomerId]
+        .filter((value): value is string => typeof value === "string" && value.length > 0);
+      for (const providerId of providerIds) {
+        await tx.update(schema.paymentWebhookEvents)
+          .set({ payload: sql`'{}'::jsonb`, processingError: null })
+          .where(sql`${schema.paymentWebhookEvents.payload}::text like ${`%${providerId}%`}`);
+      }
     });
   } catch (reason) {
     console.error("account_delete_data_failed", { userId, message: reason instanceof Error ? reason.message : "unknown" });

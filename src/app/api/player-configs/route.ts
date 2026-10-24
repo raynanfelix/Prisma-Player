@@ -5,6 +5,7 @@ import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
 import { db, schema } from "@/lib/db";
 import { ownedAssetPaths } from "@/lib/player/assets";
+import { PLAYER_CONFIG_KEYS, unknownConfigKeys } from "@/lib/player/config-keys";
 import { purgeEmbedManifest } from "@/lib/cache/embed-purge";
 import { normalizePixelConfig, pixelConfigErrors } from "@/lib/player/pixels";
 import { rateLimit } from "@/lib/security/rate-limit";
@@ -78,6 +79,12 @@ export async function PUT(request: Request) {
   }
 
   const domains = Array.isArray(body.domains) ? body.domains.filter((item): item is string => typeof item === "string").slice(0, 100) : [];
+  // C2: allowlist de chaves. O config é jsonb lido de volta pelo embed; sem
+  // esta rejeição qualquer chave gravada aqui vira pública no corpo do embed.
+  const invalidKeys = unknownConfigKeys(body.config as Record<string, unknown>);
+  if (invalidKeys.length > 0) {
+    return NextResponse.json({ error: "invalid_config_key", invalidKeys, allowedKeys: PLAYER_CONFIG_KEYS }, { status: 400 });
+  }
   const pixelErrors = pixelConfigErrors(body.config as Record<string, unknown>);
   if (pixelErrors.length > 0) return NextResponse.json({ error: "invalid_pixel_config", fields: pixelErrors }, { status: 400 });
   const config = normalizePixelConfig({ ...(body.config as Record<string, unknown>) });

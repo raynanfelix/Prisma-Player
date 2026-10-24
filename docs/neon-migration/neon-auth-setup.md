@@ -108,14 +108,28 @@ desligado por enquanto.
 
 ## 7. Fluxo de senha — pendências de UI (fora do escopo T2)
 
-1. **Token do reset não é lido pela UI.** O link do e-mail cai em
-   `/reset-password?token=...`, mas `src/app/reset-password/page.tsx` não lê o
-   token e `src/services/auth/client.ts` não o envia. As rotas já aceitam
-   `{ password, token }`; falta (dono da UI / Lead):
-   - ler `?token=` com `useSearchParams()` na página e repassar ao serviço;
-   - `updatePassword(password, token)` em `services/auth/client.ts`.
-   Sem isso, o reset por e-mail não conclui (a rota responde
-   `reset_token_required` quando não há token nem sessão).
+1. **Token do reset: LIDO e ENVIADO pela UI desde 698656f.** A frase antiga
+   desta seção ("token não é lido pela UI") é falsa hoje. O link do e-mail
+   cai em `/reset-password?token=...`; `src/app/reset-password/page.tsx` lê o
+   token (URLSearchParams) e `src/services/auth/client.ts` o envia:
+   `updatePassword(password, token)` manda `{ password, token }` para
+   `POST /api/auth/update-password`, que chama `resetPassword` no Managed.
+   Sem token (e sem sessão) a rota responde `reset_token_required`.
+
+   O que continua aberto é limite do Neon Auth gerenciado, não da UI
+   (documentado aqui como pendência; nenhuma solução local é possível):
+   - **V1: revogação de sessões no reset.** Dependeria de
+     `emailAndPassword.revokeSessionsOnPasswordReset`, configuração do
+     Managed que o app não controla. Enquanto não for exposta, o reset NÃO
+     revoga sessões abertas em outros dispositivos. Mitigação operacional
+     existente: `POST /api/auth/revoke-all-sessions` (revoga todas as
+     sessões, inclusive a atual).
+   - **V2: verificação da senha atual.** O Managed não expõe verificação
+     somente-leitura de senha; o caminho sem token chama `changePassword`
+     com `currentPassword: ""` e falha (INVALID_PASSWORD), então o fluxo
+     real de reset é sempre pelo token do e-mail. A troca de senha
+     autenticada usa o step-up OTP de `/api/account/password` (senha atual
+     + código de e-mail).
 2. **Verificação de e-mail**: sem página/fluxo de verify (o Managed envia o
    e-mail; o link de verificação precisa de UI própria ou custom SMTP +
    página). Pendência de UI.
