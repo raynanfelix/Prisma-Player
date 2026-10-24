@@ -16,7 +16,7 @@
 | Convites de equipe | `account_team_invites` | 7 dias | Cron `expireTeamInvites` (já automático) | A003 do data-map |
 | Rollups agregados | `video_daily_stats` | Até exclusão da conta | DELETE da conta | Agregados sem PII direta |
 | Trilha admin pseudonimizada | `admin_audit_log` | Preservada | Exclusão de conta NÃO apaga (pseudonimizada) | Prova de integridade interna |
-| Backups/PITR do Neon | Infra gerenciada | Janela do provedor (verificar) | Nenhum (gerenciado) | Art. 16; GAP-10: descobrir o prazo real e documentar aqui |
+| Backups/PITR do Neon | Infra gerenciada | **7 dias** (janela de histórico do branch de produção, padrão do plano) | Instant restore do Neon (gerenciado; sem mecanismo próprio) | Art. 15/16 (eliminação se completa após a janela) + Art. 9 (transparência ao titular); GAP-10 fechado em 24/10/2026 |
 
 ## Por que 180 dias para eventos brutos
 
@@ -46,4 +46,10 @@ Fluxo REAL implementado no código (roteiro completo em [dsar/workflow.md](./dsa
 1. **Ligar os purges** (envs acima) em produção - é uma decisão de produto (afeta até 6 meses de dados brutos de analytics de clientes) e não foi feita por ser irreversível para relatórios antigos.
 2. **Registrar a classificação ATPP** (Res. 2/2022): se micro/EPP/startup até R$ 16M/ano, prazos de titular dobram (30 dias) e incidentes têm 6 dias úteis.
 3. **Confirmar com o contador** a necessidade de registro fiscal próprio (GAP-05).
-4. **Verificar e documentar** a janela de PITR/backup do Neon aqui (GAP-10).
+4. ~~Verificar e documentar a janela de PITR/backup do Neon aqui (GAP-10)~~ **FECHADO (24/10/2026)**: janela padrão de 7 dias documentada na tabela acima. Decisão que resta (custo, não conformidade): estender a janela ou não.
+
+## Nota de infraestrutura (24/10/2026, RLS real aplicada)
+
+- **PITR de 7 dias e eliminação (Art. 15/16 + Art. 9)**: o branch de produção mantém 7 dias de histórico de restauração. Dados eliminados (inclusive por DSAR de exclusão de conta) podem permanecer recuperáveis dentro dessa janela de infraestrutura gerenciada; a eliminação se completa com a expiração da janela. Este ponto é divulgado ao titular como transparência (Art. 9) e listado como resíduo conhecido do fluxo DSAR.
+- **RLS real em produção (Art. 46, segurança)**: em 24/10/2026 foram aplicadas as 126 policies de `docs/neon-migration/neon-schema.sql` e criado o papel `authenticated` (NOLOGIN). Estado de segurança: deny-all para qualquer conexão não-owner sem claim; provado com SET ROLE (relatório em `docs/reports/NEON_RLS_APPLY.md`). O app conecta como owner com BYPASSRLS e mantém o filtro `accountOwnerId` como primeira camada.
+- **Purges de eventos seguem OPT-IN (GAP-03)**: `VIDEO_EVENTS_RETENTION_DAYS` (proposta: 180) e demais envs de retenção continuam pendentes de definição na Vercel, decisão do dono.

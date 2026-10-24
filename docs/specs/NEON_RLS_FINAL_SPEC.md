@@ -1,0 +1,13 @@
+# RLS apply — final (24/10, 3ª tentativa; fatos consolidados, escopo CIRÚRGICO)
+
+FAITOS (não redescubra): HEAD eef72b0; produção: RLS enabled 42/44, policies=0, role authenticated INEXISTENTE, roles existentes [cloud_admin, neon_auth, neon_service, neon_superuser, neondb_owner]; FUNÇÃO auth.user_id() NÃO EXISTE no banco (audit: auth_fn=[]) — as policies de docs/neon-migration/neon-schema.sql referenciam auth.user_id() e VÃO FALHAR se copiadas; DECISÃO DO DONO: opção A (aplicar de verdade) e Data API PERMANENTEMENTE OFF (a app saiu do Supabase pra não expor o banco; sem dataApi em neon.ts — repo nem tem o arquivo; sem roles postgrest ✓).
+
+## Passos (ordem fixa)
+1. INVESTIGUE o que a Neon oferece de claims: liste funções em neon_auth (select routine_name from information_schema.routines where specific_schema='neon_auth') + procure helpers de claim do Lakebase/Authorize (ex.: request.jwt.claims GUC? função neon_auth.user_id()?). Se NADA existir, crie UM helper mínimo no schema neon_auth NÃO (não altere neon_auth!) — crie schema `app_auth` com função `user_id() text` que lê `current_setting('request.jwt.claims', true)::json->>'sub'` (retorna NULL se não setado) + grant execute pra authenticated. Policies usam app_auth.user_id() (equivalente fiel do auth.user_id()).
+2. Crie role authenticated (NOLOGIN) idempotente + grants: USAGE public, SELECT/INSERT/UPDATE/DELETE nas tabelas public EXCETO neon_auth e system tables; para account_integrations e billing_churn_surveys siga o doc (append-only: sem DELETE/UPDATE grants).
+3. Extraia e adapte TODAS as policies do neon-schema.sql (regex por statement; troque auth.user_id() -> app_auth.user_id(); DROP POLICY IF EXISTS + CREATE; transação por tabela; log). Casos especiais do doc preservados (account_integrations sem UPDATE/DELETE policy; churn sem UPDATE).
+4. PROVA: SET ROLE authenticated → SELECT count(*) FROM videos (com dados) = 0 rows (deny sem claims ✓) → SET LOCAL request.jwt.claims = '{"sub":"<id-real-de-um-user>"}' → SELECT videos where account_owner_id = esse user = rows (allow ✓); RESET ROLE.
+5. Re-executar matriz (policies=N por tabela) e escrever docs/reports/NEON_RLS_APPLY.md: antes/depois, mapeamento auth.user_id() -> app_auth.user_id(), PROVA deny/allow, Data API OFF permanente (decisão do dono), rollback 1 linha (DROP POLICY + drop role), veredito lançamento.
+
+## Regras
+pg via node --env-file=.env.local + script .cjs escrito com WRITE TOOL (nunca -e, nunca WriteAllText com $$ no PowerShell). NÃO toque: neon_auth schema/tables, código de app, WIPs kanban (package.json/kibo-ui/AdminShell/app-shared/roadmap novo), .github. Zero deps. Set-Content proibido. Sem travessões. Scripts temp removidos ao final. Sem build/push (Lead comita o relatório).
