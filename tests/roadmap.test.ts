@@ -5,7 +5,7 @@ import {
   normalizeRoadmapText,
   validateRoadmapPatch,
   validateRoadmapTask,
-} from "@/lib/admin/roadmap";
+} from "@/lib/roadmap";
 
 describe("roadmap: validação de criação", () => {
   it("aceita task válida com defaults", () => {

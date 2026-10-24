@@ -40,6 +40,7 @@ type KanbanContextProps = {
   columns: KanbanColumnProps[];
   data: KanbanItem[];
   activeItemId: string | null;
+  draggable: boolean;
 };
 
 const KanbanContext = createContext<KanbanContextProps | undefined>(undefined);
@@ -61,6 +62,7 @@ export function KanbanProvider({
   onDragEnd,
   onDragStart,
   overlay,
+  draggable,
   ...props
 }: {
   announcements?: Announcements;
@@ -69,11 +71,16 @@ export function KanbanProvider({
   data: KanbanItem[];
   onDataChange: (data: KanbanItem[]) => void;
   overlay?: (item: KanbanItem) => ReactNode;
+  draggable?: boolean;
 } & Omit<DndContextProps, "children">) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
+    ...(draggable === false
+      ? []
+      : [
+          useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+          useSensor(KeyboardSensor),
+        ]),
   );
 
   const findItem = (id: string) => data.find((item) => item.id === id);
@@ -104,8 +111,8 @@ export function KanbanProvider({
   };
 
   const value = useMemo(
-    () => ({ columns, data, activeItemId }),
-    [columns, data, activeItemId],
+    () => ({ columns, data, activeItemId, draggable: draggable !== false }),
+    [columns, data, activeItemId, draggable],
   );
 
   return (
@@ -178,7 +185,8 @@ export function KanbanCard({
   name: string;
   children: ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const { draggable: canDrag } = useKanban();
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !canDrag });
   const style: CSSProperties = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.4 : 1,
@@ -186,9 +194,8 @@ export function KanbanCard({
   };
   return (
     <div
-      {...attributes}
-      {...listeners}
-      className={`cursor-grab rounded-xl border border-slate-200 bg-white p-3 shadow-xs dark:border-zinc-800 dark:bg-card ${isDragging ? "ring-2 ring-selected/40" : "hover:border-slate-300 dark:hover:border-zinc-700"}`}
+      {...(canDrag ? { ...attributes, ...listeners } : {})}
+      className={`${canDrag ? "cursor-grab" : "cursor-default"} rounded-xl border border-slate-200 bg-white p-3 shadow-xs dark:border-zinc-800 dark:bg-card ${isDragging ? "ring-2 ring-selected/40" : "hover:border-slate-300 dark:hover:border-zinc-700"}`}
       data-dragging={isDragging ? "" : undefined}
       style={style}
       ref={setNodeRef}

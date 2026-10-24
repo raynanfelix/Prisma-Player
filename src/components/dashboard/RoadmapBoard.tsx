@@ -12,11 +12,7 @@ import {
 } from "@/components/kibo-ui/kanban";
 import Dialog from "@/components/ui/Dialog";
 import AdminConfirm from "@/components/admin/AdminConfirm";
-import {
-  ROADMAP_STAGE_LABELS,
-  ROADMAP_STAGES,
-  type RoadmapStage,
-} from "@/lib/admin/roadmap";
+import { ROADMAP_STAGE_LABELS, ROADMAP_STAGES, type RoadmapStage } from "@/lib/roadmap";
 
 export type RoadmapTask = {
   id: string;
@@ -40,11 +36,7 @@ const shortDate = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "sho
 const inputClass =
   "h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs outline-none focus:border-selected dark:border-zinc-800 dark:bg-card";
 
-function toKanbanItem(task: RoadmapTask): KanbanItem {
-  return { ...task, column: task.stage };
-}
-
-function TaskCardFace({ task, onDelete }: { task: RoadmapTask; onDelete?: (task: RoadmapTask) => void }) {
+function TaskCardFace({ task, isAdmin, onDelete }: { task: RoadmapTask; isAdmin: boolean; onDelete?: (task: RoadmapTask) => void }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="flex min-w-0 flex-col gap-1">
@@ -55,7 +47,7 @@ function TaskCardFace({ task, onDelete }: { task: RoadmapTask; onDelete?: (task:
           {task.requesterName ? ` · por ${task.requesterName}` : ""}
         </p>
       </div>
-      {onDelete ? (
+      {isAdmin && onDelete ? (
         <button
           type="button"
           aria-label={`Excluir ${task.title}`}
@@ -72,17 +64,17 @@ function TaskCardFace({ task, onDelete }: { task: RoadmapTask; onDelete?: (task:
   );
 }
 
-export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTask[] }) {
+/** Roadmap do produto: clientes sugerem (criam tasks); admins avançam as etapas (drag). */
+export default function RoadmapBoard({ initialTasks, isAdmin }: { initialTasks: RoadmapTask[]; isAdmin: boolean }) {
   const [tasks, setTasks] = useState<RoadmapTask[]>(initialTasks);
   const [notice, setNotice] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [deleteTask, setDeleteTask] = useState<RoadmapTask | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const [form, setForm] = useState({ title: "", description: "", requesterName: "", stage: "backlog" as RoadmapStage });
+  const [form, setForm] = useState({ title: "", description: "" });
 
   const refreshList = useCallback(async () => {
-    const response = await fetch("/api/admin/roadmap", { cache: "no-store" });
+    const response = await fetch("/api/roadmap", { cache: "no-store" });
     const data = (await response.json().catch(() => ({}))) as { tasks?: RoadmapTask[] };
     if (response.ok && Array.isArray(data.tasks)) setTasks(data.tasks);
   }, []);
@@ -93,7 +85,7 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
       const moved = next.find((item) => previous.find((p) => p.id === item.id)?.stage !== item.column);
       if (!moved) return;
       setTasks(next.map((item) => ({ ...(item as unknown as RoadmapTask), stage: item.column })));
-      fetch(`/api/admin/roadmap/${moved.id}`, {
+      fetch(`/api/roadmap/${moved.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ stage: moved.column }),
@@ -117,7 +109,7 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
     if (busy || form.title.trim().length < 3) return;
     setBusy(true);
     setNotice("");
-    fetch("/api/admin/roadmap", {
+    fetch("/api/roadmap", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(form),
@@ -126,7 +118,7 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
         const data = (await response.json().catch(() => ({}))) as { error?: string };
         if (!response.ok) throw new Error(data.error ?? "task_create_failed");
         setAddOpen(false);
-        setForm({ title: "", description: "", requesterName: "", stage: "backlog" });
+        setForm({ title: "", description: "" });
         return refreshList();
       })
       .catch((error: unknown) => {
@@ -138,7 +130,7 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
   function confirmDelete() {
     if (!deleteTask) return;
     setBusy(true);
-    fetch(`/api/admin/roadmap/${deleteTask.id}`, { method: "DELETE" })
+    fetch(`/api/roadmap/${deleteTask.id}`, { method: "DELETE" })
       .then(async (response) => {
         const data = (await response.json().catch(() => ({}))) as { error?: string };
         if (!response.ok) throw new Error(data.error ?? "task_delete_failed");
@@ -151,70 +143,78 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
       .finally(() => setBusy(false));
   }
 
-  const kanbanItems = tasks.map(toKanbanItem);
+  const kanbanItems = tasks.map((task) => ({ ...task, column: task.stage }));
 
   return (
-    <div className="flex min-h-[70dvh] flex-col gap-3">
+    <div className="flex flex-col gap-3">
       {notice ? (
         <p className="m-0 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400" role="alert">
           {notice}
         </p>
       ) : null}
-      <KanbanProvider
-        columns={COLUMNS}
-        data={kanbanItems}
-        onDataChange={(next) => moveTask(next)}
-        overlay={(item) => {
-          const task = tasks.find((entry) => entry.id === item.id);
-          return task ? <TaskCardFace task={task} /> : null;
-        }}
-      >
-        {(column) => (
-          <KanbanBoard id={column.id} key={column.id}>
-            <KanbanHeader>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }} />
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">{column.name}</span>
-                <span className="rounded-full bg-slate-200 px-2 text-[10px] font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  {tasks.filter((task) => task.stage === column.id).length}
-                </span>
-              </div>
-              {column.id === "backlog" ? (
-                <button
-                  type="button"
-                  onClick={() => { setAddOpen(true); setNotice(""); }}
-                  className="flex h-8 items-center gap-1 rounded-lg bg-selected px-2.5 text-[11px] font-bold text-selected-foreground hover:opacity-90"
-                >
-                  <Plus className="size-3.5" />
-                  Adicionar task
-                </button>
-              ) : null}
-            </KanbanHeader>
-            <KanbanCards id={column.id}>
-              {(item) => {
-                const task = tasks.find((entry) => entry.id === item.id);
-                if (!task) return null;
-                return (
-                  <KanbanCard key={task.id} id={task.id} column={task.stage} name={task.title}>
-                    <TaskCardFace task={task} onDelete={(target) => setDeleteTask(target)} />
-                  </KanbanCard>
-                );
-              }}
-            </KanbanCards>
-          </KanbanBoard>
-        )}
-      </KanbanProvider>
+      <div className="flex min-h-[70dvh] gap-3 overflow-x-auto pb-2">
+        <KanbanProvider
+          columns={COLUMNS}
+          data={kanbanItems}
+          onDataChange={(next) => moveTask(next)}
+          draggable={isAdmin}
+          overlay={(item) => {
+            const task = tasks.find((entry) => entry.id === item.id);
+            return task ? <TaskCardFace task={task} isAdmin={isAdmin} /> : null;
+          }}
+        >
+          {(column) => (
+            <KanbanBoard id={column.id} key={column.id}>
+              <KanbanHeader>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }} />
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">{column.name}</span>
+                  <span className="rounded-full bg-slate-200 px-2 text-[10px] font-bold text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    {tasks.filter((task) => task.stage === column.id).length}
+                  </span>
+                </div>
+                {column.id === "backlog" ? (
+                  <button
+                    type="button"
+                    onClick={() => { setAddOpen(true); setNotice(""); }}
+                    className="flex h-8 items-center gap-1 rounded-lg bg-selected px-2.5 text-[11px] font-bold text-selected-foreground hover:opacity-90"
+                  >
+                    <Plus className="size-3.5" />
+                    Adicionar task
+                  </button>
+                ) : null}
+              </KanbanHeader>
+              <KanbanCards id={column.id}>
+                {(item) => {
+                  const task = tasks.find((entry) => entry.id === item.id);
+                  if (!task) return null;
+                  return (
+                    <KanbanCard key={task.id} id={task.id} column={task.stage} name={task.title}>
+                      <TaskCardFace task={task} isAdmin={isAdmin} onDelete={(target) => setDeleteTask(target)} />
+                    </KanbanCard>
+                  );
+                }}
+              </KanbanCards>
+            </KanbanBoard>
+          )}
+        </KanbanProvider>
+      </div>
+      {!isAdmin ? (
+        <p className="m-0 text-[11px] text-slate-400 dark:text-zinc-500">
+          Sugira o que a equipe deve fazer a seguir. Nossa equipe move cada pedido entre as etapas.
+        </p>
+      ) : null}
 
       <Dialog
         open={addOpen}
         onClose={() => { if (!busy) setAddOpen(false); }}
-        title="Adicionar task ao roadmap"
-        description="Descreva o que você quer que o agente faça. As tasks entram na coluna escolhida e os admins movem pelos estágios."
+        title="Sugerir para o roadmap"
+        description="Conte o que você quer que a gente faça. Sua sugestão entra no Backlog e a equipe avança as etapas."
         footer={
           <>
             <button type="button" onClick={() => setAddOpen(false)} disabled={busy} className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-bold dark:border-zinc-800">Cancelar</button>
             <button type="submit" form="roadmap-add-form" disabled={busy || form.title.trim().length < 3} className="h-10 rounded-xl bg-selected px-4 text-xs font-bold text-selected-foreground disabled:opacity-40">
-              {busy ? "Adicionando..." : "Adicionar"}
+              {busy ? "Enviando..." : "Enviar sugestão"}
             </button>
           </>
         }
@@ -232,40 +232,16 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
             />
           </label>
           <label className="grid gap-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">Descrição (opcional)</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">Detalhes (opcional)</span>
             <textarea
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
               maxLength={2000}
               rows={3}
-              placeholder="Detalhe o pedido: contexto, objetivo, onde mora no produto..."
+              placeholder="Contexto, objetivo, onde isso mora no produto..."
               className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-selected dark:border-zinc-800 dark:bg-card"
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">Solicitado por (opcional)</span>
-              <input
-                value={form.requesterName}
-                onChange={(event) => setForm((prev) => ({ ...prev, requesterName: event.target.value }))}
-                maxLength={80}
-                placeholder="Quem quer isso"
-                className={inputClass}
-              />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">Coluna inicial</span>
-              <select
-                value={form.stage}
-                onChange={(event) => setForm((prev) => ({ ...prev, stage: event.target.value as RoadmapStage }))}
-                className={inputClass}
-              >
-                {ROADMAP_STAGES.map((stage) => (
-                  <option key={stage} value={stage}>{ROADMAP_STAGE_LABELS[stage]}</option>
-                ))}
-              </select>
-            </label>
-          </div>
           {notice && addOpen ? (
             <p className="m-0 text-[12px] font-semibold text-red-500" role="alert">{notice}</p>
           ) : null}
@@ -276,7 +252,7 @@ export default function RoadmapBoard({ initialTasks }: { initialTasks: RoadmapTa
         open={Boolean(deleteTask)}
         title="Excluir task"
         lines={deleteTask ? [{ label: "Task", value: deleteTask.title.slice(0, 60) }] : []}
-        consequence="A task sai do kanban para sempre. Não há como desfazer."
+        consequence="A task sai do roadmap para sempre. Não há como desfazer."
         confirmLabel="Excluir"
         danger
         busy={busy}

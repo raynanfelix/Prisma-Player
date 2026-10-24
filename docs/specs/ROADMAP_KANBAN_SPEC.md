@@ -1,31 +1,31 @@
-# Roadmap: Kanban admin (24/10/2026)
+# Roadmap: Kanban público de sugestões (24/10/2026, rev.2)
 
-DECISÕES DO DONO: página `/admin/roadmap` apenas para admins (o layout admin já impõe `requireAdmin`); colunas Backlog / Faremos / Estamos preparando / Pronto; botão "Adicionar task" no cabeçalho da coluna Backlog abre o modal Dialog que já usamos (`src/components/ui/Dialog.tsx`); drag-and-drop com animação de arrastar via kibo-ui/kanban (`@dnd-kit`); dados reais no Neon (tabela `roadmap_tasks`, migration drizzle 0004 + SQL idempotente para o dono aplicar no Neon Editor, padrão 0003); mutações com `adminGuard` + trilha `admin_audit_log` (contrato `admin-guard.ts:19`); rate limit fail-closed 60/min por admin; SEM travessões em textos novos. Valide tsc+vitest por item.
+DECISÕES DO DONO (rev.2, após revisão da v1 admin-only): a página é do DASHBOARD dos clientes (`/dashboard/roadmap`, sidebar de usuários), na HORIZONTAL como no código kibo original (colunas lado a lado, cards na vertical). **Clientes criam as tasks** (sugestões do que querem que a equipe faça) e **só admins avançam as etapas** (drag entre colunas; `getCurrentAdminUser` define quem arrasta). Modal "Adicionar task" no cabeçalho do Backlog (Dialog existente). Drag-and-drop animado via kibo-ui/kanban (`@dnd-kit`). Dados reais no Neon (`roadmap_tasks`, migration 0004 + SQL do dono no Neon Editor). Mutações: POST = `guard({csrf:true})` qualquer usuário; PATCH/DELETE = guard + verificação `getCurrentAdminUser` (403 admin_required) + trilha `admin_audit_log`. SEM travessões em textos novos. Valide tsc+vitest por item.
 
 ## 1. Componente Kanban (src/components/kibo-ui/kanban/index.tsx)
-Novo componente kibo-ui com a API do exemplo do dono: `KanbanProvider({columns, data, onDataChange, children})`, `KanbanBoard({id})`, `KanbanHeader`, `KanbanCards({id})`, `KanbanCard({column, id, name, children})`. Implementação com `@dnd-kit/core` + `@dnd-kit/utilities` + `@dnd-kit/sortable`: PointerSensor com activation distance 8 (clique vira drag com a animação de arrastar), KeyboardSensor para acessibilidade, DragOverlay com o card flutuante, colunas droppable e cards draggable. Ao soltar: o item muda de coluna via `onDataChange` (otimista no cliente) e o cliente dispara PATCH. Estilos com os tokens do repo (dark: zinc, rounded-xl, bg-card, border slate/zinc).
+API do exemplo do dono: `KanbanProvider({columns, data, onDataChange, children})`, `KanbanBoard`, `KanbanHeader`, `KanbanCards`, `KanbanCard`, `KanbanOverlay`. `@dnd-kit/core` + `utilities`: PointerSensor distance 8, KeyboardSensor, DragOverlay com dropAnimation. Prop `draggable?: boolean` (default true): quando false, cards ficam estáticos (clientes) sem listeners/cursor-grab. Provider renderiza `columns.map(children)` (boards irmãos dentro do container horizontal da página).
 
-## 2. Schema + migration (roadmap_tasks)
-`drizzle/schema.ts`: tabela `roadmap_tasks` - `id uuid pk defaultRandom`, `title text notNull` (2 a 200 chars na validação), `description text` (ate 2000), `requester_name text` (ate 80, "quem pediu"), `stage text notNull default 'backlog'` com CHECK in ('backlog','faremos','preparando','pronto'), `created_at`/`updated_at` timestamptz notNull default now. Migration gerada com `npx drizzle-kit generate` (0004). SQL idempotente do dono no Neon Editor entregue no fim (padrão 0003 do billing). Superfície platform-level (sem user_id: só admins tocam).
+## 2. Layout horizontal (o erro da v1)
+A v1 empilhou os boards na VERTICAL (container flex-col). Rev.2: a página envolve o KanbanProvider em `flex min-h-[70dvh] gap-3 overflow-x-auto` e cada `KanbanBoard` (flex-1 min-w-64) fica LADO A LADO na horizontal, cards empilhados na vertical dentro da coluna, igual ao código kibo enviado.
 
-## 3. API admin (src/app/api/admin/roadmap)
-- `GET /api/admin/roadmap`: `adminGuard`, lista todas as tasks ordenadas por `updated_at desc`, no-store.
-- `POST /api/admin/roadmap`: `adminGuard` + csrf + fail-closed 60/min, body `{title, description?, requesterName?, stage?}` validado por `src/lib/admin/roadmap.ts` (`validateRoadmapTask`), cria com stage default 'backlog', audit `roadmap_task_created`.
-- `PATCH /api/admin/roadmap/[id]`: move (stage) e/ou edita (title/description/requesterName), audit `roadmap_task_moved` ou `roadmap_task_updated`.
-- `DELETE /api/admin/roadmap/[id]`: audit `roadmap_task_deleted`.
-Helpers puros em `src/lib/admin/roadmap.ts` (`STAGES`, `validateRoadmapTask`, `validateStage`) testáveis sem banco (padrão admin-support).
+## 3. API (src/app/api/roadmap)
+- `GET`: `guard(request)` (qualquer autenticado), lista tasks por `updated_at desc`, no-store.
+- `POST`: `guard(request, { csrf: true })` (qualquer autenticado), body `{title, description?}`; stage forçado 'backlog'; `requesterName` auto-preenchido com o `profiles.fullName` da sessão (não é input do cliente). Rate limit default do guard.
+- `PATCH /[id]`: guard + csrf + `getCurrentAdminUser()` -> 403 admin_required. Move (stage) e/ou edita. Audit `roadmap_task_moved`/`roadmap_task_updated`.
+- `DELETE /[id]`: guard + csrf + admin. Audit `roadmap_task_deleted`.
+Helpers puros em `src/lib/roadmap.ts` (`ROADMAP_STAGES`, `validateRoadmapTask`, `validateRoadmapPatch`, `normalizeRoadmapText`), testáveis sem banco (padrão admin-support).
 
 ## 4. Página + navegação
-`src/app/admin/roadmap/page.tsx` (server component, lê a tabela direto, sem chamada HTTP) renderiza `src/components/admin/RoadmapBoard.tsx` (client: Kanban + modal + PATCH no fim do drag + fallback GET em erro). `AdminShell.tsx`: item "Roadmap" (ícone KanbanSquare) no grupo "Command center", antes de "Crescimento".
+`src/app/dashboard/roadmap/page.tsx` (server): `requireUser()` + `getCurrentAdminUser()` (isAdmin) + leitura direta da tabela; renderiza `PageHeader` + `src/components/dashboard/RoadmapBoard.tsx` (client). `app-shared.tsx`: item "Roadmap" (ícone KanbanSquare) entre Conversões e Integrações. Para clientes: hint "Sugira o que a equipe deve fazer a seguir. Nossa equipe move cada pedido entre as etapas."
 
-## 5. Modal Adicionar task (Dialog existente)
-No cabeçalho do Backlog: botão "Adicionar task" abre `ui/Dialog` (título, descrição opcional, "Solicitado por" opcional, select de coluna inicial default Backlog). Erro real do backend exibido no modal (padrão fefe88a), busy state, `router.refresh()` no sucesso.
+## 5. Board do cliente
+`RoadmapBoard({initialTasks, isAdmin})`: drag + excluir + overlay só para admin; botão "Adicionar task" (todos); modal Dialog (Título, Detalhes); erro real do backend com rollback otimista; contadores por coluna; datas pt-BR.
 
 ## 6. Testes
-`tests/roadmap-admin.test.ts`: helpers puros (validação de title/description/requesterName/stage, transições), espelhando `tests/admin-support.test.ts`. Componente e rotas cobertos por tsc + os testes de helpers.
+`tests/roadmap.test.ts`: helpers puros (12 testes).
 
-## Fase 2 (fora do escopo hoje, registrado)
-Entrada pública de sugestões (dashboard/cliente alimenta o Backlog) e atribuição de responsável por task com avatar no card.
+## Fase 2 (pós-lançamento)
+Responsável com avatar no card; comentários públicos por task; notificação no inbox quando a sugestão avança de etapa.
 
-## Dependências novas (concretas e verificadas)
-`@dnd-kit/core`, `@dnd-kit/utilities`, `@dnd-kit/sortable` para o drag animado pedido pelo dono. Nenhuma outra.
+## Dependências
+`@dnd-kit/core`, `@dnd-kit/utilities` (sortable instalado mas não exigido pela implementação atual).
