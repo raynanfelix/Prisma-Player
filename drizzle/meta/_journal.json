@@ -29,6 +29,13 @@
       "when": 1792534456081,
       "tag": "0003_motionless_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792852722548,
+      "tag": "0004_chief_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

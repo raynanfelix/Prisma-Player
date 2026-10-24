@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  BarChart3, BrainCircuit, CircleDollarSign, Globe, LayoutDashboard,
+  BarChart3, BrainCircuit, CircleDollarSign, Globe, KanbanSquare, LayoutDashboard,
   LifeBuoy, LogOut, Menu, PanelLeftClose, PanelLeftOpen, TrendingUp,
   Users, Video, CreditCard, ShieldCheck, X,
 } from "lucide-react";
@@ -12,7 +12,10 @@ import { Logo, LogoIcon } from "@/components/logo";
 import AdminTopbarSearch from "@/components/admin/AdminTopbarSearch";
 
 const groups: Array<{ label: string; items: Array<{ href: string; label: string; icon: typeof Users }> }> = [
-  { label: "Command center", items: [{ href: "/admin", label: "Visão geral", icon: LayoutDashboard }] },
+  { label: "Command center", items: [
+    { href: "/admin", label: "Visão geral", icon: LayoutDashboard },
+    { href: "/admin/roadmap", label: "Roadmap", icon: KanbanSquare },
+  ] },
   { label: "Clientes", items: [
     { href: "/admin/users", label: "Contas", icon: Users },
     { href: "/admin/support", label: "Suporte", icon: LifeBuoy },
@@ -33,7 +36,7 @@ const groups: Array<{ label: string; items: Array<{ href: string; label: string;
 ];
 
 const titles: Record<string, string> = {
-  "/admin": "Visão geral", "/admin/users": "Contas", "/admin/support": "Suporte",
+  "/admin": "Visão geral", "/admin/roadmap": "Roadmap", "/admin/users": "Contas", "/admin/support": "Suporte",
   "/admin/growth": "Crescimento", "/admin/finance": "Receita e financeiro",
   "/admin/billing": "Receita e planos", "/admin/content": "Vídeos e storage",
   "/admin/credits": "Prisma IA e créditos", "/admin/system": "Saúde do sistema",
