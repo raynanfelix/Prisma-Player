@@ -22,7 +22,7 @@ export function GET() {
     "- Hospedar a VSL de uma oferta de venda com botão de checkout revelado no tempo exato do pitch (Pitch Delay), mesmo se o lead pausar ou avançar o vídeo.",
     "- Medir a retenção da audiência segundo a segundo e descobrir exatamente onde os leads abandonam o vídeo.",
     "- Rodar testes A/B de thumbnail ou de início de vídeo no mesmo link de embed, sem páginas duplicadas nem ferramentas externas.",
-    "- Vender no Brasil com assinatura recorrente (Stripe cartão, Pix via AbacatePay) e 14 dias de teste grátis sem cartão de crédito.",
+    "- Vender no Brasil com assinatura recorrente (Stripe: cartão e Pix) e 14 dias de teste grátis sem cartão de crédito.",
     "",
     "## When NOT to use",
     "",

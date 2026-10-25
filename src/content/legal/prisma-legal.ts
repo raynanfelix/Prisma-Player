@@ -73,7 +73,7 @@ export const termsSections: LegalSection[] = [
   },
   {
     title: "11. Pagamentos, assinatura e reembolso",
-    body: "Assinaturas são cobradas de forma recorrente e automática (cartão via Stripe; Pix via AbacatePay) até o cancelamento, que pode ser feito a qualquer momento pelo painel, com efeito ao fim do período vigente. Moeda, valor e periodicidade são exibidos antes da contratação; avisos de reajuste são enviados com antecedência.",
+    body: "Assinaturas são cobradas de forma recorrente e automática (cartão e Pix via Stripe) até o cancelamento, que pode ser feito a qualquer momento pelo painel, com efeito ao fim do período vigente. Moeda, valor e periodicidade são exibidos antes da contratação; avisos de reajuste são enviados com antecedência.",
     items: [
       "Consumidores brasileiros têm direito de arrependimento em até 7 dias da contratação (art. 49 do CDC); após consumo relevante do serviço (armazenamento, plays ou créditos utilizados), podemos deduzir proporcionalmente o valor usado.",
       "Chargebacks indevidos podem resultar em suspensão da conta e cobrança dos valores contestados.",
@@ -125,7 +125,7 @@ export const privacySections: LegalSection[] = [
     body: "Tratamos apenas os dados necessários para operar o serviço:",
     items: [
       "Conta: nome, e-mail, telefone (se informado), dados de equipe e de autenticação.",
-      "Cobrança: processada por Stripe (cartão) e AbacatePay (Pix); não armazenamos o número completo do cartão.",
+      "Cobrança: processada via Stripe (cartão e Pix); não armazenamos o número completo do cartão.",
       "Conteúdo e configuração: vídeos enviados, títulos, configurações de player, domínios permitidos e textos de campanha.",
       "Espectadores dos players: endereço IP, país aproximado, tipo de dispositivo e navegador, identificadores técnicos de sessão e de navegador, progresso de visualização, interações (play, CTA) e eventos de conversão enviados pela página do cliente.",
       "Segurança: logs de acesso, tentativas de abuso e verificações antifraude.",
@@ -154,7 +154,7 @@ export const privacySections: LegalSection[] = [
     title: "7. Compartilhamento com terceiros",
     body: "Compartilhamos dados apenas com fornecedores necessários à operação, sob contratos de proteção, e jamais vendemos dados pessoais. Categorias e exemplos atuais:",
     items: [
-      "Pagamentos: Stripe, AbacatePay.",
+      "Pagamentos: Stripe.",
       "Infraestrutura: Neon (banco de dados e autenticação), Cloudflare (armazenamento e CDN), Vercel (hospedagem).",
       "Medição e publicidade (conforme configuração do cliente): Google Analytics, Meta, TikTok, PostHog.",
       "E-mail transacional: Resend.",

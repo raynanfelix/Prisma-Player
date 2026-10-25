@@ -1,0 +1,31 @@
+﻿node.exe : npm notice run prisma-player@0.1.0 npx
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\rayna\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run prisma-player@0.1.0 npx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run knip
+file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/oxc-parser/src-js/raw-transfer/common.js:294
+  const arrayBuffer = new ArrayBuffer(ARRAY_BUFFER_SIZE);
+                      ^
+
+RangeError: Array buffer allocation failed
+    at new ArrayBuffer (<anonymous>)
+    at createBuffer 
+(file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/oxc-parser/src-js/raw-transfer/common.js:294:23)
+    at prepareRaw 
+(file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/oxc-parser/src-js/raw-transfer/common.js:208:55)
+    at parseSyncRawImpl 
+(file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/oxc-parser/src-js/raw-transfer/common.js:42:53)
+    at parseSyncRaw 
+(file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/oxc-parser/src-js/raw-transfer/eager.js:16:10)
+    at parseSync (file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/oxc-parser/src-js/index.js:60:12)
+    at parseFile 
+(file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/knip/dist/typescript/ast-nodes.js:13:12)
+    at runPlugin (file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/knip/dist/WorkspaceWorker.js:347:47)
+    at async WorkspaceWorker.runPlugins 
+(file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/knip/dist/WorkspaceWorker.js:427:33)
+    at async build (file:///C:/Users/rayna/Downloads/Prisma-Player-main/node_modules/knip/dist/graph/build.js:181:35)
+
+Node.js v24.21.0

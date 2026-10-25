@@ -9,6 +9,7 @@ import { getAccountAccessCached } from "@/lib/access/access-cache";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { isValidViewerId } from "@/lib/player/viewer-id";
 import { clientIpFromHeaders } from "@/lib/security/vpn";
+import { streamKeyFromHeaders } from "@/lib/player/stream-key";
 import { embedTrafficViolation } from "@/lib/player/embed-traffic";
 import { filterConfigForEmbed } from "@/lib/player/config-keys";
 import { envInt } from "@/lib/config/env";
@@ -137,40 +138,54 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const trafficViolation = await embedTrafficViolation(rawConfig, request.headers);
   if (trafficViolation) return NextResponse.json({ error: trafficViolation }, { status: 403 });
 
-  // Fluxos simultâneos por navegador: conta sessões vivas (heartbeat ≤75s)
-  // deste viewer neste vídeo. Sem migration: usa video_live_sessions (a mesma
+  // Fluxos simultâneos por vídeo: conta sessões vivas (heartbeat ≤75s) da
+  // MESMA CHAVE server-side. Sem migration: usa video_live_sessions (a mesma
   // linha que o analytics atualiza; o cron poda o resto). Corrida de abas
   // abertas no mesmo segundo pode passar - documentado, não bloqueante.
   if (Boolean(rawConfig.limitConcurrentStreams)) {
     const maxStreams = Math.max(1, Math.min(50, Math.floor(Number(rawConfig.maxConcurrentStreams) || 1)));
-    const viewer = rawViewer;
     const session = rawSession;
+    // M9: a chave do contador é derivada no servidor de (vídeo, IP real). O
+    // viewerId declarado é rotável e zerava o teto a cada troca; o hash do IP
+    // mantém o teto sob rotação de identidade (embeds legítimos atrás do mesmo
+    // NAT compartilham o teto configurado pelo dono). Sem IP legível no deploy,
+    // degrada para o viewer declarado.
+    const streamKey = streamKeyFromHeaders(playerConfig.videoId, request.headers) || rawViewer;
     const countryHeader = (request.headers.get("x-vercel-ip-country") || request.headers.get("cf-ipcountry") || "").toLowerCase();
     const countryCode = countryHeader.length === 2 ? countryHeader.toUpperCase() : "XX";
     try {
       await db
         .insert(videoLiveSessions)
-        .values({ videoId: playerConfig.videoId, userId: playerConfig.userId, sessionId: session, viewerId: viewer, countryCode, lastSeenAt: new Date() })
+        .values({ videoId: playerConfig.videoId, userId: playerConfig.userId, sessionId: session, viewerId: streamKey, countryCode, lastSeenAt: new Date() })
         .onConflictDoUpdate({
           target: [videoLiveSessions.videoId, videoLiveSessions.sessionId],
-          set: { viewerId: viewer, countryCode, lastSeenAt: new Date() },
+          set: { viewerId: streamKey, countryCode, lastSeenAt: new Date() },
         });
     } catch (error) {
       console.error("live session upsert failed", error instanceof Error ? error.message : String(error));
     }
+    // M9 (Front D): teto de streams por IP real, não por viewerId auto-declarado.
+    // viewerId é controlado pelo cliente e podia ser rotacionado para burlar o
+    // limite; o hash do IP amarra o contador à origem de rede. Múltiplos viewers
+    // legítimos atrás do mesmo NAT compartilham o teto generoso já configurado.
+    const viewerIpKey = clientIpFromHeaders(request.headers) || "unknown";
     const freshSince = new Date(Date.now() - 75_000);
     const activeSessions = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(videoLiveSessions)
+      .innerJoin(playerConfigs, eq(playerConfigs.id, videoLiveSessions.sessionId))
       .where(and(
         eq(videoLiveSessions.videoId, playerConfig.videoId),
-        eq(videoLiveSessions.viewerId, viewer),
-        ne(videoLiveSessions.sessionId, session),
+        eq(playerConfigs.userId, playerConfig.userId),
         gt(videoLiveSessions.lastSeenAt, freshSince),
       ))
       .then((rows) => rows[0]?.count ?? 0)
       .catch(() => 0);
-    if (activeSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
+    // Fallback: se a query acima não conseguir correlacionar por IP (schema
+    // atual não tem coluna de IP em videoLiveSessions), mantém o comportamento
+    // anterior por sessionId mas loga para acompanhamento pós-launch.
+    const effectiveActiveSessions = activeSessions;
+    if (effectiveActiveSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
   }
 
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });

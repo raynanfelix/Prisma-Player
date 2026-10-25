@@ -99,7 +99,9 @@ export function VideoUploadProvider({ children }: { children: React.ReactNode })
       } catch (error) {
         if (uploadId) await videosService.multipart(video.id, { action: "abort", uploadId }).catch(() => undefined);
         posthog.capture("video_upload_failed", { storage_provider: "r2", file_name: file.name, size_bytes: file.size, error: error instanceof Error ? error.message : "unknown" });
-        updateTask(video.id, { state: "failed", error: error instanceof Error ? error.message : "Falha no envio ao R2." });
+        // Mensagem genérica: error.message pode conter detalhes do R2/SDK
+        // que não devem chegar ao navegador (tokens, paths internos).
+        updateTask(video.id, { state: "failed", error: "Falha no envio do vídeo. Tente novamente." });
       } finally {
         notifyVideosChanged();
       }

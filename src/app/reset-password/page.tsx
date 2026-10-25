@@ -40,10 +40,12 @@ export default function ResetPasswordPage() {
       const token = new URLSearchParams(window.location.search).get("token") ?? undefined;
       await authService.updatePassword(password, token);
       setNotice({ tone: "success", message: "Senha atualizada. Sua conta já está protegida." });
-    } catch (error) {
+    } catch {
+      // Mensagem genérica: error.message pode conter detalhes do provedor
+      // de auth ou do banco que não devem chegar ao navegador.
       setNotice({
         tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível atualizar a senha.",
+        message: "Não foi possível atualizar a senha. Tente novamente.",
       });
     } finally {
       setLoading(false);

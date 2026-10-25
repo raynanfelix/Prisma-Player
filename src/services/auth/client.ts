@@ -28,7 +28,11 @@ export const authService = {
         body: { email: email.trim().toLowerCase(), password },
       });
       if (data.user) {
-        posthog.identify(data.user.id, { email: data.user.email });
+        // LGPD Art. 6º III (minimização) + Art. 33 (transferência internacional):
+        // email é dado pessoal desnecessário para analytics de produto e configura
+        // transferência a operador sem DPA/SCCs documentados. user.id interno já
+        // é suficiente para funil e retenção; email removido do identify.
+        posthog.identify(data.user.id);
         posthog.capture("user_logged_in", { method: "email" });
       }
       return data.user;

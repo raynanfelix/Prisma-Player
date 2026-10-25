@@ -7,7 +7,22 @@ import { ensureAccountBootstrap } from "@/lib/access/bootstrap";
 
 const { profiles } = schema;
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: "Player de VSL com Pitch Delay e Analytics de Retenção | Prisma Player",
+  description:
+    "Aumente conversões da sua VSL com Pitch Delay sincronizado ao segundo, analytics de retenção segundo a segundo, testes A/B nativos e proteção DRM anti-pirataria. Player feito para vender.",
+  alternates: { canonical: "/" },
+  keywords: [
+    "player de vsl",
+    "pitch delay",
+    "video sales letter",
+    "analytics de retenção",
+    "aumentar conversão vsl",
+    "proteção drm vídeo",
+    "testes ab vsl",
+    "player para infoproduto",
+  ],
+};
 
 export default async function Home() {
   const userId = await getCurrentUserId();

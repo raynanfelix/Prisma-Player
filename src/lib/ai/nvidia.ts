@@ -7,7 +7,7 @@ const DEFAULT_CHAT_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completi
 const SECRET_PATTERNS = [
   /sk-[a-z0-9_\-]+/gi,
   /nvapi-[a-z0-9_\-]+/gi,
-  /(NVIDIA|ABACATEPAY|CLOUDFLARE|R2|SECRET|TOKEN|API_KEY)[A-Z0-9_]*\s*[:=]\s*["']?[^"',\s}]+/gi,
+  /(NVIDIA|STRIPE|CLOUDFLARE|R2|SECRET|TOKEN|API_KEY)[A-Z0-9_]*\s*[:=]\s*["']?[^"',\s}]+/gi,
 ];
 
 type AnalysisInput = {

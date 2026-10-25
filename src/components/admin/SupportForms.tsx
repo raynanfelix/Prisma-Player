@@ -21,7 +21,7 @@ export function SupportCaseForm({ userId }: { userId?: string }) {
   const [notice, setNotice] = useState("");
   const input = "h-10 rounded-xl border border-slate-200 bg-white px-3.5 text-xs dark:border-zinc-800 dark:bg-card";
   return (
-    <form onSubmit={(event) => { event.preventDefault(); if (busy || subject.trim().length < 3) return; setBusy(true); setNotice(""); post("/api/admin/support/cases", { userId: userId || undefined, subject, category, priority }).then((data) => { router.push(`/admin/support/${data.id}`); }).catch((error: unknown) => { setNotice(`Falhou: ${error instanceof Error ? error.message : "erro"}`); setBusy(false); }); }} className="grid gap-2 p-5 sm:grid-cols-[1fr_160px_140px_auto]">
+    <form onSubmit={(event) => { event.preventDefault(); if (busy || subject.trim().length < 3) return; setBusy(true); setNotice(""); post("/api/admin/support/cases", { userId: userId || undefined, subject, category, priority }).then((data) => { router.push(`/admin/support/${data.id}`); }).catch((error: unknown) => { setNotice("Não foi possível criar o caso. Tente novamente."); setBusy(false); }); }} className="grid gap-2 p-5 sm:grid-cols-[1fr_160px_140px_auto]">
       <input value={subject} onChange={(event) => setSubject(event.target.value)} maxLength={140} placeholder="Assunto do caso (mín. 3 letras)" className={input} aria-label="Assunto" />
       <AdminSelect label="Categoria" value={category} onChange={setCategory} options={["geral", "cobranca", "tecnico", "conta", "reembolso", "outro"].map((item) => ({ value: item, label: item }))} />
       <AdminSelect label="Prioridade" value={priority} onChange={setPriority} options={["baixa", "normal", "alta", "urgente"].map((item) => ({ value: item, label: item }))} />

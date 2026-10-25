@@ -41,6 +41,7 @@ vi.mock("@/lib/db", async () => {
 // O módulo de origem é o REAL (criptografia pura, sem rede): os tokens são
 // mintados e verificados com o mesmo código de produção.
 import { createEmbedOriginToken, mintEmbedSessionToken, verifyEmbedEventTokenContext, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
+import { streamKeyForIp } from "@/lib/player/stream-key";
 import { resetAccessCacheForTests } from "@/lib/access/access-cache";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { signR2ReadUrl } from "@/lib/storage/r2";
@@ -549,6 +550,39 @@ describe("GET /api/embed/[id] - limite de fluxos simultâneos", () => {
       { viewerId: VIEWER_ID, sessionId: SESSION_ID },
     );
     expect(response.status).toBe(200);
+  });
+
+  it("M9: rotação de viewerId não zera o teto: mesmo IP com outro viewer soma no contador (409)", async () => {
+    const rotatedViewer = "ffffffff-0000-4000-8000-00000000000a";
+    fake().state.selectRows["video_live_sessions"] = [{ count: 1 }];
+    const response = await streamRow(
+      { "x-vercel-forwarded-for": "203.0.113.9" },
+      {
+        viewerId: rotatedViewer,
+        sessionId: OTHER_SESSION_ID,
+        sessionToken: mintSession({ viewerId: rotatedViewer, sessionId: OTHER_SESSION_ID }),
+      },
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "stream_limit" });
+    // A linha gravada leva a chave derivada no servidor (hash de vídeo + IP),
+    // nunca o viewerId declarado: trocar a identidade não cria contador novo.
+    const sessions = insertedValues(fake(), "video_live_sessions") as Array<Record<string, unknown>>;
+    expect(sessions[0].viewerId).toBe(streamKeyForIp(VIDEO_ID, "203.0.113.9"));
+    expect(sessions[0].viewerId).not.toBe(rotatedViewer);
+  });
+
+  it("M9: a chave é por (vídeo, IP): IPs diferentes geram chaves diferentes", async () => {
+    fake().state.selectRows["video_live_sessions"] = [{ count: 0 }];
+    await streamRow({ "x-vercel-forwarded-for": "203.0.113.9" }, { viewerId: VIEWER_ID, sessionId: SESSION_ID });
+    await streamRow(
+      { "x-vercel-forwarded-for": "203.0.113.10" },
+      { viewerId: VIEWER_ID, sessionId: OTHER_SESSION_ID, sessionToken: mintSession({ sessionId: OTHER_SESSION_ID }) },
+    );
+    const sessions = insertedValues(fake(), "video_live_sessions") as Array<Record<string, unknown>>;
+    expect(sessions[0].viewerId).toBe(streamKeyForIp(VIDEO_ID, "203.0.113.9"));
+    expect(sessions[1].viewerId).toBe(streamKeyForIp(VIDEO_ID, "203.0.113.10"));
+    expect(sessions[0].viewerId).not.toBe(sessions[1].viewerId);
   });
 
   it("viewerId inválido agora é rejeitado antes: 403 session_required (a porta não abre sem sessão)", async () => {

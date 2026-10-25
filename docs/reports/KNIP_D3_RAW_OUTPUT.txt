@@ -1,0 +1,74 @@
+﻿node.exe : npm notice run prisma-player@0.1.0 npx
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\rayna\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run prisma-player@0.1.0 npx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run knip
+Unused files (10)
+src/app/dashboard/conversions/performance-charts.tsx         
+src/components/ui/avatar.tsx                                 
+src/components/ui/input-group.tsx                            
+src/components/ui/table.tsx                                  
+src/components/ui/textarea.tsx                               
+src/features/intelligence/components/IntelligenceControls.tsx
+src/features/marketing/components/Footer.tsx                 
+src/features/marketing/components/Nav.tsx                    
+src/lib/billing/service.ts                                   
+src/lib/realtime/client.ts                                   
+Unused dependencies (2)
+@dnd-kit/sortable     package.json:20:6
+@neon/realtime-react  package.json:24:6
+Unused exports (45)
+KanbanOverlay                   function  src/components/kibo-ui/kanban/index.tsx:212:17                 
+BubbleGroup                               src/components/ui/bubble.tsx:127:10                            
+BubbleReactions                           src/components/ui/bubble.tsx:127:46                            
+CalendarDayButton                         src/components/ui/calendar.tsx:221:20                          
+Line                            function  src/components/ui/charts/composed-chart.tsx:229:17             
+Line                                      src/components/ui/charts/index.ts:15:3                         
+LegendItem                                src/components/ui/charts/index.ts:32:3                         
+LegendMarker                              src/components/ui/charts/index.ts:33:3                         
+LegendLabel                               src/components/ui/charts/index.ts:34:3                         
+LegendValue                               src/components/ui/charts/index.ts:35:3                         
+LegendProgress                            src/components/ui/charts/index.ts:36:3                         
+LegendItem                      function  src/components/ui/charts/ring-legend.tsx:60:17                 
+LegendMarker                    function  src/components/ui/charts/ring-legend.tsx:89:17                 
+LegendLabel                     function  src/components/ui/charts/ring-legend.tsx:104:17                
+LegendValue                     function  src/components/ui/charts/ring-legend.tsx:120:17                
+LegendProgress                  function  src/components/ui/charts/ring-legend.tsx:147:17                
+DatePicker                      function  src/components/ui/date-picker.tsx:76:17                        
+FieldGroup                                src/components/ui/field.tsx:232:3                              
+FieldLegend                               src/components/ui/field.tsx:233:3                              
+FieldSeparator                            src/components/ui/field.tsx:234:3                              
+FieldSet                                  src/components/ui/field.tsx:235:3                              
+FieldContent                              src/components/ui/field.tsx:236:3                              
+FieldTitle                                src/components/ui/field.tsx:237:3                              
+MarkerIcon                                src/components/ui/marker.tsx:70:18                             
+markerVariants                            src/components/ui/marker.tsx:70:45                             
+useMessageScroller                        src/components/ui/message-scroller.tsx:123:3                   
+useMessageScrollerScrollable              src/components/ui/message-scroller.tsx:124:3                   
+useMessageScrollerVisibility              src/components/ui/message-scroller.tsx:125:3                   
+MessageFooter                             src/components/ui/message.tsx:89:3                             
+MessageHeader                             src/components/ui/message.tsx:90:3                             
+PopoverDescription                        src/components/ui/popover.tsx:85:3                             
+PopoverHeader                             src/components/ui/popover.tsx:86:3                             
+pixelVerifyReady                function  src/features/integrations/components/PixelVerifyPanel.tsx:85:17
+FEATURE_APPS                              src/features/integrations/components/store-data.ts:310:14      
+formatStorageOverage            function  src/lib/billing/catalog.ts:161:17                              
+BILLING                                   src/lib/constants.ts:63:14                                     
+daysAgoIso                      function  src/lib/datetime.ts:20:17                                      
+listProviderInstances           function  src/lib/integrations/server.ts:217:23                          
+getIntegration                  function  src/lib/integrations/server.ts:226:23                          
+resolveIntegrationsForVideo     function  src/lib/integrations/server.ts:320:23                          
+PLAYER_CONFIG_SERVER_ONLY_KEYS            src/lib/player/config-keys.ts:113:14                           
+EMBED_CONFIG_KEYS                         src/lib/player/config-keys.ts:131:14                           
+streamIpFromHeaders             function  src/lib/player/stream-key.ts:19:17                             
+liveEventsQuery                 function  src/lib/realtime/server.ts:59:17                               
+authClient                                src/services/auth/social-client.ts:19:14                       
+Unused exported types (1)
+RoadmapTaskInput  type  src/lib/roadmap.ts:17:13
+Configuration hints (3)
+instrumentation-client.ts    knip.json  Refine entry pattern (no matches)  
+instrumentation-client.ts    knip.json  Refine project pattern (no matches)
+src/proxy.ts                 knip.json  Remove redundant entry pattern     

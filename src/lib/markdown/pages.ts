@@ -59,7 +59,7 @@ Plays adicionais custam R$ 0,02, informado antecipadamente. Upgrade, downgrade o
 
 ## Garantia
 
-Garantia incondicional de 14 dias: crie a conta sem informar cartão e teste velocidade e retenção sem risco. Assinaturas são cobradas via Stripe (cartão) e Pix (AbacatePay), conforme os [Termos de Uso](/terms).
+Garantia incondicional de 14 dias: crie a conta sem informar cartão e teste velocidade e retenção sem risco. Assinaturas são cobradas via Stripe (cartão e Pix), conforme os [Termos de Uso](/terms).
 
 ## Links
 
@@ -135,7 +135,7 @@ Resumo da política vigente desde 17 de outubro de 2026 (versão completa, com t
 ## Dados tratados
 
 - Conta: nome, e-mail, telefone (se informado), dados de equipe e autenticação.
-- Cobrança: processada por Stripe (cartão) e AbacatePay (Pix); não armazenamos o número completo do cartão.
+- Cobrança: processada via Stripe (cartão e Pix); não armazenamos o número completo do cartão.
 - Conteúdo e configuração: vídeos, títulos, configurações de player e domínios permitidos.
 - Espectadores dos players: IP, país aproximado, dispositivo, progresso de visualização e eventos de conversão - o cliente é o controlador e a Prisma Player, a operadora.
 - Segurança: logs de acesso e verificações antifraude.
@@ -146,7 +146,7 @@ Tratamento com base na LGPD (art. 7º) e no GDPR (art. 6º): execução de contr
 
 ## Terceiros e segurança
 
-Compartilhamento apenas com fornecedores necessários: Stripe, AbacatePay, Neon, Cloudflare, Vercel, Google Analytics, Meta, TikTok, PostHog, Resend e provedores de IA. URLs de vídeo assinadas e de curta duração, isolamento por conta, limites de requisição e notificação de incidentes às autoridades dentro dos prazos legais.
+Compartilhamento apenas com fornecedores necessários: Stripe, Neon, Cloudflare, Vercel, Google Analytics, Meta, TikTok, PostHog, Resend e provedores de IA. URLs de vídeo assinadas e de curta duração, isolamento por conta, limites de requisição e notificação de incidentes às autoridades dentro dos prazos legais.
 
 ## Relacionados
 
@@ -163,7 +163,7 @@ Resumo dos termos vigentes desde 17 de outubro de 2026 (versão completa, com to
 - **Seu conteúdo** - você mantém todos os direitos sobre vídeos e criativos; concedemos apenas a licença limitada necessária para operar o serviço. Não usamos seu conteúdo para treinar IA.
 - **Intermediário** - somos provedora de hospedagem e meio técnico (arts. 18 e 19 do Marco Civil); cada cliente é o único responsável pelo conteúdo que publica.
 - **Conduta proibida** - conteúdo ilegal ou enganoso, material sem licença, malware, burlar proteções anti-download ou limites técnicos.
-- **Planos e pagamentos** - assinatura recorrente via Stripe (cartão) e Pix (AbacatePay), cobrança anual com desconto; direito de arrependimento em 7 dias (art. 49 do CDC), com dedução proporcional do consumo relevante.
+- **Planos e pagamentos** - assinatura recorrente via Stripe (cartão e Pix), cobrança anual com desconto; direito de arrependimento em 7 dias (art. 49 do CDC), com dedução proporcional do consumo relevante.
 - **Métricas e IA** - analytics, testes A/B e sugestões de IA são ferramentas de apoio, não promessa de resultado.
 - **Suspensão e encerramento** - possível por violação dos termos, inadimplência ou risco à segurança, com exportação de dados por prazo razoável.
 - **Lei aplicável** - leis da República Federativa do Brasil, sem prejuízo de normas imperativas do local do consumidor.

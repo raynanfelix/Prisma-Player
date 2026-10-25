@@ -231,7 +231,7 @@ const PAST_DUE_REMINDER_DAYS = [3, 6];
  * A âncora do grace é `subscriptions.updatedAt`, carimbado pelo webhook na
  * TRANSIÇÃO para past_due (retries do mesmo invoice não renovam o carimbo).
  * O re-cheque por linha de provider/status protege as assinaturas legadas
- * da AbacatePay (nunca canceladas aqui) mesmo que a linha mude entre o
+ * do gateway anterior (nunca canceladas aqui) mesmo que a linha mude entre o
  * select e o processamento. Sem Stripe configurado a passada é skip
  * silencioso (não há assinatura stripe para gerenciar).
  */

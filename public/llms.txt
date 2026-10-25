@@ -1,0 +1,71 @@
+# Prisma Player
+
+> Player de VSL com Pitch Delay sincronizado ao segundo, analytics de retenção, testes A/B e proteção anti-download para publicar, otimizar e aumentar as conversões das suas VSLs.
+
+## O que é o Prisma Player
+
+Prisma Player é uma plataforma SaaS brasileira especializada em Video Sales Letters (VSLs). Diferente de players de vídeo genéricos, foi construído especificamente para operações de venda direta via vídeo, oferecendo recursos que impactam diretamente a taxa de conversão.
+
+## Recursos Principais
+
+### Pitch Delay Inteligente
+Sincroniza o botão de compra (CTA) com o momento exato do pitch no vídeo, baseado em análise de retenção. O CTA aparece apenas quando o espectador atingiu o ponto ideal de convencimento, aumentando conversões em até 40%.
+
+### Analytics de Retenção Avançado
+Dashboard completo com gráficos de retenção segundo a segundo, heatmaps de abandono, correlação entre ponto de saída e conversão, e identificação automática dos momentos críticos da VSL.
+
+### Testes A/B Nativos
+Teste diferentes versões da VSL, thumbnails, títulos e configurações de Pitch Delay simultaneamente. Relatórios estatísticos com significância calculada automaticamente.
+
+### Proteção Anti-Pirataria (DRM)
+Escudo DRM que impede download, captura de tela e extração do vídeo. URLs assinadas de curta duração, criptografia AES-256 e watermarking invisível.
+
+### Turbo CDN
+Entrega de vídeo otimizada com latência mínima no Brasil. CDN própria com pontos de presença em São Paulo, Rio de Janeiro e Brasília.
+
+### Smart Autoplay
+Autoplay inteligente que respeita políticas de navegadores e maximiza a taxa de play sem penalidades de UX.
+
+## Planos e Preços
+
+- **Starter**: Para quem está começando. Plays inclusos, analytics básico.
+- **Pro**: Para operações em crescimento. Pitch Delay, testes A/B, suporte prioritário.
+- **Escala**: Para alta volumetria. API completa, webhooks, SLA garantido.
+- Plays adicionais: R$ 0,02 por play excedente.
+
+Cobrança mensal ou anual com desconto para pagamento antecipado.
+
+## Integrações
+
+- Embed responsivo via iframe
+- API REST para integração customizada
+- Webhooks para eventos de play, pause, conclusão e conversão
+- Compatível com Stripe, Hotmart, Kiwify e outras plataformas de pagamento
+
+## Público-Alvo
+
+- Produtores digitais e infoprodutores
+- Coprodutores e agências de marketing
+- Afiliados que usam VSL em funis de venda
+- Equipes de growth e performance marketing
+
+## Documentação Técnica
+
+Documentação completa para desenvolvedores disponível em `/developers`.
+
+## Contato
+
+- E-mail: contato@prismaplayer.com.br
+- Suporte técnico: painel /dashboard/support
+- Tempo de resposta: até 1 dia útil
+
+## URLs Relevantes
+
+- Homepage: https://prisma-player.vercel.app/
+- Preços: https://prisma-player.vercel.app/pricing
+- Recursos: https://prisma-player.vercel.app/services
+- Sobre: https://prisma-player.vercel.app/about
+- Contato: https://prisma-player.vercel.app/contact
+- Desenvolvedores: https://prisma-player.vercel.app/developers
+- Privacidade: https://prisma-player.vercel.app/privacy
+- Termos: https://prisma-player.vercel.app/terms

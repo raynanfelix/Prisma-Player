@@ -22,7 +22,7 @@ export default function TeamPromoteForm() {
           setBusy(true);
           fetch("/api/admin/team/role", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: userId.trim(), role: "admin" }) })
             .then(async (response) => { if (!response.ok) throw new Error(((await response.json().catch(() => ({}))) as { error?: string }).error ?? "request_failed"); setPending(false); setUserId(""); setNotice(""); router.refresh(); })
-            .catch((error: unknown) => setNotice(`Falhou: ${error instanceof Error ? error.message : "erro"}`))
+            .catch(() => setNotice("Não foi possível atualizar o papel. Tente novamente."))
             .finally(() => setBusy(false));
         }}
         onClose={() => { if (!busy) setPending(false); }} />

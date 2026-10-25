@@ -75,10 +75,12 @@ export default function LoginPage() {
     try {
       await authService.requestPasswordReset(normalizedEmail);
       setNotice({ tone: "success", message: "Enviamos o link de recuperação para seu e-mail." });
-    } catch (error) {
+    } catch {
+      // Mensagem genérica: error.message pode conter detalhes do provedor
+      // de e-mail ou do auth que não devem chegar ao navegador.
       setNotice({
         tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível enviar o e-mail.",
+        message: "Não foi possível enviar o e-mail. Tente novamente.",
       });
     }
   }
@@ -119,14 +121,17 @@ export default function LoginPage() {
       router.replace(safeAuthRedirect(new URLSearchParams(window.location.search).get("next")));
       router.refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Não foi possível entrar agora.";
+      // Mensagem genérica para o usuário; a mensagem crua do provedor pode
+      // conter detalhes internos. A detecção de e-mail não verificado usa a
+      // string original apenas como sinalizador interno.
+      const raw = error instanceof Error ? error.message : "";
+      const needsVerification = /verif/i.test(raw);
       setNotice({
         tone: "error",
-        message,
-        // Better Auth rejeita sign-in de e-mail não verificado (mensagem pode
-        // variar - trate genericamente por substring 'verif'). Oferece a tela
-        // de verificação por código com o e-mail já preenchido.
-        action: /verif/i.test(message)
+        message: needsVerification
+          ? "E-mail ainda não verificado. Verifique sua caixa de entrada ou reenvie o código."
+          : "Não foi possível entrar agora. Tente novamente.",
+        action: needsVerification
           ? { label: "Verificar e-mail", href: `/signup?verify=1&email=${encodeURIComponent(normalizedEmail)}` }
           : undefined,
       });

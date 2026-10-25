@@ -11,7 +11,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 /**
  * Suporte: troca o plano da conta manualmente. NÃO altera nada no provedor
- * (AbacatePay): a cobrança recorrente continua a que está lá. A resposta
+ * (Stripe): a cobrança recorrente continua a que está lá. A resposta
  * inclui o aviso para o operador não esquecer a conciliação.
  */
 export async function POST(request: Request) {
@@ -77,6 +77,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     updated: true,
     plan: planRow[0].slug,
-    warning: "Plano trocado só na Prisma. Concilie a cobrança na AbacatePay.",
+    warning: "Plano trocado só na Prisma. Concilie a cobrança no Stripe.",
   }, { headers: { "cache-control": "no-store" } });
 }

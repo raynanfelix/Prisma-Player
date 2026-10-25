@@ -164,11 +164,16 @@ export default function SignupPage() {
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Não foi possível criar a conta.";
+      // Mensagem genérica: error.message pode conter detalhes internos do
+      // provedor de auth ou do banco que não devem chegar ao navegador.
+      const raw = error instanceof Error ? error.message : "";
+      const isEmailTaken = EMAIL_ALREADY_USED.test(raw);
       setNotice({
         tone: "error",
-        message,
-        action: EMAIL_ALREADY_USED.test(message) ? { label: "Fazer login", href: "/login" } : undefined,
+        message: isEmailTaken
+          ? "Este e-mail já está em uso."
+          : "Não foi possível criar a conta. Tente novamente.",
+        action: isEmailTaken ? { label: "Fazer login", href: "/login" } : undefined,
       });
     } finally {
       submittingRef.current = false;
@@ -216,11 +221,11 @@ export default function SignupPage() {
         setCode("");
         setCodeError("Código inválido ou expirado. Solicite um novo código.");
       }
-    } catch (error) {
+    } catch {
       setCode("");
-      setCodeError(
-        error instanceof Error ? error.message : "Código inválido ou expirado. Tente novamente.",
-      );
+      // Mensagem genérica: error.message pode conter detalhes do provedor
+      // de auth que não devem chegar ao navegador.
+      setCodeError("Código inválido ou expirado. Solicite um novo código.");
     } finally {
       verifyingRef.current = false;
       setVerifying(false);
@@ -259,7 +264,9 @@ export default function SignupPage() {
     } catch (error) {
       setNotice({
         tone: "error",
-        message: error instanceof Error ? error.message : "Não foi possível reenviar o código. Tente novamente.",
+        // Mensagem genérica: error.message pode conter detalhes do provedor
+        // de e-mail ou auth que não devem chegar ao navegador.
+        message: "Não foi possível reenviar o código. Tente novamente.",
       });
     } finally {
       resendingRef.current = false;

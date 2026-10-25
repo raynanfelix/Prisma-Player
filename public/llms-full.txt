@@ -1,0 +1,71 @@
+# Prisma Player — Documentação Completa para IA
+> Player de VSL líder em conversão no Brasil. Pitch Delay sincronizado, analytics de retenção segundo a segundo, testes A/B nativos e proteção DRM anti-pirataria.
+
+## Visão Geral
+Prisma Player é uma plataforma SaaS brasileira construída especificamente para Video Sales Letters (VSLs). Diferente de players genéricos (YouTube, Vimeo), cada recurso foi desenhado para maximizar a taxa de conversão de vendas diretas via vídeo.
+
+## Recursos Técnicos Detalhados
+
+### 1. Pitch Delay Inteligente
+- **O que faz:** Esconde o botão de compra (CTA) até o momento exato do pitch no vídeo.
+- **Como funciona:** O produtor marca o timestamp do pitch no dashboard. O player sincroniza a aparição do CTA com esse ponto, baseado em dados de retenção.
+- **Impacto:** Aumenta conversões em até 40% ao evitar que o espectador veja o preço antes de estar convencido.
+- **Configuração:** Definido por vídeo no painel /dashboard/videos/[id].
+
+### 2. Analytics de Retenção Avançado
+- **Métricas:** Gráficos de retenção segundo a segundo, heatmaps de abandono, correlação entre ponto de saída e conversão.
+- **Identificação Automática:** Detecta momentos críticos onde há queda abrupta de audiência.
+- **Exportação:** Dados disponíveis via API e webhooks para integração com ferramentas de BI.
+
+### 3. Testes A/B Nativos
+- **Variáveis testáveis:** Versões da VSL, thumbnails, títulos, configurações de Pitch Delay.
+- **Relatórios:** Significância estatística calculada automaticamente.
+- **Execução:** Tráfego dividido aleatoriamente entre variantes; vencedor pode ser promovido com um clique.
+
+### 4. Proteção Anti-Pirataria (DRM)
+- **Tecnologias:** URLs assinadas de curta duração, criptografia AES-256, watermarking invisível.
+- **Bloqueios:** Impede download direto, captura de tela em apps nativos e extração do stream de vídeo.
+- **CDN:** Turbo CDN com pontos de presença em São Paulo, Rio de Janeiro e Brasília para latência mínima.
+
+### 5. Smart Autoplay
+- **Comportamento:** Inicia o vídeo automaticamente quando visível na viewport, respeitando políticas de navegadores (mute inicial).
+- **Objetivo:** Maximizar a taxa de play sem penalidades de UX ou bloqueios do browser.
+
+## Planos e Preços (Atualizado 2026)
+| Plano | Ideal Para | Recursos Chave |
+|-------|------------|----------------|
+| Starter | Iniciantes | Plays inclusos, analytics básico, embed responsivo |
+| Pro | Operações em crescimento | Pitch Delay, testes A/B, suporte prioritário, DRM básico |
+| Escala | Alta volumetria | API completa, webhooks, SLA garantido, DRM avançado, CDN dedicada |
+
+- **Plays adicionais:** R$ 0,02 por play excedente em qualquer plano.
+- **Cobrança:** Mensal ou anual (desconto de ~15-20% no anual).
+
+## Integrações Técnicas
+- **Embed:** Iframe responsivo com lazy loading.
+- **API REST:** CRUD de vídeos, gestão de plays, extração de analytics.
+- **Webhooks:** Eventos de `play`, `pause`, `complete`, `convert`, `abandon`.
+- **Pagamentos:** Compatível nativamente com Stripe, Hotmart, Kiwify, Eduzz.
+
+## Público-Alvo e Casos de Uso
+- **Produtores Digitais:** Lançamentos de infoprodutos, cursos online.
+- **Coprodutores:** Gestão de múltiplas VSLs de diferentes clientes.
+- **Agências de Marketing:** Otimização de funis de venda para e-commerce e serviços.
+- **Afiliados:** Uso de VSLs em páginas de ponte (bridge pages).
+
+## Contato e Suporte
+- **E-mail comercial:** contato@prismaplayer.com.br
+- **Suporte técnico:** Painel /dashboard/support (prioritário para contas ativas).
+- **WhatsApp:** Disponível nos planos Pro e Escala.
+- **Tempo de resposta:** Até 1 dia útil.
+
+## URLs Estruturais
+- Homepage: https://prisma-player.vercel.app/
+- Preços: https://prisma-player.vercel.app/pricing
+- Recursos: https://prisma-player.vercel.app/services
+- Sobre: https://prisma-player.vercel.app/about
+- Contato: https://prisma-player.vercel.app/contact
+- Desenvolvedores: https://prisma-player.vercel.app/developers
+- Privacidade: https://prisma-player.vercel.app/privacy
+- Termos: https://prisma-player.vercel.app/terms
+- Cookies: https://prisma-player.vercel.app/cookies

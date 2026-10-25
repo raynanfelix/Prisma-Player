@@ -53,14 +53,14 @@ export default function UserActions({ userId, email, plans, subStatus, subProvid
       setPending(null);
       router.refresh();
     } catch (error) {
-      setNotice(`Falhou: ${error instanceof Error ? error.message : "erro"}`);
+      setNotice("Não foi possível concluir a ação. Tente novamente.");
     } finally {
       setBusy(false);
     }
   }
 
   const meta: Record<Pending["kind"], { title: string; consequence: string; confirm: string; danger?: boolean }> = {
-    plan: { title: "Trocar plano", consequence: "Vale só na Prisma. A cobrança na AbacatePay precisa de conciliação manual.", confirm: "Trocar plano" },
+    plan: { title: "Trocar plano", consequence: "Vale só na Prisma. A cobrança no Stripe precisa de conciliação manual.", confirm: "Trocar plano" },
     suspend: { title: "Suspender conta", consequence: "Bloqueia produto, embed e analytics. Não apaga dados. Recorrência no provedor continua.", confirm: "Suspender", danger: true },
     reactivate: { title: "Reativar conta", consequence: "Reativa o acesso por 30 dias. Não reativa cobrança cancelada no provedor.", confirm: "Reativar" },
     trial_extend: { title: "Estender trial", consequence: "Trial ativo por mais 14 dias a partir do vencimento atual.", confirm: "Estender" },

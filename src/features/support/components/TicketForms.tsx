@@ -20,7 +20,7 @@ export function TicketForm() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   return (
-    <form onSubmit={(event) => { event.preventDefault(); if (busy || subject.trim().length < 3) return; setBusy(true); setNotice(""); post("/api/support/cases", { subject, category, priority }).then((data) => router.push(`/dashboard/support/${data.id}`)).catch((error: unknown) => { setNotice(`Falhou: ${error instanceof Error ? error.message : "erro"}`); setBusy(false); }); }} className="grid gap-3">
+    <form onSubmit={(event) => { event.preventDefault(); if (busy || subject.trim().length < 3) return; setBusy(true); setNotice(""); post("/api/support/cases", { subject, category, priority }).then((data) => router.push(`/dashboard/support/${data.id}`)).catch((error: unknown) => { setNotice("Não foi possível criar o chamado. Tente novamente."); setBusy(false); }); }} className="grid gap-3">
       <div>
         <label htmlFor="ticket-subject" className="mb-1 block text-[12px] font-semibold">O que está acontecendo?</label>
         <input id="ticket-subject" value={subject} onChange={(event) => setSubject(event.target.value)} maxLength={140} placeholder="Ex.: meu embed parou de carregar" className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm dark:border-zinc-800 dark:bg-card" />

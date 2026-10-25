@@ -54,7 +54,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   // plano terminado (o cron marca `expired`, mas a tela não pode mentir).
   const subActive = isSubscriptionEffective(subscription ? { status: subscription.status, current_period_end: subscription.current_period_end } : null);
   // Portal só para assinatura DO Stripe (profiles.stripe_customer_id existe):
-  // assinatura legada (AbacatePay) continua com os CTAs de plano para migrar.
+  // assinatura de provedor externo antigo continua com os CTAs de plano para migrar.
   const showPortal = subActive && subscription?.provider === "stripe";
 
   return (

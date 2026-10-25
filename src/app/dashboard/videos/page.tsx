@@ -98,7 +98,9 @@ export default function VideosPage() {
       setActiveTab("processing");
       notify("Upload iniciado. Você pode continuar usando a dashboard.");
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Não foi possível iniciar o upload");
+      // Mensagem genérica: error.message pode conter detalhes do R2/SDK
+// que não devem chegar ao navegador (tokens, paths internos).
+notify("Não foi possível iniciar o upload. Tente novamente.");
     } finally {
       setPreparingUpload(false);
     }

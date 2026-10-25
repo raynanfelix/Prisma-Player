@@ -527,7 +527,9 @@ export default function VslStudio() {
       dirtyConfigKeys.current.clear();
     } catch (error) {
       if (error instanceof ApiError) {
-        setSaveError(playerConfigSaveErrors[error.code] ?? error.message);
+        // Usa mensagem mapeada por código; fallback genérico para evitar
+        // vazar detalhes internos do backend ou do provedor ao navegador.
+        setSaveError(playerConfigSaveErrors[error.code] ?? "Não foi possível salvar a configuração. Tente novamente.");
       } else {
         setSaveError("Não foi possível salvar a configuração. Tente novamente.");
       }

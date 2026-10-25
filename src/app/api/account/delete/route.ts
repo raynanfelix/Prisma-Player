@@ -273,7 +273,10 @@ export async function POST(request: Request) {
     await db.execute(sql`DELETE FROM neon_auth."user" WHERE id = ${userId}`);
   } catch (reason) {
     console.error("account_delete_auth_failed", { userId, message: reason instanceof Error ? reason.message : "unknown" });
-    return NextResponse.json({ error: "account_delete_failed", message: "Dados do titular removidos; falhou a remoção do usuário na auth." }, { status: 500 });
+    // Mensagem genérica: expor que "dados foram removidos mas auth falhou"
+    // revela arquitetura interna e estado parcial ao atacante. O log já tem
+    // o detalhe para debugging; o usuário só precisa saber que algo falhou.
+    return NextResponse.json({ error: "account_delete_failed", message: "Não foi possível concluir a exclusão da conta. Tente novamente ou entre em contato com o suporte." }, { status: 500 });
   }
 
   await getAuth().signOut().catch(() => undefined);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/server";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 const {
@@ -59,12 +59,16 @@ export async function GET(request: Request) {
   const limited = await rateLimit(request, `account-export:${userId}`, { max: 5, windowMs: 60 * 60_000 });
   if (limited) return limited;
 
+  const VIDEO_EXPORT_LIMIT = 2000;
+  const FOLDER_EXPORT_LIMIT = 500;
   const [
     profileRows,
     accessRows,
     subscriptionRows,
     videoRows,
+    videoTotalRows,
     folderRows,
+    folderTotalRows,
     playerRows,
     walletRows,
     ledgerRows,
@@ -79,14 +83,34 @@ export async function GET(request: Request) {
     db.select().from(profiles).where(eq(profiles.id, userId)).limit(1),
     db.select().from(accountAccess).where(eq(accountAccess.userId, userId)).limit(1),
     db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1),
-    db.select({ id: videos.id, title: videos.title, mimeType: videos.mimeType, sizeBytes: videos.sizeBytes, status: videos.status, durationSeconds: videos.durationSeconds, createdAt: videos.createdAt }).from(videos).where(eq(videos.userId, userId)).limit(2000),
-    db.select({ id: videoFolders.id, name: videoFolders.name, createdAt: videoFolders.createdAt }).from(videoFolders).where(eq(videoFolders.userId, userId)).limit(500),
+    db.select({ id: videos.id, title: videos.title, mimeType: videos.mimeType, sizeBytes: videos.sizeBytes, status: videos.status, durationSeconds: videos.durationSeconds, createdAt: videos.createdAt }).from(videos).where(eq(videos.userId, userId)).limit(VIDEO_EXPORT_LIMIT),
+    db.select({ count: sql<number>`count(*)::int` }).from(videos).where(eq(videos.userId, userId)),
+    db.select({ id: videoFolders.id, name: videoFolders.name, createdAt: videoFolders.createdAt }).from(videoFolders).where(eq(videoFolders.userId, userId)).limit(FOLDER_EXPORT_LIMIT),
+    db.select({ count: sql<number>`count(*)::int` }).from(videoFolders).where(eq(videoFolders.userId, userId)),
     db.select({ id: playerConfigs.id, videoId: playerConfigs.videoId, config: playerConfigs.config, allowedDomains: playerConfigs.allowedDomains, published: playerConfigs.published, createdAt: playerConfigs.createdAt }).from(playerConfigs).where(eq(playerConfigs.userId, userId)).limit(2000),
     db.select({ balance: aiCreditWallets.balance, lifetimePurchased: aiCreditWallets.lifetimePurchased, lifetimeUsed: aiCreditWallets.lifetimeUsed }).from(aiCreditWallets).where(eq(aiCreditWallets.userId, userId)).limit(1),
     db.select({ amount: aiCreditLedger.amount, reason: aiCreditLedger.reason, reference: aiCreditLedger.reference, createdAt: aiCreditLedger.createdAt }).from(aiCreditLedger).where(eq(aiCreditLedger.userId, userId)).orderBy(desc(aiCreditLedger.createdAt)).limit(500),
     db.select({ kind: userInbox.kind, title: userInbox.title, message: userInbox.message, createdAt: userInbox.createdAt, readAt: userInbox.readAt }).from(userInbox).where(eq(userInbox.userId, userId)).limit(500),
     db.select({ eventType: securityEvents.eventType, createdAt: securityEvents.createdAt }).from(securityEvents).where(eq(securityEvents.userId, userId)).orderBy(desc(securityEvents.createdAt)).limit(500),
-    db.select().from(intelligenceControls).where(eq(intelligenceControls.userId, userId)).limit(1),
+    // LGPD Art. 6º III (minimização): webhookUrl e alertWebhookUrl podem conter
+    // tokens assinados que não devem ser expostos no dump de portabilidade.
+    // A rota GET /api/intelligence/controls já mascara esses campos; o export
+    // segue a mesma semântica para evitar vazamento em arquivo baixável.
+    db.select({
+      automaticReportsEnabled: intelligenceControls.automaticReportsEnabled,
+      reportFrequency: intelligenceControls.reportFrequency,
+      reportEmail: intelligenceControls.reportEmail,
+      reportVideoIds: intelligenceControls.reportVideoIds,
+      audienceSyncEnabled: intelligenceControls.audienceSyncEnabled,
+      audienceRetentionThreshold: intelligenceControls.audienceRetentionThreshold,
+      outgoingWebhooksEnabled: intelligenceControls.outgoingWebhooksEnabled,
+      webhookEvents: intelligenceControls.webhookEvents,
+      conversionAlertsEnabled: intelligenceControls.conversionAlertsEnabled,
+      conversionDropThreshold: intelligenceControls.conversionDropThreshold,
+      alertWebhookEnabled: intelligenceControls.alertWebhookEnabled,
+      alertVideoIds: intelligenceControls.alertVideoIds,
+      updatedAt: intelligenceControls.updatedAt,
+    }).from(intelligenceControls).where(eq(intelligenceControls.userId, userId)).limit(1),
     db.select({ teamId: accountTeamMembers.teamId, role: accountTeamMembers.role, status: accountTeamMembers.status, joinedAt: accountTeamMembers.joinedAt }).from(accountTeamMembers).where(eq(accountTeamMembers.userId, userId)).limit(100),
     db.select({ id: accountTeamInvites.id, email: accountTeamInvites.email, role: accountTeamInvites.role, status: accountTeamInvites.status, invitedBy: accountTeamInvites.invitedBy, expiresAt: accountTeamInvites.expiresAt, createdAt: accountTeamInvites.createdAt }).from(accountTeamInvites).where(eq(accountTeamInvites.invitedBy, userId)).limit(200),
     db.select({ id: billingCheckouts.id, checkoutType: billingCheckouts.checkoutType, amountCents: billingCheckouts.amountCents, currency: billingCheckouts.currency, status: billingCheckouts.status, paidAt: billingCheckouts.paidAt, receiptUrl: billingCheckouts.receiptUrl, createdAt: billingCheckouts.createdAt }).from(billingCheckouts).where(eq(billingCheckouts.userId, userId)).orderBy(desc(billingCheckouts.createdAt)).limit(200),
@@ -102,7 +126,25 @@ export async function GET(request: Request) {
     intelligenceControls: controlRows[0] ? toJsonRow(controlRows[0]) : null,
     aiCredits: { wallet: walletRows[0] ? toJsonRow(walletRows[0]) : null, ledger: ledgerRows.map(toJsonRow) },
     videos: videoRows.map(toJsonRow),
+    videosMeta: {
+      exported: videoRows.length,
+      total: videoTotalRows[0]?.count ?? 0,
+      truncated: (videoTotalRows[0]?.count ?? 0) > VIDEO_EXPORT_LIMIT,
+      limit: VIDEO_EXPORT_LIMIT,
+      note: (videoTotalRows[0]?.count ?? 0) > VIDEO_EXPORT_LIMIT
+        ? `Export limitado a ${VIDEO_EXPORT_LIMIT} vídeos por requisição. Para obter o conjunto completo, solicite via privacidade@prismaplayer.com.br.`
+        : undefined,
+    },
     folders: folderRows.map(toJsonRow),
+    foldersMeta: {
+      exported: folderRows.length,
+      total: folderTotalRows[0]?.count ?? 0,
+      truncated: (folderTotalRows[0]?.count ?? 0) > FOLDER_EXPORT_LIMIT,
+      limit: FOLDER_EXPORT_LIMIT,
+      note: (folderTotalRows[0]?.count ?? 0) > FOLDER_EXPORT_LIMIT
+        ? `Export limitado a ${FOLDER_EXPORT_LIMIT} pastas por requisição. Para obter o conjunto completo, solicite via privacidade@prismaplayer.com.br.`
+        : undefined,
+    },
     players: playerRows.map(toJsonRow),
     inbox: inboxRows.map(toJsonRow),
     securityEvents: securityEventRows.map(toJsonRow),

@@ -13,7 +13,7 @@ const actions = new Set(["suspend", "reactivate", "trial_extend", "trial_reset"]
 /**
  * Suporte: suspende/reativa assinatura e estende/reseta trial.
  * Suspender não cancela no provedor: a recorrência do cartão continua até
- * ser tratada na AbacatePay (aviso devolvido na resposta).
+ * ser tratada no Stripe (aviso devolvido na resposta).
  */
 export async function POST(request: Request) {
   const gate = await adminGuard(request);
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     if (action === "suspend") {
       await db.update(subscriptions).set({ status: "suspended", updatedAt: now }).where(eq(subscriptions.userId, userId));
       auditAction = "subscription_suspend";
-      result = { updated: true, warning: "Assinatura suspensa só na Prisma. Trate a recorrência na AbacatePay." };
+      result = { updated: true, warning: "Assinatura suspensa só na Prisma. Trate a recorrência no Stripe." };
     } else {
       await db.update(subscriptions).set({
         status: "active",

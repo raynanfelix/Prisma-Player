@@ -29,7 +29,7 @@ function dayIndexFor(timestampMs: number, endMs: number): number {
  * adaptado ao domínio Prisma Player.
  *
  * Fontes de dados REAIS desta página:
- * - Webhooks AbacatePay: tabela payment_webhook_events - eventos com
+ * - Stripe Webhooks: tabela payment_webhook_events - eventos com
  *   status "failed" viram incidentes "Indisponível" no dia em que chegaram
  *   (com o erro real de processamento), e a fila pendente ("received"/
  *   "processing") vira "Degradado" no dia corrente.
@@ -125,8 +125,8 @@ export default async function AdminSystemPage() {
     { name: "API (funções Vercel)", missing: UPTIME_DAYS - 1 },
     // PLACEHOLDER HONESTO: idem - esta página do Dashboard renderizou hoje.
     { name: "Dashboard", missing: UPTIME_DAYS - 1 },
-    // Dados reais: payment_webhook_events (falhas + fila) da AbacatePay.
-    { name: "Webhooks AbacatePay", incidents: webhookIncidents },
+    // Dados reais: payment_webhook_events (falhas + fila) da Stripe.
+    { name: "Stripe Webhooks", incidents: webhookIncidents },
     // PLACEHOLDER HONESTO: as queries desta página responderam (Neon ativo
     // hoje); não há registro histórico de incidentes de banco no projeto.
     { name: "Banco Neon", missing: UPTIME_DAYS - 1 },
@@ -138,7 +138,7 @@ export default async function AdminSystemPage() {
     <div>
       <AdminHeader
         title="Saúde do Sistema"
-        description="Disponibilidade dos serviços do Prisma Player, com incidentes reais dos webhooks AbacatePay e telemetria da própria página."
+        description="Disponibilidade dos serviços do Prisma Player, com incidentes reais dos webhooks Stripe e telemetria da própria página."
       />
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,640px)_minmax(0,1fr)]">
@@ -150,7 +150,7 @@ export default async function AdminSystemPage() {
             endDate={endDate}
           />
           <p className="text-[11px] leading-relaxed themeable-text-ink-muted-48">
-            Fonte real: tabela <strong>payment_webhook_events</strong> (falhas e fila dos webhooks AbacatePay) e a
+            Fonte real: tabela <strong>payment_webhook_events</strong> (falhas e fila dos webhooks Stripe) e a
             resposta desta página. API, Dashboard e Banco Neon ainda não possuem telemetria histórica de incidentes -
             os dias anteriores aparecem como <em>Sem dados</em> e apenas o dia corrente é comprovado. R2/Storage
             aguarda sondagem dedicada.

@@ -98,7 +98,7 @@ export default function RoadmapBoard({ initialTasks, isAdmin }: { initialTasks: 
         })
         .catch((error: unknown) => {
           setTasks(previous);
-          setNotice(`Falha ao mover: ${error instanceof Error ? error.message : "erro"}`);
+          setNotice("Não foi possível mover esta tarefa. Tente novamente.");
         });
     },
     [tasks],
@@ -121,8 +121,8 @@ export default function RoadmapBoard({ initialTasks, isAdmin }: { initialTasks: 
         setForm({ title: "", description: "" });
         return refreshList();
       })
-      .catch((error: unknown) => {
-        setNotice(`Falhou: ${error instanceof Error ? error.message : "erro"}`);
+      .catch(() => {
+        setNotice("Não foi possível criar a tarefa. Tente novamente.");
       })
       .finally(() => setBusy(false));
   }
@@ -137,8 +137,8 @@ export default function RoadmapBoard({ initialTasks, isAdmin }: { initialTasks: 
         setDeleteTask(null);
         return refreshList();
       })
-      .catch((error: unknown) => {
-        setNotice(`Falha ao excluir: ${error instanceof Error ? error.message : "erro"}`);
+      .catch(() => {
+        setNotice("Não foi possível excluir a tarefa. Tente novamente.");
       })
       .finally(() => setBusy(false));
   }

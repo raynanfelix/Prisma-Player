@@ -82,6 +82,11 @@ export async function GET(request: Request) {
       .limit(1);
     if (!row) return NextResponse.json({ error: "controls_unavailable" }, { status: 503 });
     // Contrato preservado: o painel consome chaves snake_case.
+    // Máscara de URLs de webhook: mesma classe de bug do pixel token (metaCapiToken)
+    // corrigida em maskIntegrationConfig. O navegador só precisa saber SE existe;
+    // o valor cru fica no servidor e volta via merge no PATCH (campo vazio preserva).
+    const hasWebhookUrl = typeof row.webhookUrl === "string" && row.webhookUrl.trim().length > 0;
+    const hasAlertWebhookUrl = typeof row.alertWebhookUrl === "string" && row.alertWebhookUrl.trim().length > 0;
     const data = {
       automatic_reports_enabled: row.automaticReportsEnabled,
       report_frequency: row.reportFrequency,
@@ -90,12 +95,14 @@ export async function GET(request: Request) {
       audience_sync_enabled: row.audienceSyncEnabled,
       audience_retention_threshold: row.audienceRetentionThreshold,
       outgoing_webhooks_enabled: row.outgoingWebhooksEnabled,
-      webhook_url: row.webhookUrl,
+      webhook_url: "",
+      has_webhook_url: hasWebhookUrl,
       webhook_events: row.webhookEvents,
       conversion_alerts_enabled: row.conversionAlertsEnabled,
       conversion_drop_threshold: row.conversionDropThreshold,
       alert_webhook_enabled: row.alertWebhookEnabled,
-      alert_webhook_url: row.alertWebhookUrl,
+      alert_webhook_url: "",
+      has_alert_webhook_url: hasAlertWebhookUrl,
       alert_video_ids: row.alertVideoIds,
       updated_at: row.updatedAt.toISOString(),
     };
@@ -155,11 +162,15 @@ export async function PATCH(request: Request) {
   }
   if ("webhookUrl" in body) {
     const value = String(body.webhookUrl ?? "").trim();
+    // String vazia = frontend mascarado preservando o valor existente (merge).
+    // Só apaga se o usuário enviar explicitamente um espaço ou se for o primeiro save.
     if (value) {
       if (!plan.capabilities.outgoing_webhooks) return capabilityDenied("outgoing_webhooks");
       try { await validateWebhookUrl(value); } catch { return NextResponse.json({ error: "invalid_webhook_url" }, { status: 400 }); }
+      update.webhookUrl = value;
     }
-    update.webhookUrl = value || null;
+    // Se value === "" e o campo está no body, NÃO toca no update — preserva o
+    // valor salvo no banco (mesma semântica do mergeSecretConfig das integrações).
   }
   if (Array.isArray(body.webhookEvents)) update.webhookEvents = body.webhookEvents.map(String).filter((item) => webhookEvents.has(item)).slice(0, 6);
   if ("conversionAlertsEnabled" in body) {
@@ -177,11 +188,14 @@ export async function PATCH(request: Request) {
   }
   if ("alertWebhookUrl" in body) {
     const value = String(body.alertWebhookUrl ?? "").trim();
+    // String vazia = frontend mascarado preservando o valor existente (merge).
     if (value) {
       if (!plan.capabilities.conversion_drop_alerts) return capabilityDenied("conversion_drop_alerts");
       try { await validateWebhookUrl(value); } catch { return NextResponse.json({ error: "invalid_alert_webhook_url" }, { status: 400 }); }
+      update.alertWebhookUrl = value;
     }
-    update.alertWebhookUrl = value || null;
+    // Se value === "" e o campo está no body, NÃO toca no update — preserva o
+    // valor salvo no banco (mesma semântica do mergeSecretConfig das integrações).
   }
   if ("alertVideoIds" in body) {
     const parsedIds = parseVideoIdList(body.alertVideoIds);
@@ -241,6 +255,8 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ delivered: true, ...delivered });
   } catch (error) {
-    return NextResponse.json({ error: "webhook_delivery_failed", message: error instanceof Error ? error.message : "delivery_failed" }, { status: 502 });
+    // Mensagem genérica: error.message pode conter URLs, tokens ou detalhes
+    // internos do provedor de webhook que não devem chegar ao navegador.
+    return NextResponse.json({ error: "webhook_delivery_failed", message: "Não foi possível entregar o webhook de teste. Verifique a URL e tente novamente." }, { status: 502 });
   }
 }

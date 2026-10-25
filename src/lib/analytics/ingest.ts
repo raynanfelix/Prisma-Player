@@ -10,6 +10,7 @@ import { pixelIntegrations } from "@/lib/player/pixels";
 import { deliverServerPurchase } from "@/services/ads/server-events";
 import type { NormalizedAnalyticsEvent } from "@/lib/player/analytics-batch";
 import { isValidViewerId } from "@/lib/player/viewer-id";
+import { streamKeyForIp } from "@/lib/player/stream-key";
 
 const { videos, playerConfigs, videoEvents, videoLiveSessions, intelligenceControls } = schema;
 
@@ -64,7 +65,12 @@ export async function ingestAnalyticsEvents(command: AnalyticsIngestCommand): Pr
   }
   const context = buildIngestContext(command);
   const lastEvent = command.events[command.events.length - 1];
-  const sessionWritten = await upsertLiveSession(target.video, command.sessionId, { lastEvent, viewerId: context.viewerId, countryCode: context.countryCode, deviceType: context.client.device });
+  // M9: a sessão live grava a MESMA chave server-side do teto de streams
+  // (hash de vídeo + IP, ver stream-key.ts). Gravar o viewerId declarado aqui
+  // sobrescreveria a chave do embed e reabriria a evasão por rotação. Sem IP
+  // legível, degrada para o viewer declarado.
+  const streamKey = streamKeyForIp(target.video.id, command.peerIpCandidate ?? "") || context.viewerId;
+  const sessionWritten = await upsertLiveSession(target.video, command.sessionId, { lastEvent, streamKey, countryCode: context.countryCode, deviceType: context.client.device });
   if (!sessionWritten) return { kind: "live_session_write_failed" };
   const actionable = command.events.filter((event) => event.eventType !== "heartbeat");
   if (actionable.length === 0) return { kind: "no_content" };
@@ -181,22 +187,22 @@ async function findIngestTarget(videoId: string): Promise<IngestTarget> {
   return { kind: "ready", video: { id: video.id, userId: video.userId, title: video.title }, allowedDomains, config };
 }
 
-type LiveSessionInput = { lastEvent: NormalizedAnalyticsEvent; viewerId: string | undefined; countryCode: string; deviceType: string };
+type LiveSessionInput = { lastEvent: NormalizedAnalyticsEvent; streamKey: string | undefined; countryCode: string; deviceType: string };
 
 async function upsertLiveSession(video: { id: string; userId: string }, sessionId: string, input: LiveSessionInput): Promise<boolean> {
   const lastSeenAt = new Date();
   try {
     // Upsert com a MESMA chave de antes (video_id, session_id - PK composta de
-    // video_live_sessions). viewer_id entra no update apenas quando presente -
-    // sem viewer, o valor anterior permanece (mesma semântica de omitir o campo
-    // no payload do upsert anterior).
+    // video_live_sessions). viewer_id guarda a chave server-side do teto de
+    // streams (M9, hash de vídeo + IP) e entra no update apenas quando
+    // presente - sem chave, o valor anterior permanece.
     const liveUpsert = {
       userId: video.userId,
       countryCode: input.countryCode,
       deviceType: input.deviceType,
       progressPercent: input.lastEvent.progressPercent,
       lastSeenAt,
-      ...(input.viewerId ? { viewerId: input.viewerId } : {}),
+      ...(input.streamKey ? { viewerId: input.streamKey } : {}),
     };
     await db
       .insert(videoLiveSessions)

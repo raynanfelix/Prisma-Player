@@ -1,0 +1,101 @@
+﻿node.exe : npm notice run prisma-player@0.1.0 npx
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\rayna\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm notice run prisma-player@0.1.0 npx:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice run vitest run tests/route-guards.test.ts
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the 
+default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` 
+in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.5 C:/Users/rayna/Downloads/Prisma-Player-main
+
+ ❯ tests/route-guards.test.ts (38 tests | 2 failed) 85ms
+   ❯ guarda 401: sessao ausente (29)
+     ✓ GET /api/ab-tests responde 401 unauthorized 17ms
+     ✓ POST /api/ab-tests responde 401 unauthorized 4ms
+     × GET /api/ab-tests/[id] responde 401 unauthorized 13ms
+     ✓ GET /api/account/access responde 401 unauthorized 2ms
+     ✓ GET /api/account/inbox responde 401 unauthorized 3ms
+     ✓ GET /api/account/overview responde 401 unauthorized 1ms
+     ✓ GET /api/account/profile responde 401 unauthorized 1ms
+     ✓ GET /api/account/security responde 401 unauthorized 1ms
+     ✓ POST /api/account/trial responde 401 unauthorized 2ms
+     ✓ POST /api/admin/credits/adjust responde 401 unauthorized 2ms
+     ✓ POST /api/admin/plans/toggle responde 401 unauthorized 2ms
+     ✓ GET /api/admin/search responde 401 unauthorized 1ms
+     ✓ POST /api/admin/seo/targets responde 401 unauthorized 2ms
+     ✓ POST /api/admin/support/cases responde 401 unauthorized 1ms
+     ✓ POST /api/admin/support/notes responde 401 unauthorized 1ms
+     ✓ POST /api/admin/team/role responde 401 unauthorized 1ms
+     ✓ POST /api/admin/users/plan responde 401 unauthorized 1ms
+     ✓ POST /api/admin/users/status responde 401 unauthorized 1ms
+     ✓ GET /api/analytics/[videoId]/live-logs responde 401 unauthorized 1ms
+     ✓ POST /api/auth/revoke-all-sessions responde 401 unauthorized 1ms
+     ✓ GET /api/cron responde 401 unauthorized 1ms
+     ✓ GET /api/dashboard-security responde 401 unauthorized 0ms
+     ✓ POST /api/integrations/telegram-verify responde 401 unauthorized 1ms
+     ✓ GET /api/player-pixels/diagnostics responde 401 unauthorized 2ms
+     ✓ GET /api/realtime responde 401 unauthorized 1ms
+     ✓ GET /api/roadmap responde 401 unauthorized 1ms
+     ✓ PATCH /api/roadmap/[id] responde 401 unauthorized 1ms
+     ✓ POST /api/studio/asset-sign responde 401 unauthorized 3ms
+     ✓ POST /api/studio/asset-upload responde 401 unauthorized 1ms
+   ✓ guarda 403: sessao presente sem papel (3)
+     ✓ adminGuard sem admin responde 403 admin_forbidden (amostra: POST /api/admin/users/plan) 1ms
+     ✓ guard role=edit com viewer responde 403 team_role_forbidden (POST /api/studio/asset-sign) 1ms
+     ✓ roadmap PATCH com sessao comum responde 403 admin_required (checagem da propria rota) 1ms
+   ✓ guarda 400: rotas publicas de auth validam payload antes do SDK (4)
+     ✓ POST /api/auth/login sem credenciais responde 400 invalid_credentials 1ms
+     ✓ POST /api/auth/reset sem e-mail responde 400 email_required 1ms
+     ✓ POST /api/auth/update-password com senha fraca responde 400 weak_password 1ms
+     ✓ POST /api/auth/update-password sem token e sem sessao responde 400 reset_token_required 1ms
+   ❯ proxy do catch-all do Neon Auth (2)
+     × GET /api/auth/[...path] delega ao handler do SDK com o context intacto 2ms
+     ✓ POST /api/auth/logout encerra sem sessao e responde ok (fail-open da saida) 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/route-guards.test.ts > guarda 401: sessao ausente > GET /api/ab-tests/[id] responde 401 unauthorized
+AssertionError: expected 400 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 400
+
+ ❯ tests/route-guards.test.ts:178:29
+    176|   it.each(unauthorizedCases)("%s responde 401 unauthorized", async (_n…
+    177|     const response = await call();
+    178|     expect(response.status).toBe(401);
+       |                             ^
+    179|     expect(await response.json()).toEqual({ error: "unauthorized" });
+    180|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/route-guards.test.ts > proxy do catch-all do Neon Auth > GET /api/auth/[...path] delega ao handler do SDK 
+com o context intacto
+TypeError: handlers(...).GET is not a function
+ ❯ Module.GET src/app/api/auth/[...path]/route.ts:32:21
+     30|
+     31| export async function GET(request: Request, context: NextRouteContext)…
+     32|   return handlers().GET(request, context);
+       |                     ^
+     33| }
+     34|
+ ❯ tests/route-guards.test.ts:236:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 36 passed (38)
+   Start at  22:25:31
+   Duration  3.74s (import 61%, transform 36%, tests 3%)
+
