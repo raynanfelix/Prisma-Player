@@ -1161,7 +1161,13 @@ CREATE POLICY "account_teams_delete" ON public."account_teams" FOR DELETE TO aut
 -- account_team_members (dono: user_id)
 ALTER TABLE public."account_team_members" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "account_team_members_select" ON public."account_team_members";
-CREATE POLICY "account_team_members_select" ON public."account_team_members" FOR SELECT TO authenticated USING ("user_id" = auth.user_id());
+-- Hardening 2026-10-27: membros da mesma equipe podem ver uns aos outros.
+-- A policy anterior (user_id = auth.user_id()) impedia listagem de colegas via RLS;
+-- o servidor já contorna isso com conexão owner, mas a defesa em profundidade exige
+-- que o RLS também reflita a regra de negócio correta.
+CREATE POLICY "account_team_members_select" ON public."account_team_members" FOR SELECT TO authenticated USING (
+  "team_id" IN (SELECT "team_id" FROM public."account_team_members" WHERE "user_id" = auth.user_id())
+);
 DROP POLICY IF EXISTS "account_team_members_insert" ON public."account_team_members";
 CREATE POLICY "account_team_members_insert" ON public."account_team_members" FOR INSERT TO authenticated WITH CHECK ("user_id" = auth.user_id());
 DROP POLICY IF EXISTS "account_team_members_update" ON public."account_team_members";
@@ -1252,16 +1258,18 @@ ALTER TABLE public."account_team_invites" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "account_team_invites_select" ON public."account_team_invites";
 CREATE POLICY "account_team_invites_select" ON public."account_team_invites" FOR SELECT TO authenticated USING ("accepted_by" = auth.user_id() OR "invited_by" = auth.user_id());
 
--- Catálogos globais (leitura pública autenticada; escrita via servidor)
+-- Catálogos globais (leitura autenticada; escrita via servidor)
+-- Hardening 2026-10-27: removido USING (true) — catálogos são dados da plataforma,
+-- mas acesso anônimo ao DB não deve listar planos/templates/créditos sem sessão.
 ALTER TABLE public."billing_plans" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "billing_plans_select" ON public."billing_plans";
-CREATE POLICY "billing_plans_select" ON public."billing_plans" FOR SELECT TO authenticated USING (true);
+CREATE POLICY "billing_plans_select" ON public."billing_plans" FOR SELECT TO authenticated USING (auth.user_id() IS NOT NULL);
 ALTER TABLE public."conversion_templates" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "conversion_templates_select" ON public."conversion_templates";
-CREATE POLICY "conversion_templates_select" ON public."conversion_templates" FOR SELECT TO authenticated USING (true);
+CREATE POLICY "conversion_templates_select" ON public."conversion_templates" FOR SELECT TO authenticated USING (auth.user_id() IS NOT NULL);
 ALTER TABLE public."ai_credit_products" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "ai_credit_products_select" ON public."ai_credit_products";
-CREATE POLICY "ai_credit_products_select" ON public."ai_credit_products" FOR SELECT TO authenticated USING (true);
+CREATE POLICY "ai_credit_products_select" ON public."ai_credit_products" FOR SELECT TO authenticated USING (auth.user_id() IS NOT NULL);
 
 
 -- Tabelas de sistema: SEM policy => nenhuma role de aplicação lê/escreve
