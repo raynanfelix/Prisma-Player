@@ -5,6 +5,7 @@ import { billingOrigin, getStripe } from "@/lib/billing/stripe/client";
 import { guard } from "@/lib/api/guard";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { alertOperations } from "@/lib/security/alert-webhook";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { db, schema } from "@/lib/db";
 import { safeLog } from "@/lib/utils/log";
 
@@ -54,8 +55,10 @@ export async function POST(request: Request) {
       kind: "billing_portal_failed",
     });
     if (!process.env.STRIPE_SECRET_KEY) {
+      // Bug A: instrução de setup não vai ao cliente - alertOperations já
+      // levou o motivo ao dono.
       return NextResponse.json(
-        { error: "stripe_unavailable", message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
+        { error: "stripe_unavailable", message: GENERIC_ERROR_MESSAGES.billingUnavailable },
         { status: 503, headers: NO_STORE },
       );
     }

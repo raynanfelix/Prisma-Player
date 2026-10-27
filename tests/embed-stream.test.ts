@@ -11,6 +11,11 @@ vi.mock("@/lib/security/rate-limit", () => ({
   consumeRateLimit: vi.fn(async () => ({ limited: false, headers: {} })),
 }));
 
+// P0-1: escopos públicos de embed migraram para o limitador por instância.
+vi.mock("@/lib/security/rate-limit-local", () => ({
+  localRateLimit: vi.fn(async () => null),
+}));
+
 vi.mock("@/lib/access/service", () => ({
   getAccountAccess: vi.fn(async () => ({ hasAccess: accessState.hasAccess, trialActive: true, subscriptionActive: false })),
 }));
@@ -39,7 +44,8 @@ vi.mock("@/lib/db", async () => {
 
 import { createEmbedOriginToken, mintEmbedSessionToken } from "@/lib/security/embed-origin";
 import { resetAccessCacheForTests } from "@/lib/access/access-cache";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { resetEmbedConfigCacheForTests } from "@/lib/player/embed-config";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { GET as getEmbedStream } from "@/app/api/embed/[id]/stream/route";
 import { POST as postEmbedCapi } from "@/app/api/embed/[id]/capi/route";
@@ -155,6 +161,9 @@ beforeEach(() => {
   accessState.hasAccess = true;
   vpnState.blocked = false;
   resetAccessCacheForTests();
+  // Cache de config/vídeo de embed (P1-4): cada caso define a própria
+  // config e não pode herdar a do caso anterior.
+  resetEmbedConfigCacheForTests();
   resetFakeDb(fake());
   fake().state.selectRows["player_configs"] = [playerConfigRow()];
   fake().state.selectRows["videos"] = [embedVideoRow()];
@@ -394,9 +403,9 @@ describe("POST /api/embed/[id]/capi - eventos Meta pelo servidor", () => {
     expect(await response.json()).toEqual({ error: "player_unavailable" });
   });
 
-  it("rate limit por IP de 30/min respeitado na chamada", async () => {
+  it("rate limit por IP de 30/min respeitado na chamada (por instância, P0-1)", async () => {
     await postEmbedCapi(confirmedCapiRequest(PLAYER_ID, { body: { eventName: "ViewContent" } }), ctx(PLAYER_ID));
-    expect(vi.mocked(rateLimit)).toHaveBeenCalledWith(
+    expect(vi.mocked(localRateLimit)).toHaveBeenCalledWith(
       expect.any(Request),
       `embed-capi:${PLAYER_ID}`,
       { max: 30, windowMs: 60_000 },
@@ -404,7 +413,7 @@ describe("POST /api/embed/[id]/capi - eventos Meta pelo servidor", () => {
   });
 
   it("limite estourado devolve o 429 do rate limit", async () => {
-    vi.mocked(rateLimit).mockResolvedValueOnce(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "content-type": "application/json", "retry-after": "1" } }));
+    vi.mocked(localRateLimit).mockResolvedValueOnce(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "content-type": "application/json", "retry-after": "1" } }));
     const response = await postEmbedCapi(
       confirmedCapiRequest(PLAYER_ID, { body: { eventName: "ViewContent" } }),
       ctx(PLAYER_ID),

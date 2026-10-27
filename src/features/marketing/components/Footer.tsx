@@ -58,7 +58,7 @@ export default function Footer() {
               {[
                 { label: "Termos de Uso", href: "/terms" },
                 { label: "Política de Privacidade", href: "/privacy" },
-                { label: "Canal de Denúncias", href: "mailto:privacidade@prismaplayer.com.br" },
+                { label: "Canal de Denúncias", href: "mailto:privacidade@prismaplayer.online" },
               ].map(
                 (item) => (
                   <li key={item.label}>
@@ -78,7 +78,7 @@ export default function Footer() {
               Ajuda
             </h4>
             <ul className="space-y-2">
-              {["Central de Ajuda", "WhatsApp", "contato@prismaplayer.com.br"].map(
+              {["Central de Ajuda", "WhatsApp", "contato@prismaplayer.online"].map(
                 (item) => (
                   <li key={item}>
                     <a

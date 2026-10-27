@@ -259,7 +259,9 @@ describe("CancelSurvey - pesquisa de churn + oferta honesta (item 4)", () => {
       await flush();
     });
     expect(openBillingPortalMock).toHaveBeenCalledTimes(1);
-    expect(notifyMock).toHaveBeenCalledWith("Nenhuma compra via Stripe nesta conta ainda.");
+    // Bug A: texto controlado pelo map de código do componente - nunca a
+    // message crua do payload.
+    expect(notifyMock).toHaveBeenCalledWith("Nenhuma compra via Stripe nesta conta ainda - assine um plano antes de gerenciar a assinatura.");
   });
 
   it("'Manter minha assinatura' volta ao estado inicial sem enviar nada", () => {

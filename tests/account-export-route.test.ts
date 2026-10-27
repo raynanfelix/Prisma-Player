@@ -106,12 +106,15 @@ describe("GET /api/account/export - DSAR completo (LGPD art. 18, II e V)", () =>
       { reason: "preco", feedback: "Caro para meu momento.", created_at: "2026-04-10T09:30:00.000Z" },
     ]);
 
-    // Nota sobre dados em operadores: PostHog/Stripe + canal para o titular.
+    // Nota sobre dados em operadores: Stripe + canal para o titular. PostHog
+    // saiu do produto (remoção integral 2026-10-27) - a nota lista só quem
+    // ainda trata dados do titular, e o canal migrou para o domínio .online.
     const thirdParty = body["thirdPartyData"] as Record<string, unknown>;
-    expect(thirdParty["providers"]).toEqual(["Stripe", "PostHog"]);
+    expect(thirdParty["providers"]).toEqual(["Stripe"]);
     expect(String(thirdParty["privacyPolicyUrl"])).toBe("/privacy");
-    expect(String(thirdParty["privacyContactEmail"])).toBe("privacidade@prismaplayer.com.br");
-    expect(String(thirdParty["note"])).toContain("PostHog");
+    expect(String(thirdParty["privacyContactEmail"])).toBe("privacidade@prismaplayer.online");
+    expect(String(thirdParty["note"])).not.toContain("PostHog");
+    expect(String(thirdParty["note"])).toContain("Stripe");
   });
 
   it("sem equipes/checkouts/churn: seções vazias, não ausentes (formato estável para o titular)", async () => {

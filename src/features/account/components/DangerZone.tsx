@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInputField } from "@/components/shared/OtpInputField";
 import { ApiError } from "@/services/http/client";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { accountSettingsService } from "@/services/account/settings";
 import { SettingsCard } from "./SettingsUi";
 
@@ -26,8 +27,8 @@ const deleteMessages: Record<string, string> = {
   password_or_otp_required: "Informe sua senha ou o código de 6 dígitos.",
   invalid_password: "A senha não confere.",
   invalid_otp_format: "Digite os 6 dígitos do código.",
-  invalid_otp: "Código inválido ou expirado. Solicite um novo código.",
-  otp_send_failed: "Não foi possível enviar o código. Tente novamente em alguns minutos.",
+  invalid_otp: GENERIC_ERROR_MESSAGES.otpInvalidOrExpired,
+  otp_send_failed: GENERIC_ERROR_MESSAGES.otpSendFailed,
   rate_limited: "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
   team_not_empty: "Remova os outros membros da equipe antes de excluir a conta.",
   stripe_cancel_failed: "Não foi possível cancelar a assinatura agora. Nenhum dado foi apagado; tente novamente em instantes.",

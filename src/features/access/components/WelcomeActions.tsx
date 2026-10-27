@@ -2,7 +2,6 @@
 
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { accessService } from "@/services/access/client";
@@ -17,7 +16,6 @@ export default function WelcomeActions() {
     setError("");
     try {
       await accessService.setTrialAction(action);
-      if (action === "activate") posthog.capture("trial_activated");
       router.replace(action === "activate" ? "/dashboard/videos" : "/dashboard/billing");
       router.refresh();
     } catch {

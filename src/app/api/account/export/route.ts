@@ -132,7 +132,7 @@ export async function GET(request: Request) {
       truncated: (videoTotalRows[0]?.count ?? 0) > VIDEO_EXPORT_LIMIT,
       limit: VIDEO_EXPORT_LIMIT,
       note: (videoTotalRows[0]?.count ?? 0) > VIDEO_EXPORT_LIMIT
-        ? `Export limitado a ${VIDEO_EXPORT_LIMIT} vídeos por requisição. Para obter o conjunto completo, solicite via privacidade@prismaplayer.com.br.`
+        ? `Export limitado a ${VIDEO_EXPORT_LIMIT} vídeos por requisição. Para obter o conjunto completo, solicite via privacidade@prismaplayer.online.`
         : undefined,
     },
     folders: folderRows.map(toJsonRow),
@@ -142,7 +142,7 @@ export async function GET(request: Request) {
       truncated: (folderTotalRows[0]?.count ?? 0) > FOLDER_EXPORT_LIMIT,
       limit: FOLDER_EXPORT_LIMIT,
       note: (folderTotalRows[0]?.count ?? 0) > FOLDER_EXPORT_LIMIT
-        ? `Export limitado a ${FOLDER_EXPORT_LIMIT} pastas por requisição. Para obter o conjunto completo, solicite via privacidade@prismaplayer.com.br.`
+        ? `Export limitado a ${FOLDER_EXPORT_LIMIT} pastas por requisição. Para obter o conjunto completo, solicite via privacidade@prismaplayer.online.`
         : undefined,
     },
     players: playerRows.map(toJsonRow),
@@ -153,10 +153,10 @@ export async function GET(request: Request) {
     billingCheckouts: checkoutRows.map(toJsonRow),
     churnSurveys: churnRows.map(toJsonRow),
     thirdPartyData: {
-      note: "Dados tratados por operadores (Stripe: customer, assinaturas, faturas; PostHog: analytics de produto) permanecem nos sistemas deles e não são replicados neste arquivo. Para exercer direitos sobre esses dados, solicite também diretamente ao provedor, ou pelo nosso canal de privacidade.",
-      providers: ["Stripe", "PostHog"],
+      note: "Dados tratados por operadores (Stripe: customer, assinaturas, faturas) permanecem nos sistemas deles e não são replicados neste arquivo. Para exercer direitos sobre esses dados, solicite também diretamente ao provedor, ou pelo nosso canal de privacidade.",
+      providers: ["Stripe"],
       privacyPolicyUrl: "/privacy",
-      privacyContactEmail: "privacidade@prismaplayer.com.br",
+      privacyContactEmail: "privacidade@prismaplayer.online",
     },
   };
 

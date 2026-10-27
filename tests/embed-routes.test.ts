@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { currentFakeDb, insertedValues, resetFakeDb, type FakeDb } from "./helpers/fake-db";
 
 const { accessState, vpnState } = vi.hoisted(() => ({
@@ -12,6 +14,11 @@ const { accessState, vpnState } = vi.hoisted(() => ({
 vi.mock("@/lib/security/rate-limit", () => ({
   rateLimit: vi.fn(async () => null),
   consumeRateLimit: vi.fn(async () => ({ limited: false, headers: {} })),
+}));
+
+// P0-1: escopos públicos de embed migraram para o limitador por instância.
+vi.mock("@/lib/security/rate-limit-local", () => ({
+  localRateLimit: vi.fn(async () => null),
 }));
 
 vi.mock("@/lib/access/service", () => ({
@@ -43,7 +50,8 @@ vi.mock("@/lib/db", async () => {
 import { createEmbedOriginToken, mintEmbedSessionToken, verifyEmbedEventTokenContext, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
 import { streamKeyForIp } from "@/lib/player/stream-key";
 import { resetAccessCacheForTests } from "@/lib/access/access-cache";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { resetEmbedConfigCacheForTests } from "@/lib/player/embed-config";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { GET as getEmbedConfig } from "@/app/api/embed/[id]/route";
 import { GET as getEmbedManifest } from "@/app/api/embed/[id]/manifest/route";
@@ -177,6 +185,9 @@ beforeEach(() => {
   // O micro-cache de acesso (30s) sobrevive entre casos no mesmo worker:
   // sem reset, o 402 de um caso vaza hasAccess=false para os demais.
   resetAccessCacheForTests();
+  // Idem para o cache de config/vídeo de embed (P1-4): cada caso define a
+  // própria config do player e não pode herdar a do caso anterior.
+  resetEmbedConfigCacheForTests();
   resetFakeDb(fake());
   // Caminho feliz padrão: player publicado + vídeo ready do titular.
   fake().state.selectRows["player_configs"] = [playerConfigRow()];
@@ -585,6 +596,34 @@ describe("GET /api/embed/[id] - limite de fluxos simultâneos", () => {
     expect(sessions[0].viewerId).not.toBe(sessions[1].viewerId);
   });
 
+  it("M9 (regressão da query): a contagem filtra por viewer_id = streamKey, exclui a própria sessão e não faz join", async () => {
+    fake().state.selectRows["video_live_sessions"] = [{ count: 0 }];
+    await streamRow(
+      { "x-vercel-forwarded-for": "203.0.113.9" },
+      { viewerId: VIEWER_ID, sessionId: OTHER_SESSION_ID, sessionToken: mintSession({ sessionId: OTHER_SESSION_ID }) },
+    );
+    // O teste da cláusula WHERE real, não um count hardcoded: sem isto a
+    // query pode contar a dimensão errada (join por userId do dono) e o
+    // teto continua morto com o teste verde (achado do code review D1).
+    const whereCall = fake().state.calls.find(
+      (call) => call.op === "select" && call.table === "video_live_sessions" && call.method === "where",
+    );
+    expect(whereCall).toBeDefined();
+    const { sql: whereSql, params } = new PgDialect().sqlToQuery(whereCall!.arg as SQL);
+    // A dimensão da leitura é a MESMA da escrita: a chave server-side
+    // (hash de vídeo + IP real) gravada em viewer_id.
+    expect(whereSql).toContain('"video_id" = $');
+    expect(whereSql).toContain('"viewer_id" = $');
+    // A própria sessão não conta para o teto (o upsert acabou de gravá-la).
+    expect(whereSql).toContain('"session_id" <> $');
+    expect(whereSql).toContain('"last_seen_at" > $');
+    // Nunca um join por player_configs: sessionId é UUID do cliente, não id
+    // de config - o join da regressão nunca casava e o teto nunca disparava.
+    expect(whereSql).not.toContain('"player_configs"');
+    expect(params).toContain(streamKeyForIp(VIDEO_ID, "203.0.113.9"));
+    expect(params).toContain(OTHER_SESSION_ID);
+  });
+
   it("viewerId inválido agora é rejeitado antes: 403 session_required (a porta não abre sem sessão)", async () => {
     fake().state.selectRows["video_live_sessions"] = [{ count: 5 }];
     const response = await streamRow(
@@ -743,12 +782,12 @@ describe("POST /api/embed/[id]/session - mint do sessionToken", () => {
     expect(verifyEmbedSessionToken("v1.lixo.assinatura", claims)).toBe(false);
   });
 
-  it("mint usa rate limit de 10/min por IP (C1: apertado de 60)", async () => {
+  it("mint usa rate limit de 10/min por IP (C1: apertado de 60; P0-1: por instância)", async () => {
     await postEmbedSession(
       confirmedSessionRequest(PLAYER_ID, { body: { viewerId: VIEWER_ID, sessionId: SESSION_ID } }),
       ctx(PLAYER_ID),
     );
-    expect(vi.mocked(rateLimit)).toHaveBeenCalledWith(
+    expect(vi.mocked(localRateLimit)).toHaveBeenCalledWith(
       expect.any(Request),
       `embed-session:${PLAYER_ID}`,
       { max: 10, windowMs: 60_000 },

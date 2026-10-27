@@ -1,7 +1,6 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * Eventos de segurança (tabela security_events) - Drizzle + Lakebase Postgres.
@@ -62,11 +61,6 @@ export async function recordAuthFailure(eventType: "login_failed" | "signup_fail
   } catch {
     // Falha de telemetria nunca bloqueia o fluxo de auth.
   }
-  getPostHogClient().capture({
-    distinctId: email,
-    event: eventType,
-    properties: { email, ip },
-  });
 }
 
 /** Lista os eventos mais recentes do usuário (GET /api/account/security). */

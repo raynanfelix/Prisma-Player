@@ -13,6 +13,7 @@ import type { AuthNoticeState } from "@/features/auth/model/types";
 import { useCapsLock } from "@/features/auth/hooks/use-caps-lock";
 import { isValidEmail, suggestEmailCorrection } from "@/features/auth/lib/validation";
 import { clientRateMessage, consumeClientAttempt } from "@/lib/security/client-rate-limit";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { authService, safeAuthRedirect } from "@/services/auth/client";
 
 export default function LoginPage() {
@@ -80,7 +81,7 @@ export default function LoginPage() {
       // de e-mail ou do auth que não devem chegar ao navegador.
       setNotice({
         tone: "error",
-        message: "Não foi possível enviar o e-mail. Tente novamente.",
+        message: GENERIC_ERROR_MESSAGES.sendEmail,
       });
     }
   }
@@ -130,7 +131,7 @@ export default function LoginPage() {
         tone: "error",
         message: needsVerification
           ? "E-mail ainda não verificado. Verifique sua caixa de entrada ou reenvie o código."
-          : "Não foi possível entrar agora. Tente novamente.",
+          : GENERIC_ERROR_MESSAGES.signIn,
         action: needsVerification
           ? { label: "Verificar e-mail", href: `/signup?verify=1&email=${encodeURIComponent(normalizedEmail)}` }
           : undefined,

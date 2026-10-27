@@ -1,5 +1,5 @@
 export const legalUpdatedAt = "17 de outubro de 2026";
-export const legalContactEmail = "privacidade@prismaplayer.com.br";
+export const legalContactEmail = "privacidade@prismaplayer.online";
 
 export type LegalSection = { title: string; body: string; items?: string[] };
 

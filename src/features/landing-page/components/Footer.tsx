@@ -50,7 +50,7 @@ export default function Footer() {
             <span className="inline-flex rounded-full bg-[#B9FF66] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#191A23]">
               Contato &amp; Suporte
             </span>
-            <p className="text-[13px] text-white/60">E-mail: suporte@prismaplayer.com.br</p>
+            <p className="text-[13px] text-white/60">E-mail: suporte@prismaplayer.online</p>
             <p className="text-[13px] text-white/60">WhatsApp: +55 (11) 98765-4321</p>
             <p className="text-[13px] text-white/60">
               Atendimento de Segunda a Domingo com Suporte Técnico 24/7

@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
 
-import { db, schema } from "@/lib/db";
 import { domainAllowed, mintEmbedSessionToken, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
 import { isRealBrowserUserAgent } from "@/lib/security/browser-ua";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
+import { findPublishedPlayerConfigCached } from "@/lib/player/embed-config";
 import { readJsonBody } from "@/lib/api/request";
 import { isValidViewerId } from "@/lib/player/viewer-id";
 import { safeLog } from "@/lib/utils/log";
 import { envInt } from "@/lib/config/env";
-
-const { playerConfigs } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // C1: mint por IP apertado de 60 para 10/min - um script com um render
@@ -40,7 +37,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params;
   if (!uuid.test(id)) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: NO_STORE });
 
-  const limited = await rateLimit(request, `embed-session:${id}`, { max: EMBED_SESSION_RATE_LIMIT_MAX, windowMs: EMBED_SESSION_RATE_LIMIT_WINDOW_MS });
+  // P0-1: escopo público de embed usa o limitador por instância (memória).
+  const limited = await localRateLimit(request, `embed-session:${id}`, { max: EMBED_SESSION_RATE_LIMIT_MAX, windowMs: EMBED_SESSION_RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
   // Anti-script na porta: sem UA de navegador não há mint.
@@ -68,21 +66,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (!verifiedOrigin.nonce || !verifyEmbedRenderCookie(request.headers, verifiedOrigin.nonce)) return NextResponse.json({ error: "render_not_confirmed" }, { status: 403, headers: NO_STORE });
 
   // allowedDomains do config publicado (quando o vídeo restringe domínios,
-  // o host do token precisa estar na allowlist já no mint). Falha de lookup
-  // não trava o mint: o sessionToken não concede nada por si só, config e
-  // stream revalidam domínio com o MESMO originToken.
+  // o host do token precisa estar na allowlist já no mint). Fail-open
+  // documentado: falha de lookup não trava o mint (o sessionToken não
+  // concede nada por si só; config e stream revalidam domínio com o MESMO
+  // originToken). P1-4: lookup compartilhado com cache de 10s (dedup D3).
+  let row: { allowedDomains: string[] } | null = null;
   try {
-    const [row] = await db
-      .select({ allowedDomains: playerConfigs.allowedDomains })
-      .from(playerConfigs)
-      .where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true)))
-      .limit(1);
-    const domains = Array.isArray(row?.allowedDomains) ? row.allowedDomains.map((domain: string) => domain.trim()).filter(Boolean) : [];
-    if (domains.length > 0 && !domainAllowed(verifiedOrigin.host, domains)) {
-      return NextResponse.json({ error: "domain_not_allowed" }, { status: 403, headers: NO_STORE });
-    }
+    row = await findPublishedPlayerConfigCached(id);
   } catch {
-    // Lookup indisponível: segue o mint (fail-open documentado acima).
+    row = null;
+  }
+  const domains = Array.isArray(row?.allowedDomains) ? row!.allowedDomains.map((domain: string) => domain.trim()).filter(Boolean) : [];
+  if (domains.length > 0 && !domainAllowed(verifiedOrigin.host, domains)) {
+    return NextResponse.json({ error: "domain_not_allowed" }, { status: 403, headers: NO_STORE });
   }
 
   const parsed = await readJsonBody<{ viewerId?: unknown; sessionId?: unknown }>(request);

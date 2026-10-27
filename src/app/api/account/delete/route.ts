@@ -7,6 +7,7 @@ import { readJsonBody } from "@/lib/api/request";
 import { csrfGuard } from "@/lib/security/csrf";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { recordSecurityEvent } from "@/lib/security/auth-events";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { alertOperations } from "@/lib/security/alert-webhook";
 import { getStripe } from "@/lib/billing/stripe/client";
 import { deleteR2Object } from "@/lib/storage/r2";
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     const { error } = await getAuth().emailOtp.sendVerificationOtp({ email, type: "email-verification" });
     if (error) {
       await recordSecurityEvent("account_delete_otp_send_failed", { userId });
-      return NextResponse.json({ error: "otp_send_failed", message: "Não foi possível enviar o código. Tente novamente em alguns minutos." }, { status: 400, headers: { "cache-control": "no-store" } });
+      return NextResponse.json({ error: "otp_send_failed", message: GENERIC_ERROR_MESSAGES.otpSendFailed }, { status: 400, headers: { "cache-control": "no-store" } });
     }
     return NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } });
   }
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
     const otpResult = await getAuth().signIn.emailOtp({ email, otp });
     if (otpResult.error) {
       await recordSecurityEvent("account_delete_denied", { userId });
-      return NextResponse.json({ error: "invalid_otp", message: "Código inválido ou expirado. Solicite um novo código." }, { status: 400, headers: { "cache-control": "no-store" } });
+      return NextResponse.json({ error: "invalid_otp", message: GENERIC_ERROR_MESSAGES.otpInvalidOrExpired }, { status: 400, headers: { "cache-control": "no-store" } });
     }
   }
 
@@ -276,7 +277,7 @@ export async function POST(request: Request) {
     // Mensagem genérica: expor que "dados foram removidos mas auth falhou"
     // revela arquitetura interna e estado parcial ao atacante. O log já tem
     // o detalhe para debugging; o usuário só precisa saber que algo falhou.
-    return NextResponse.json({ error: "account_delete_failed", message: "Não foi possível concluir a exclusão da conta. Tente novamente ou entre em contato com o suporte." }, { status: 500 });
+    return NextResponse.json({ error: "account_delete_failed", message: GENERIC_ERROR_MESSAGES.deleteAccount }, { status: 500 });
   }
 
   await getAuth().signOut().catch(() => undefined);

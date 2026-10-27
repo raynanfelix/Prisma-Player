@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
 import { getAuth } from "@/lib/auth/server";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   });
   if (error) {
     await recordAuthFailure("signup_failed", email, request);
-    const message = getAuthErrorMessage(error, "Não foi possível criar a conta. Tente novamente.");
+    const message = getAuthErrorMessage(error, GENERIC_ERROR_MESSAGES.createAccount);
     return NextResponse.json({ error: "signup_failed", message }, { status: 400 });
   }
 

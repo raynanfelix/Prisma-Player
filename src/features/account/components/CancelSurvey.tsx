@@ -5,6 +5,23 @@ import { AlertCircle, ArrowRight, CreditCard, LoaderCircle } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { accountSettingsService } from "@/services/account/settings";
 import { ApiError } from "@/services/http/client";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
+
+/**
+ * Bug A: o texto exibido é sempre controlado por CÓDIGO (mesmo padrão do
+ * BillingSettingsTab) - nunca `error.message` cru do servidor.
+ */
+const PORTAL_ERROR_MESSAGES: Record<string, string> = {
+  stripe_unavailable: GENERIC_ERROR_MESSAGES.billingUnavailable,
+  sem_stripe_customer: "Nenhuma compra via Stripe nesta conta ainda - assine um plano antes de gerenciar a assinatura.",
+  rate_limited: "Muitas tentativas. Aguarde um minuto e tente novamente.",
+  network_unavailable: GENERIC_ERROR_MESSAGES.networkUnavailable,
+};
+
+function friendlyPortalError(error: unknown): string {
+  if (error instanceof ApiError) return PORTAL_ERROR_MESSAGES[error.code] ?? GENERIC_ERROR_MESSAGES.billingUnavailable;
+  return GENERIC_ERROR_MESSAGES.billingUnavailable;
+}
 
 /**
  * Cancelamento com pesquisa de churn (spec Billing Completo, item 4 - skill
@@ -68,7 +85,7 @@ export function CancelSurvey({ active, notify }: { active: boolean; notify: (mes
       window.location.assign(url);
     } catch (error) {
       setOpeningPortal(false);
-      notify(error instanceof ApiError ? error.message : "Não foi possível abrir o portal de cobrança agora.");
+      notify(friendlyPortalError(error));
     }
   }
 

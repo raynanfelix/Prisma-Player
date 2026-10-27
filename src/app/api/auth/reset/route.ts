@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
 import { getAuth } from "@/lib/auth/server";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
 
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     redirectTo: `${siteUrl}/reset-password`,
   });
   if (error) {
-    const message = getAuthErrorMessage(error, "Não foi possível enviar o e-mail.");
+    const message = getAuthErrorMessage(error, GENERIC_ERROR_MESSAGES.sendEmail);
     return NextResponse.json({ error: "reset_failed", message }, { status: 400 });
   }
   // Anti-enumeracao: para e-mail inexistente o Managed responde sucesso;

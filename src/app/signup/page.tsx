@@ -16,6 +16,7 @@ import type { AuthNoticeState } from "@/features/auth/model/types";
 import { useCapsLock } from "@/features/auth/hooks/use-caps-lock";
 import { isValidEmail, suggestEmailCorrection } from "@/features/auth/lib/validation";
 import { clientRateMessage, consumeClientAttempt } from "@/lib/security/client-rate-limit";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { authService } from "@/services/auth/client";
 
 const EMAIL_ALREADY_USED = /já possui uma conta|already registered|already been registered/i;
@@ -172,7 +173,7 @@ export default function SignupPage() {
         tone: "error",
         message: isEmailTaken
           ? "Este e-mail já está em uso."
-          : "Não foi possível criar a conta. Tente novamente.",
+          : GENERIC_ERROR_MESSAGES.createAccount,
         action: isEmailTaken ? { label: "Fazer login", href: "/login" } : undefined,
       });
     } finally {
@@ -219,13 +220,13 @@ export default function SignupPage() {
         });
       } else {
         setCode("");
-        setCodeError("Código inválido ou expirado. Solicite um novo código.");
+        setCodeError(GENERIC_ERROR_MESSAGES.otpInvalidOrExpired);
       }
     } catch {
       setCode("");
       // Mensagem genérica: error.message pode conter detalhes do provedor
       // de auth que não devem chegar ao navegador.
-      setCodeError("Código inválido ou expirado. Solicite um novo código.");
+      setCodeError(GENERIC_ERROR_MESSAGES.otpInvalidOrExpired);
     } finally {
       verifyingRef.current = false;
       setVerifying(false);
@@ -266,7 +267,7 @@ export default function SignupPage() {
         tone: "error",
         // Mensagem genérica: error.message pode conter detalhes do provedor
         // de e-mail ou auth que não devem chegar ao navegador.
-        message: "Não foi possível reenviar o código. Tente novamente.",
+        message: GENERIC_ERROR_MESSAGES.resendCode,
       });
     } finally {
       resendingRef.current = false;

@@ -27,8 +27,11 @@ const { rateState } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/lib/security/rate-limit", () => ({
-  rateLimit: vi.fn(async (_request: Request, scope: string, options: { max?: number; windowMs?: number; failClosed?: boolean; identifier?: string }) => {
+// P0-1: as rotas públicas de ingest trocaram o limitador de banco pelo
+// local (memória por instância) - o mock simula o MESMO contrato: janela
+// fixa por bucket, scopes "enforced" travam de verdade, os demais só gravam.
+vi.mock("@/lib/security/rate-limit-local", () => ({
+  localRateLimit: vi.fn(async (_request: Request, scope: string, options: { max?: number; windowMs?: number; failClosed?: boolean; identifier?: string }) => {
     rateState.calls.push({ scope, options: { ...options } as Record<string, unknown> });
     if (!rateState.enforced.has(scope)) return null;
     const key = `${scope}:${options.identifier ?? "ip"}`;

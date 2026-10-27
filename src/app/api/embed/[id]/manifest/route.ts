@@ -1,50 +1,21 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
 
-import { db, schema } from "@/lib/db";
 import { sanitizeCoverUrl } from "@/lib/player/autoplay-cover";
 import { ownedAssetPaths } from "@/lib/player/assets";
 import { signR2ReadUrl } from "@/lib/storage/r2";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
+import { findPublishedPlayerConfigCached, type PlayerConfigRow } from "@/lib/player/embed-config";
+import { safeLog } from "@/lib/utils/log";
 import { envInt } from "@/lib/config/env";
-
-const { playerConfigs } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RATE_LIMIT_MAX = envInt("EMBED_MANIFEST_RATE_LIMIT_MAX", 600);
 const RATE_LIMIT_WINDOW_MS = envInt("EMBED_MANIFEST_RATE_LIMIT_WINDOW_MS", 60_000);
 
-type PlayerConfigRow = {
-  id: string;
-  videoId: string;
-  userId: string;
-  config: unknown;
-  allowedDomains: string[];
-  published: boolean;
-};
-
-const PLAYER_CONFIG_FIELDS = {
-  id: playerConfigs.id,
-  videoId: playerConfigs.videoId,
-  userId: playerConfigs.userId,
-  config: playerConfigs.config,
-  allowedDomains: playerConfigs.allowedDomains,
-  published: playerConfigs.published,
-};
-
 function databaseErrorDetails(error: unknown) {
   const shape = error as { code?: string; message?: string };
   return { code: shape?.code ?? "database_error", message: shape?.message ?? "unknown" };
-}
-
-/** Player publicado por id de config; cai para o id de vídeo (mesma busca dupla do SDK antigo). */
-async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | null> {
-  const [byPlayerId, byVideoId] = await Promise.all([
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-  ]);
-  return byPlayerId ?? byVideoId;
 }
 
 /**
@@ -88,15 +59,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   // O rate limit só roda em cache miss: com o manifest público cacheado na
   // borda (s-maxage=60), a CDN absorve o tráfego repetido e a origem só vê a
-  // primeira requisição de cada janela por player.
-  const limited = await rateLimit(request, `embed-manifest:${id}`, { max: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS });
+  // primeira requisição de cada janela por player. Escopo público de embed:
+  // limitador por instância (P0-1).
+  const limited = await localRateLimit(request, `embed-manifest:${id}`, { max: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
   let playerConfig: PlayerConfigRow | null = null;
   try {
-    playerConfig = await findPublishedPlayerConfig(id);
+    // P1-4: lookup compartilhado com cache de 10s (dedup D3).
+    playerConfig = await findPublishedPlayerConfigCached(id);
   } catch (error) {
-    console.error("embed manifest player lookup failed", databaseErrorDetails(error));
+    safeLog("embed_manifest_player_lookup_failed", databaseErrorDetails(error));
     return NextResponse.json({ error: "player_lookup_failed" }, { status: 503, headers: NO_STORE });
   }
   if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: NO_STORE });

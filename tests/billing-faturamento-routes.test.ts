@@ -206,7 +206,7 @@ describe("GET /api/billing/invoices (item 3)", () => {
     expect(response.status).toBe(401);
   });
 
-  it("Stripe fora → 503 com mensagem clara + alerta operacional", async () => {
+  it("Stripe fora → 503 com mensagem GENÉRICA + alerta operacional (Bug A: infra nunca no corpo)", async () => {
     delete process.env.STRIPE_SECRET_KEY;
     stripeState.envMissing = true;
     dbState.selectRows = { profiles: [{ stripeCustomerId: "cus_inv_1" }] };
@@ -216,7 +216,10 @@ describe("GET /api/billing/invoices (item 3)", () => {
 
     expect(response.status).toBe(503);
     expect(body.error).toBe("stripe_unavailable");
-    expect(body.message).toContain("STRIPE_SECRET_KEY");
+    // Instrução de infra não vai ao cliente final - o dono recebe o motivo
+    // pelo alertOperations.
+    expect(body.message).not.toContain("STRIPE_SECRET_KEY");
+    expect(body.message).toContain("Não foi possível conectar ao serviço de cobrança");
     expect(alertCalls[0]).toMatchObject({ kind: "billing_invoices_failed" });
   });
 });

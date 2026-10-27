@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
 import { getAuth } from "@/lib/auth/server";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordSecurityEvent } from "@/lib/security/auth-events";
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: "otp_send_failed",
-        message: getAuthErrorMessage(error, "Não foi possível enviar o código. Tente novamente em alguns minutos."),
+        message: getAuthErrorMessage(error, GENERIC_ERROR_MESSAGES.otpSendFailed),
       },
       { status: 400, headers: NO_STORE },
     );
@@ -94,7 +95,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json(
       {
         error: "invalid_otp",
-        message: getAuthErrorMessage(otpResult.error, "Código inválido ou expirado. Solicite um novo código."),
+        message: getAuthErrorMessage(otpResult.error, GENERIC_ERROR_MESSAGES.otpInvalidOrExpired),
       },
       { status: 400, headers: NO_STORE },
     );
@@ -116,7 +117,7 @@ export async function PATCH(request: Request) {
       await recordSecurityEvent("password_change_denied", { userId: session.userId });
       return NextResponse.json({ error: "invalid_current_password", message: "A senha atual não confere." }, { status: 403, headers: NO_STORE });
     }
-    return NextResponse.json({ error: "password_update_failed", message: getAuthErrorMessage(error, "Não foi possível trocar a senha. Tente novamente.") }, { status: 400, headers: NO_STORE });
+    return NextResponse.json({ error: "password_update_failed", message: getAuthErrorMessage(error, GENERIC_ERROR_MESSAGES.updatePassword) }, { status: 400, headers: NO_STORE });
   }
   await recordSecurityEvent("password_changed", { userId: session.userId });
   return NextResponse.json({ ok: true }, { headers: NO_STORE });

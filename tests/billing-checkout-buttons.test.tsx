@@ -7,9 +7,12 @@ import { act } from "react";
 import { PlanCheckoutButton } from "@/features/account/components/BillingCheckoutButtons";
 
 /**
- * Diagnóstico REAL no botão (spec Billing Completo, item 0): 502/503 com
- * `message` do backend → a mensagem detalhada aparece inline; sem `message`
- * → o fallback honesto continua. O mistério dos erros genéricos morre aqui.
+ * Contrato de erro dos botões de checkout (Bug A da auditoria 2026-10-26):
+ * o texto exibido é SEMPRE controlado pelo map de CÓDIGO estável - a
+ * `message` detalhada do backend (instruções de infra como
+ * STRIPE_SECRET_KEY/stripe-seed.mjs) NUNCA aparece na UI; o dono debuga
+ * pelo log do servidor. O mistério dos erros genéricos morre no log, não
+ * na tela do cliente final.
  */
 
 const fetchMock = vi.fn();
@@ -42,8 +45,8 @@ async function clickAndSettle(): Promise<void> {
 
 const alertText = () => document.querySelector('[role="alert"]')?.textContent ?? "";
 
-describe("PlanCheckoutButton - erro REAL do backend (item 0)", () => {
-  it("502 com message devolve o diagnóstico real (price_not_found) no botão", async () => {
+describe("PlanCheckoutButton - erro controlado por código (Bug A)", () => {
+  it("502 price_not_found: mensagem de INFRA do backend nunca aparece - map por código vence", async () => {
     fetchMock.mockImplementation(
       async () =>
         new Response(
@@ -58,8 +61,11 @@ describe("PlanCheckoutButton - erro REAL do backend (item 0)", () => {
 
     await clickAndSettle();
 
-    expect(alertText()).toContain("stripe-seed.mjs");
-    expect(alertText()).not.toContain("Catálogo de preços ainda não sincronizado");
+    // A instrução de seed NUNCA chega à UI do cliente final...
+    expect(alertText()).not.toContain("stripe-seed.mjs");
+    expect(alertText()).not.toContain("API key");
+    // ...o texto é o genérico de cobrança do map por código.
+    expect(alertText()).toContain("Não foi possível conectar ao serviço de cobrança");
   });
 
   it("502 sem message mantém o fallback honesto", async () => {
@@ -70,10 +76,10 @@ describe("PlanCheckoutButton - erro REAL do backend (item 0)", () => {
 
     await clickAndSettle();
 
-    expect(alertText()).toContain("Catálogo de preços ainda não sincronizado - rode o seed do Stripe.");
+    expect(alertText()).toContain("Não foi possível conectar ao serviço de cobrança");
   });
 
-  it("503 com message (Stripe sem config) mostra a orientação real do backend", async () => {
+  it("503 stripe_unavailable com message de setup de infra: genérica na UI, nunca STRIPE_SECRET_KEY", async () => {
     fetchMock.mockImplementation(
       async () =>
         new Response(
@@ -88,7 +94,28 @@ describe("PlanCheckoutButton - erro REAL do backend (item 0)", () => {
 
     await clickAndSettle();
 
-    expect(alertText()).toContain("STRIPE_SECRET_KEY");
-    expect(alertText()).not.toContain("Pagamentos temporariamente indisponíveis");
+    expect(alertText()).not.toContain("STRIPE_SECRET_KEY");
+    expect(alertText()).toContain("Não foi possível conectar ao serviço de cobrança");
+  });
+
+  it("409 sem_stripe_customer devolve a mensagem de produto do map", async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ error: "sem_stripe_customer" }), { status: 409, headers: { "content-type": "application/json" } }),
+    );
+    renderButton();
+
+    await clickAndSettle();
+
+    expect(alertText()).toContain("Nenhuma compra via Stripe nesta conta ainda");
+  });
+
+  it("rede caída (fetch rejeita) devolve a mensagem de rede normalizada", async () => {
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    renderButton();
+
+    await clickAndSettle();
+
+    expect(alertText()).not.toContain("fetch failed");
+    expect(alertText()).toContain("Não foi possível conectar ao servidor");
   });
 });

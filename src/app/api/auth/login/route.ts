@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
 import { getAuth } from "@/lib/auth/server";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
       message: error?.message ?? "no_message",
     });
     await recordAuthFailure("login_failed", email, request);
-    const message = getAuthErrorMessage(error, "Não foi possível entrar agora. Tente novamente.");
+    const message = getAuthErrorMessage(error, GENERIC_ERROR_MESSAGES.signIn);
     return NextResponse.json({ error: "auth_failed", message }, { status: 401 });
   }
   return NextResponse.json({ user: { id: data.user.id, email: data.user.email } });

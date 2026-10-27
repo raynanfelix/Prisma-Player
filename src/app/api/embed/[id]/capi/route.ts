@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
 
-import { db, schema } from "@/lib/db";
 import { domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { readJsonBody } from "@/lib/api/request";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
+import { findPublishedPlayerConfigCached, type PlayerConfigRow } from "@/lib/player/embed-config";
 import { isValidViewerId } from "@/lib/player/viewer-id";
 import { pixelIntegrations } from "@/lib/player/pixels";
 import { deliverServerMetaEvent } from "@/services/ads/server-events";
+import { safeLog } from "@/lib/utils/log";
 import { envInt } from "@/lib/config/env";
-
-const { playerConfigs } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Rate limit por IP (30/min): um evento legitimo por marco de progresso -
@@ -24,35 +22,9 @@ const CAPI_EVENT_NAMES = new Set(["ViewContent", "PrismaVideoPlay", "PrismaVideo
 
 const NO_STORE = { "cache-control": "private, no-store, max-age=0" };
 
-type PlayerConfigRow = {
-  id: string;
-  videoId: string;
-  userId: string;
-  config: unknown;
-  allowedDomains: string[];
-  published: boolean;
-};
-
-const PLAYER_CONFIG_FIELDS = {
-  id: playerConfigs.id,
-  videoId: playerConfigs.videoId,
-  userId: playerConfigs.userId,
-  config: playerConfigs.config,
-  allowedDomains: playerConfigs.allowedDomains,
-  published: playerConfigs.published,
-};
-
 function databaseErrorDetails(error: unknown) {
   const shape = error as { code?: string; message?: string };
   return { code: shape?.code ?? "database_error", message: shape?.message ?? "unknown" };
-}
-
-async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | null> {
-  const [byPlayerId, byVideoId] = await Promise.all([
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-  ]);
-  return byPlayerId ?? byVideoId;
 }
 
 /**
@@ -71,14 +43,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const { id } = await context.params;
   if (!uuid.test(id)) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: NO_STORE });
 
-  const limited = await rateLimit(request, `embed-capi:${id}`, { max: EMBED_CAPI_RATE_LIMIT_MAX, windowMs: EMBED_CAPI_RATE_LIMIT_WINDOW_MS });
+  // Escopo público de embed: limitador por instância (P0-1).
+  const limited = await localRateLimit(request, `embed-capi:${id}`, { max: EMBED_CAPI_RATE_LIMIT_MAX, windowMs: EMBED_CAPI_RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
   let playerConfig: PlayerConfigRow | null = null;
   try {
-    playerConfig = await findPublishedPlayerConfig(id);
+    // P1-4: lookup compartilhado com cache de 10s (dedup D3).
+    playerConfig = await findPublishedPlayerConfigCached(id);
   } catch (error) {
-    console.error("embed capi player lookup failed", databaseErrorDetails(error));
+    safeLog("embed_capi_player_lookup_failed", databaseErrorDetails(error));
     return NextResponse.json({ error: "player_lookup_failed" }, { status: 503, headers: NO_STORE });
   }
   if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: NO_STORE });

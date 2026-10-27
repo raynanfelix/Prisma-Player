@@ -1,5 +1,7 @@
 import "server-only";
 
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
+
 /**
  * Erro devolvido pelos métodos server do SDK Neon Auth
  * (NeonAuthServerApiError): `code` pode ser um código do Better Auth
@@ -32,7 +34,7 @@ export function getAuthErrorMessage(error: AuthMethodError, fallback: string): s
     return "Confirme seu e-mail antes de entrar. Enviamos um código - verifique sua caixa de entrada.";
   }
   if (code === "INVALID_OTP" || code === "OTP_EXPIRED" || message.includes("invalid otp") || message.includes("otp has expired")) {
-    return "Código inválido ou expirado. Solicite um novo código.";
+    return GENERIC_ERROR_MESSAGES.otpInvalidOrExpired;
   }
   if (code === "INVALID_EMAIL") {
     return "E-mail inválido.";

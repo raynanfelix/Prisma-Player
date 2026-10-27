@@ -28,7 +28,7 @@ export const contactSections: ContactSection[] = [
   },
   {
     title: "3. O que NÃO enviar por este canal",
-    body: "Não envie senhas, tokens, chaves de API ou dados completos de cartão - a Prisma Player nunca solicita essas informações. Notificações de direitos autorais (DMCA / Marco Civil) e pedidos de titulares de dados (LGPD/GDPR) seguem pelos canais específicos descritos nas políticas abaixo e no e-mail privacidade@prismaplayer.com.br.",
+    body: "Não envie senhas, tokens, chaves de API ou dados completos de cartão - a Prisma Player nunca solicita essas informações. Notificações de direitos autorais (DMCA / Marco Civil) e pedidos de titulares de dados (LGPD/GDPR) seguem pelos canais específicos descritos nas políticas abaixo e no e-mail privacidade@prismaplayer.online.",
   },
   {
     title: "4. Documentos e páginas relacionadas",

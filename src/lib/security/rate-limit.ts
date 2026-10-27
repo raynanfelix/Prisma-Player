@@ -4,6 +4,7 @@ import { lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { SECURITY } from "@/lib/constants";
+import { clientIpFromRequest, limitHeaders, limitedResponse } from "@/lib/security/rate-limit-shared";
 
 const { rateLimits } = schema;
 
@@ -17,74 +18,6 @@ async function cleanupExpired(): Promise<void> {
     await db.delete(rateLimits).where(lt(rateLimits.expiresAt, new Date()));
   } catch {
   }
-}
-
-/**
- * Only headers the hosting platform itself sets can be trusted here. Anything a
- * client can forge would let an attacker reset its own bucket on every request
- * and walk straight through the login and password limits.
- *
- * Vercel strips inbound `x-vercel-*` headers and rewrites them with the real
- * peer address, so `x-vercel-forwarded-for` is authoritative in production.
- * `cf-connecting-ip` is only meaningful when Cloudflare actually fronts the
- * deployment, so it stays behind an explicit opt-in.
- */
-function clientIp(request: Request): string {
-  const candidates = [
-    process.env.TRUST_CLOUDFLARE_IP_HEADER === "true" ? request.headers.get("cf-connecting-ip") : null,
-    request.headers.get("x-vercel-forwarded-for"),
-    request.headers.get("x-real-ip"),
-    // Last resort for self-hosted deployments; never reached on Vercel.
-    request.headers.get("x-forwarded-for"),
-  ];
-
-  for (const candidate of candidates) {
-    const value = candidate?.split(",")[0]?.trim();
-    if (value && value !== "unknown" && value !== "::1" && value !== "127.0.0.1") return value;
-  }
-  return "unknown";
-}
-
-/**
- * Headers padrão de rate limit: o trio do draft IETF
- * (`RateLimit-Limit/Remaining/Reset`), o `RateLimit-Policy` do mesmo draft e
- * o `X-RateLimit-*` de facto que clientes legados já leem. Sem eles o cliente
- * não tem como se auto-regular e só descobre o limite quando leva 429 - o
- * que, num player embutido em site de terceiro, vira chamado de suporte.
- *
- * O mapa completo hoje sai garantido no 429 (que o guard aplica a TODA rota
- * autenticada) e nos limites públicos próprios. No caminho PERMITIDO este
- * mapa é retornado no `RateLimitResult`, mas expor por rota exigiria reescrever
- * cada handler que monta a própria Response: invasivo, então a política
- * documentada no OpenAPI é o conjunto completo de headers no 429.
- */
-function limitHeaders(max: number, remaining: number, resetEpochSeconds: number): Record<string, string> {
-  return {
-    "RateLimit-Limit": String(max),
-    "RateLimit-Remaining": String(Math.max(0, remaining)),
-    "RateLimit-Reset": String(resetEpochSeconds),
-    "X-RateLimit-Limit": String(max),
-    "X-RateLimit-Remaining": String(Math.max(0, remaining)),
-    "X-RateLimit-Reset": String(resetEpochSeconds),
-    "RateLimit-Policy": `${max};w=${Math.max(1, resetEpochSeconds - Math.floor(Date.now() / 1000))}`,
-    "Cache-Control": "no-store",
-  };
-}
-
-// Módulo de segurança não conhece o framework: `Response` nativo (Web
-// standard), não `NextResponse`. Headers e corpo preservados byte a byte.
-function limitedResponse(max: number, retryAfterSeconds: number, resetEpochSeconds: number): Response {
-  return new Response(
-    JSON.stringify({ error: "rate_limited", retryAfterSeconds: Math.max(1, retryAfterSeconds) }),
-    {
-      status: 429,
-      headers: {
-        "content-type": "application/json",
-        ...limitHeaders(max, 0, resetEpochSeconds),
-        "Retry-After": String(Math.max(1, retryAfterSeconds)),
-      },
-    },
-  );
 }
 
 export type RateLimitOptions = { max: number; windowMs: number; failClosed?: boolean; identifier?: string };
@@ -116,7 +49,7 @@ export async function consumeRateLimit(request: Request, scope: string, options:
   // o valor virava `null` na janela e ela caía para 1 segundo.
   const windowMs = Number.isFinite(options.windowMs) && options.windowMs > 0 ? Math.round(options.windowMs) : 60_000;
   const windowSeconds = Math.max(windowMs, 1000) / 1000;
-  const key = `${scope}:${options.identifier ?? clientIp(request)}`;
+  const key = `${scope}:${options.identifier ?? clientIpFromRequest(request)}`;
 
   try {
     const [hit] = await db

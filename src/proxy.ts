@@ -17,12 +17,12 @@ function contentSecurityPolicy(frameAncestors: string, nonce: string) {
     "form-action 'self'",
     `frame-ancestors ${frameAncestors}`,
     `script-src ${scriptSrc}`,
-    "style-src 'self' 'unsafe-inline' https://*.posthog.com",
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
-    "font-src 'self' data: https://*.posthog.com",
+    "font-src 'self' data:",
     "worker-src 'self' blob:",
-    "connect-src 'self' blob: https://*.r2.cloudflarestorage.com https://*.i.posthog.com https://*.posthog.com",
+    "connect-src 'self' blob: https://*.r2.cloudflarestorage.com",
   ].join("; ");
 }
 

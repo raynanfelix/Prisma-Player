@@ -142,7 +142,7 @@ Resumo da política vigente desde 17 de outubro de 2026 (versão completa, com t
 
 ## Bases legais e direitos
 
-Tratamento com base na LGPD (art. 7º) e no GDPR (art. 6º): execução de contrato, obrigação legal, legítimo interesse e consentimento. Direitos exercíveis pelo encarregado privacidade@prismaplayer.com.br: LGPD com resposta em até 15 dias (art. 18/19), GDPR em até 30 dias e CCPA/CPRA (não vendemos dados e respeitamos o sinal GPC).
+Tratamento com base na LGPD (art. 7º) e no GDPR (art. 6º): execução de contrato, obrigação legal, legítimo interesse e consentimento. Direitos exercíveis pelo encarregado privacidade@prismaplayer.online: LGPD com resposta em até 15 dias (art. 18/19), GDPR em até 30 dias e CCPA/CPRA (não vendemos dados e respeitamos o sinal GPC).
 
 ## Terceiros e segurança
 
@@ -168,7 +168,7 @@ Resumo dos termos vigentes desde 17 de outubro de 2026 (versão completa, com to
 - **Suspensão e encerramento** - possível por violação dos termos, inadimplência ou risco à segurança, com exportação de dados por prazo razoável.
 - **Lei aplicável** - leis da República Federativa do Brasil, sem prejuízo de normas imperativas do local do consumidor.
 
-Notificações de direitos autorais (DMCA/Marco Civil) para privacidade@prismaplayer.com.br, com identificação da obra, URL do player e dados de contato.
+Notificações de direitos autorais (DMCA/Marco Civil) para privacidade@prismaplayer.online, com identificação da obra, URL do player e dados de contato.
 
 ## Relacionados
 
@@ -188,7 +188,7 @@ Resumo da política (versão completa em [/cookies](/cookies)). Cookies são peq
 
 ## Como gerenciar
 
-Banner de consentimento opcional no player (aceitar/recusar), configurações do navegador, respeito ao sinal Global Privacy Control (GPC) e ferramentas de opt-out das plataformas. Dúvidas: privacidade@prismaplayer.com.br.
+Banner de consentimento opcional no player (aceitar/recusar), configurações do navegador, respeito ao sinal Global Privacy Control (GPC) e ferramentas de opt-out das plataformas. Dúvidas: privacidade@prismaplayer.online.
 
 ## Relacionados
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInputField } from "@/components/shared/OtpInputField";
 import { ApiError } from "@/services/http/client";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { accountSettingsService } from "@/services/account/settings";
 import { SettingsCard } from "./SettingsUi";
 
@@ -17,8 +18,8 @@ const messages: Record<string, string> = {
   invalid_current_password: "A senha atual não confere.",
   current_password_required: "Informe sua senha atual.",
   invalid_otp_format: "Digite os 6 dígitos do código.",
-  invalid_otp: "Código inválido ou expirado. Solicite um novo código.",
-  otp_send_failed: "Não foi possível enviar o código. Tente novamente em alguns minutos.",
+  invalid_otp: GENERIC_ERROR_MESSAGES.otpInvalidOrExpired,
+  otp_send_failed: GENERIC_ERROR_MESSAGES.otpSendFailed,
   rate_limited: "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
 };
 

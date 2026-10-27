@@ -36,7 +36,18 @@ function createPool(): Pool {
     );
   }
 
-  const pool = new Pool({ connectionString });
+  // P1-5 (auditoria de escala 2026-10-26): bounds explícitos. O default do
+  // pg é max=10 SEM timeouts - sob rajada a fila de conexões cresce sem
+  // teto e o request pendura até o timeout da plataforma (504 misterioso).
+  // connectionTimeoutMs limita a espera por uma conexão do pool;
+  // idleTimeoutMs devolve conexões paradas ao Neon (scale-to-zero mais
+  // rápido); max é sobreponível por env sem redeploy de código.
+  const pool = new Pool({
+    connectionString,
+    max: Number(process.env.PG_POOL_MAX ?? 10),
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 10_000,
+  });
   attachDatabasePool(pool);
   return pool;
 }

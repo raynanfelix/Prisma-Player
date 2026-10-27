@@ -5,7 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { domainAllowed, normalizeHost } from "@/lib/security/embed-origin";
 import { deliverWebhook } from "@/lib/webhooks/delivery";
-import { getAccountPlan, getMonthPlaysUsed } from "@/lib/access/service";
+import { getAccountPlan } from "@/lib/access/service";
+import { getMonthPlaysUsedCached } from "@/lib/access/quota-cache";
 import { pixelIntegrations } from "@/lib/player/pixels";
 import { deliverServerPurchase } from "@/services/ads/server-events";
 import type { NormalizedAnalyticsEvent } from "@/lib/player/analytics-batch";
@@ -220,7 +221,9 @@ async function quotaHeadersOf(userId: string): Promise<Record<string, string>> {
   // negados aqui. O consumo real é exposto em /api/account/overview.
   let quotaHeaders: Record<string, string> = {};
   try {
-    const [plan, monthPlays] = await Promise.all([getAccountPlan(userId), getMonthPlaysUsed(userId)]);
+    // P0-2: valor servido do cache de 60s (quota-cache.ts) - o COUNT
+    // DISTINCT mensal não pode rodar em cada heartbeat do ingest.
+    const [plan, monthPlays] = await Promise.all([getAccountPlan(userId), getMonthPlaysUsedCached(userId)]);
     const limit = plan.quotas.includedPlays;
     if (limit !== null && limit !== undefined) {
       quotaHeaders = {

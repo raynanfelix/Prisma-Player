@@ -78,7 +78,9 @@ describe("BillingPlansShowcase - toggle mensal/anual", () => {
   });
 
   it("o botão de checkout envia o ciclo selecionado - annual por padrão, monthly após o toggle", async () => {
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ message: "indisponível agora" }), { status: 400 }));
+    // Bug A (auditoria 2026-10-26): mock com o CONTRATO real das rotas
+    // (código estável no `error`) - o texto exibido vem do map do componente.
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ error: "stripe_unavailable" }), { status: 503 }));
     renderShowcase();
 
     await act(async () => {
@@ -99,8 +101,9 @@ describe("BillingPlansShowcase - toggle mensal/anual", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(String(fetchMock.mock.calls[1]![1]!.body))).toEqual({ planSlug: "iniciante", billing: "monthly" });
 
-    // Erro honesto inline (sem redirect - o fetch não devolveu { url }).
-    expect(document.querySelector('[role="alert"]')?.textContent).toContain("indisponível agora");
+    // Erro honesto inline (sem redirect - o fetch não devolveu { url });
+    // texto controlado pelo map de código, nunca a message do backend.
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("Não foi possível conectar ao serviço de cobrança");
   });
 
   it("plano atual e portal continuam respeitados: card do plano vigente sem botão", () => {
@@ -155,7 +158,9 @@ describe("BillingPlansShowcase - trial marca o plano atual (spec Billing Complet
 
 describe("BillingPlansShowcase - troca de plano via portal (spec Billing Completo, item 2)", () => {
   it("assinatura ativa: card do plano atual com badge e sem botão; demais cards chamam /api/billing/portal", async () => {
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ message: "sem customer" }), { status: 409 }));
+    // Contrato real: código estável no `error` (Bug A) - o texto exibido
+    // vem do map do componente, nunca da message crua do backend.
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ error: "sem_stripe_customer" }), { status: 409 }));
     renderShowcase({ currentPlanSlug: "pro", showPortal: true, hasPlan: true });
 
     const cards = Array.from(document.querySelectorAll("article"));
@@ -174,7 +179,8 @@ describe("BillingPlansShowcase - troca de plano via portal (spec Billing Complet
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/billing/portal");
     expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body))).toEqual({});
 
-    // 409 do portal vira mensagem honesta inline (nenhum redirect).
-    expect(document.querySelector('[role="alert"]')?.textContent).toContain("sem customer");
+    // 409 do portal vira mensagem honesta inline (nenhum redirect) - texto
+    // do map de código.
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("Nenhuma compra via Stripe nesta conta ainda");
   });
 });

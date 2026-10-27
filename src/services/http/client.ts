@@ -1,5 +1,7 @@
 "use client";
 
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
+
 export interface ApiErrorPayload {
   error?: string;
   message?: string;
@@ -11,11 +13,11 @@ export class ApiError extends Error {
   readonly code: string;
   readonly payload: ApiErrorPayload | null;
 
-  constructor(status: number, payload: ApiErrorPayload | null, fallback: string) {
+  constructor(status: number, payload: ApiErrorPayload | null, fallback: string, code?: string) {
     super(payload?.message || payload?.error || fallback);
     this.name = "ApiError";
     this.status = status;
-    this.code = payload?.error || "request_failed";
+    this.code = code || payload?.error || "request_failed";
     this.payload = payload;
   }
 }
@@ -46,15 +48,26 @@ export async function apiRequest<T>(
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 10_000);
 
-  const response = await fetch(path, {
-    ...init,
-    signal: abortController.signal,
-    credentials: "same-origin",
-    headers,
-    body: hasBody ? JSON.stringify(init.body) : undefined,
-  });
-
-  clearTimeout(timeoutId);
+  // Bug B (auditoria 2026-10-26): o contrato deste módulo é "normaliza
+  // erros", mas o fetch estava sem try/catch - TypeError de rede ("fetch
+  // failed") e AbortError do timeout propagavam crus para TODOS os
+  // consumidores, que podiam exibir texto interno de infra na UI. Aqui é a
+  // FONTE: falha de rede/timeout vira ApiError com status 0 e mensagem
+  // amigável genérica - o detalhe interno morre no navegador.
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      signal: abortController.signal,
+      credentials: "same-origin",
+      headers,
+      body: hasBody ? JSON.stringify(init.body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, null, GENERIC_ERROR_MESSAGES.networkUnavailable, "network_unavailable");
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const payload = await readPayload(response);
 

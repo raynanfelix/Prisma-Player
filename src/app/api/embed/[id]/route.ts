@@ -3,7 +3,7 @@ import { and, eq, gt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { createBoundEmbedEventTokenSafely, domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
 import { ownedAssetPaths } from "@/lib/player/assets";
@@ -11,79 +11,50 @@ import { isValidViewerId } from "@/lib/player/viewer-id";
 import { clientIpFromHeaders } from "@/lib/security/vpn";
 import { streamKeyFromHeaders } from "@/lib/player/stream-key";
 import { embedTrafficViolation } from "@/lib/player/embed-traffic";
+import { findEmbedVideoCached, findPublishedPlayerConfigCached, type PlayerConfigRow } from "@/lib/player/embed-config";
 import { filterConfigForEmbed } from "@/lib/player/config-keys";
+import { safeLog } from "@/lib/utils/log";
 import { envInt } from "@/lib/config/env";
 import { VIDEO } from "@/lib/constants";
 
-const { playerConfigs, videoLiveSessions, videos } = schema;
+const { videoLiveSessions } = schema;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMBED_CONFIG_RATE_LIMIT_MAX = envInt("EMBED_CONFIG_RATE_LIMIT_MAX", 300);
 const EMBED_CONFIG_RATE_LIMIT_WINDOW_MS = envInt("EMBED_CONFIG_RATE_LIMIT_WINDOW_MS", 60_000);
-
-type PlayerConfigRow = {
-  id: string;
-  videoId: string;
-  userId: string;
-  config: unknown;
-  allowedDomains: string[];
-  published: boolean;
-};
-
-const PLAYER_CONFIG_FIELDS = {
-  id: playerConfigs.id,
-  videoId: playerConfigs.videoId,
-  userId: playerConfigs.userId,
-  config: playerConfigs.config,
-  allowedDomains: playerConfigs.allowedDomains,
-  published: playerConfigs.published,
-};
 
 function databaseErrorDetails(error: unknown) {
   const shape = error as { code?: string; message?: string };
   return { code: shape?.code ?? "database_error", message: shape?.message ?? "unknown" };
 }
 
-/** Player publicado por id de config; cai para o id de vídeo (mesma busca dupla do SDK antigo). */
-async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | null> {
-  const [byPlayerId, byVideoId] = await Promise.all([
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-  ]);
-  return byPlayerId ?? byVideoId;
-}
-
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   if (!uuid.test(id)) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
 
-  const limited = await rateLimit(request, `embed-config:${id}`, { max: EMBED_CONFIG_RATE_LIMIT_MAX, windowMs: EMBED_CONFIG_RATE_LIMIT_WINDOW_MS });
+  // P0-1: escopo público de embed usa o limitador por instância (memória) -
+  // o de banco aqui custava 1 write no Postgres por request de config.
+  const limited = await localRateLimit(request, `embed-config:${id}`, { max: EMBED_CONFIG_RATE_LIMIT_MAX, windowMs: EMBED_CONFIG_RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
+  // P1-4: lookup compartilhado entre as 4 portas de embed, com cache de 10s
+  // (dedup D3 + mata 2 queries por request no hot path).
   let playerConfig: PlayerConfigRow | null = null;
   try {
-    playerConfig = await findPublishedPlayerConfig(id);
+    playerConfig = await findPublishedPlayerConfigCached(id);
   } catch (error) {
-    console.error("embed player lookup failed", databaseErrorDetails(error));
+    safeLog("embed_player_lookup_failed", databaseErrorDetails(error));
     return NextResponse.json({ error: "player_lookup_failed" }, { status: 503 });
   }
   if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
 
-  // O embed é a entrega do produto. Sem esta verificação, cancelar a assinatura
-  // não tirava nada do ar: a VSL continuava hospedada e servida indefinidamente.
-  // Acesso do dono e linha do vídeo saem em PARALELO: antes eram dois awaits
-  // seriais na cadeia (acesso → checagens → vídeo), cada um pagando um
-  // roundtrip ao Neon. Precedência externa preservada: o 402 do acesso vence
-  // antes das checagens de origem e do 404 do vídeo.
+  // Acesso do dono e linha do vídeo saem em PARALELO: precedência externa
+  // preservada (o 402 do acesso vence antes das checagens de origem e do 404
+  // do vídeo). O vídeo vem do cache de 10s (findEmbedVideoCached) - mesma
+  // janela do lookup de config.
   const [ownerAccess, video] = await Promise.all([
     getAccountAccessCached(playerConfig.userId),
-    db
-      .select({ id: videos.id, title: videos.title, objectPath: videos.objectPath, mimeType: videos.mimeType, userId: videos.userId })
-      .from(videos)
-      .where(and(eq(videos.id, playerConfig.videoId), eq(videos.status, "ready")))
-      .limit(1)
-      .then((rows) => rows[0] ?? null)
-      .catch(() => null),
+    findEmbedVideoCached(playerConfig.videoId).catch(() => null),
   ]);
   if (!ownerAccess.hasAccess) {
     return NextResponse.json({ error: "player_unavailable" }, { status: 402, headers: { "cache-control": "private, no-store" } });
@@ -162,30 +133,29 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
           set: { viewerId: streamKey, countryCode, lastSeenAt: new Date() },
         });
     } catch (error) {
-      console.error("live session upsert failed", error instanceof Error ? error.message : String(error));
+      safeLog("live_session_upsert_failed", { playerId: id, message: error instanceof Error ? error.message : "unknown" });
     }
-    // M9 (Front D): teto de streams por IP real, não por viewerId auto-declarado.
-    // viewerId é controlado pelo cliente e podia ser rotacionado para burlar o
-    // limite; o hash do IP amarra o contador à origem de rede. Múltiplos viewers
-    // legítimos atrás do mesmo NAT compartilham o teto generoso já configurado.
-    const viewerIpKey = clientIpFromHeaders(request.headers) || "unknown";
+    // Contagem na MESMA dimensão da escrita (regressão D1/M9): sessões vivas
+    // com a MESMA streamKey server-side (vídeo + IP real), exceto a própria
+    // sessão - o upsert acima acabou de gravá-la. A tabela só guarda sessões
+    // vivas (o cron poda as frias) e o índice
+    // video_live_sessions_viewer_id_idx serve a busca. O join por
+    // player_configs (sessionId = config.id) da versão anterior nunca casava:
+    // sessionId é UUID do cliente, não id de config - o count dava sempre 0 e
+    // o teto nunca disparava.
     const freshSince = new Date(Date.now() - 75_000);
     const activeSessions = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(videoLiveSessions)
-      .innerJoin(playerConfigs, eq(playerConfigs.id, videoLiveSessions.sessionId))
       .where(and(
         eq(videoLiveSessions.videoId, playerConfig.videoId),
-        eq(playerConfigs.userId, playerConfig.userId),
+        eq(videoLiveSessions.viewerId, streamKey),
+        ne(videoLiveSessions.sessionId, session),
         gt(videoLiveSessions.lastSeenAt, freshSince),
       ))
       .then((rows) => rows[0]?.count ?? 0)
       .catch(() => 0);
-    // Fallback: se a query acima não conseguir correlacionar por IP (schema
-    // atual não tem coluna de IP em videoLiveSessions), mantém o comportamento
-    // anterior por sessionId mas loga para acompanhamento pós-launch.
-    const effectiveActiveSessions = activeSessions;
-    if (effectiveActiveSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
+    if (activeSessions >= maxStreams) return NextResponse.json({ error: "stream_limit" }, { status: 409 });
   }
 
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404 });

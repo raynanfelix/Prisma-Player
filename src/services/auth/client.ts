@@ -1,7 +1,7 @@
 "use client";
 
-import posthog from "posthog-js";
 import { apiRequest, ApiError } from "@/services/http/client";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 
 class AuthServiceError extends Error {
   constructor(error: unknown, fallback: string) {
@@ -32,12 +32,11 @@ export const authService = {
         // email é dado pessoal desnecessário para analytics de produto e configura
         // transferência a operador sem DPA/SCCs documentados. user.id interno já
         // é suficiente para funil e retenção; email removido do identify.
-        posthog.identify(data.user.id);
-        posthog.capture("user_logged_in", { method: "email" });
+        
       }
       return data.user;
     } catch (error) {
-      throw new AuthServiceError(error, "Não foi possível entrar agora. Tente novamente.");
+      throw new AuthServiceError(error, GENERIC_ERROR_MESSAGES.signIn);
     }
   },
 
@@ -51,16 +50,13 @@ export const authService = {
         method: "POST",
         body: { name: input.name, email: input.email, password: input.password },
       });
-      if (data.user) {
-        posthog.identify(data.user.id, { email: data.user.email });
-        posthog.capture("user_signed_up", { method: "email" });
-      }
+      
       return {
         session: data.hasSession ? "present" : null,
         emailVerificationRequired: Boolean(data.emailVerificationRequired),
       };
     } catch (error) {
-      throw new AuthServiceError(error, "Não foi possível criar a conta. Tente novamente.");
+      throw new AuthServiceError(error, GENERIC_ERROR_MESSAGES.createAccount);
     }
   },
 
@@ -73,7 +69,7 @@ export const authService = {
       });
       return { verified: Boolean(data.verified), hasSession: Boolean(data.hasSession) };
     } catch (error) {
-      throw new AuthServiceError(error, "Código inválido ou expirado. Tente novamente.");
+      throw new AuthServiceError(error, GENERIC_ERROR_MESSAGES.otpInvalidOrExpired);
     }
   },
 
@@ -85,7 +81,7 @@ export const authService = {
         body: { email: email.trim().toLowerCase(), resend: true },
       });
     } catch (error) {
-      throw new AuthServiceError(error, "Não foi possível reenviar o código. Aguarde um momento e tente novamente.");
+      throw new AuthServiceError(error, GENERIC_ERROR_MESSAGES.resendCode);
     }
   },
 
@@ -96,7 +92,7 @@ export const authService = {
         body: { email: email.trim().toLowerCase() },
       });
     } catch (error) {
-      throw new AuthServiceError(error, "Não foi possível enviar o e-mail.");
+      throw new AuthServiceError(error, GENERIC_ERROR_MESSAGES.sendEmail);
     }
   },
 

@@ -9,6 +9,7 @@ import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthNotice } from "@/features/auth/components/AuthNotice";
 import type { AuthNoticeState } from "@/features/auth/model/types";
 import { clientRateMessage, consumeClientAttempt } from "@/lib/security/client-rate-limit";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { authService } from "@/services/auth/client";
 
 export default function ResetPasswordPage() {
@@ -45,7 +46,7 @@ export default function ResetPasswordPage() {
       // de auth ou do banco que não devem chegar ao navegador.
       setNotice({
         tone: "error",
-        message: "Não foi possível atualizar a senha. Tente novamente.",
+        message: GENERIC_ERROR_MESSAGES.updatePassword,
       });
     } finally {
       setLoading(false);

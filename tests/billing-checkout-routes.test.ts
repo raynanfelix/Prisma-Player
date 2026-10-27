@@ -197,7 +197,7 @@ describe("POST /api/billing/checkout (plano)", () => {
     expect(await response.json()).toEqual({ error: "invalid_plan" });
   });
 
-  it("lookup não existe (seed não rodado) → 502 price_not_found com mensagem honesta", async () => {
+  it("lookup não existe (seed não rodado) → 502 price_not_found com mensagem GENÉRICA (Bug A: infra nunca no corpo)", async () => {
     stripeState.priceId = null;
 
     const response = await post("/api/billing/checkout", { planSlug: "pro", billing: "monthly" });
@@ -205,7 +205,10 @@ describe("POST /api/billing/checkout (plano)", () => {
 
     expect(response.status).toBe(502);
     expect(body.error).toBe("price_not_found");
-    expect(body.message).toContain("stripe-seed");
+    // Instrução de seed pertence ao LOG do servidor, não ao cliente final.
+    expect(body.message).not.toContain("stripe-seed");
+    expect(body.message).not.toContain("API key");
+    expect(body.message).toContain("Não foi possível conectar ao serviço de cobrança");
     expect(stripeState.sessionCreateArgs).toEqual([]);
   });
 
@@ -218,7 +221,10 @@ describe("POST /api/billing/checkout (plano)", () => {
 
     expect(response.status).toBe(503);
     expect(body.error).toBe("stripe_unavailable");
-    expect(body.message).toContain("STRIPE_SECRET_KEY");
+    // Bug A: a instrução de infra NÃO vai no corpo - o dono recebe o motivo
+    // pelo alertOperations abaixo; o cliente vê a genérica.
+    expect(body.message).not.toContain("STRIPE_SECRET_KEY");
+    expect(body.message).toContain("Não foi possível conectar ao serviço de cobrança");
     expect(alertCalls[0]).toMatchObject({ kind: "billing_checkout_failed" });
     expect(alertCalls[0]!.detail).toContain("owner-1");
   });

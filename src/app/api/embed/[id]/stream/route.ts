@@ -1,53 +1,24 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
 
-import { db, schema } from "@/lib/db";
 import { domainAllowed, originHeaderDisagrees, verifyEmbedOriginToken, verifyEmbedRenderCookie, verifyEmbedSessionToken } from "@/lib/security/embed-origin";
 import { isRealBrowserUserAgent } from "@/lib/security/browser-ua";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { signR2ReadUrl } from "@/lib/storage/r2";
 import { getAccountAccessCached } from "@/lib/access/access-cache";
+import { findEmbedVideoCached, findPublishedPlayerConfigCached, type PlayerConfigRow } from "@/lib/player/embed-config";
 import { isValidViewerId } from "@/lib/player/viewer-id";
 import { embedTrafficViolation } from "@/lib/player/embed-traffic";
 import { envInt } from "@/lib/config/env";
 import { safeLog } from "@/lib/utils/log";
 import { SECURITY, VIDEO } from "@/lib/constants";
 
-const { playerConfigs, videos } = schema;
-
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMBED_STREAM_RATE_LIMIT_MAX = envInt("EMBED_STREAM_RATE_LIMIT_MAX", 300);
 const EMBED_STREAM_RATE_LIMIT_WINDOW_MS = envInt("EMBED_STREAM_RATE_LIMIT_WINDOW_MS", 60_000);
 
-type PlayerConfigRow = {
-  id: string;
-  videoId: string;
-  userId: string;
-  config: unknown;
-  allowedDomains: string[];
-  published: boolean;
-};
-
-const PLAYER_CONFIG_FIELDS = {
-  id: playerConfigs.id,
-  videoId: playerConfigs.videoId,
-  userId: playerConfigs.userId,
-  config: playerConfigs.config,
-  allowedDomains: playerConfigs.allowedDomains,
-  published: playerConfigs.published,
-};
-
 function databaseErrorDetails(error: unknown) {
   const shape = error as { code?: string; message?: string };
   return { code: shape?.code ?? "database_error", message: shape?.message ?? "unknown" };
-}
-
-async function findPublishedPlayerConfig(id: string): Promise<PlayerConfigRow | null> {
-  const [byPlayerId, byVideoId] = await Promise.all([
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.id, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-    db.select(PLAYER_CONFIG_FIELDS).from(playerConfigs).where(and(eq(playerConfigs.videoId, id), eq(playerConfigs.published, true))).limit(1).then((rows) => rows[0] ?? null),
-  ]);
-  return byPlayerId ?? byVideoId;
 }
 
 /**
@@ -64,7 +35,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
   if (!uuid.test(id)) return NextResponse.json({ error: "player_not_found" }, { status: 404 });
 
-  const limited = await rateLimit(request, `embed-stream:${id}`, { max: EMBED_STREAM_RATE_LIMIT_MAX, windowMs: EMBED_STREAM_RATE_LIMIT_WINDOW_MS });
+  // P0-1: o stream responde a CADA range request do <video> (8-12 por play) -
+  // aqui o limitador de banco era o maior gerador de writes do sistema. Escopo
+  // público usa o limitador por instância (memória, ver rate-limit-local.ts).
+  const limited = await localRateLimit(request, `embed-stream:${id}`, { max: EMBED_STREAM_RATE_LIMIT_MAX, windowMs: EMBED_STREAM_RATE_LIMIT_WINDOW_MS });
   if (limited) return limited;
 
   // Anti-script na porta da mídia: cliente HTTP (curl/wget/python) não passa.
@@ -77,9 +51,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   let playerConfig: PlayerConfigRow | null = null;
   try {
-    playerConfig = await findPublishedPlayerConfig(id);
+    // P1-4: lookup compartilhado com cache de 10s (dedup das 4 portas de embed).
+    playerConfig = await findPublishedPlayerConfigCached(id);
   } catch (error) {
-    console.error("embed stream player lookup failed", databaseErrorDetails(error));
+    safeLog("embed_stream_player_lookup_failed", databaseErrorDetails(error));
     return NextResponse.json({ error: "player_lookup_failed" }, { status: 503, headers: { "cache-control": "private, no-store" } });
   }
   if (!playerConfig) return NextResponse.json({ error: "player_not_found" }, { status: 404, headers: { "cache-control": "private, no-store" } });
@@ -126,16 +101,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const trafficViolation = await embedTrafficViolation(rawConfig, request.headers);
   if (trafficViolation) return NextResponse.json({ error: trafficViolation }, { status: 403, headers: { "cache-control": "private, no-store" } });
 
-  let video: { objectPath: string; mimeType: string; status: string } | null = null;
-  try {
-    [video] = await db
-      .select({ objectPath: videos.objectPath, mimeType: videos.mimeType, status: videos.status })
-      .from(videos)
-      .where(and(eq(videos.id, playerConfig.videoId), eq(videos.status, "ready")))
-      .limit(1);
-  } catch {
-    video = null;
-  }
+  // P1-4: vídeo do cache de 10s compartilhado com a config (era 1 query por
+  // range request). Erro de banco preserva a semântica anterior: 404.
+  const video = await findEmbedVideoCached(playerConfig.videoId).catch(() => null);
   if (!video) return NextResponse.json({ error: "video_not_found" }, { status: 404, headers: { "cache-control": "private, no-store" } });
 
   // MP4/WebM progressivo hoje (docs/videojs-integration.md): não existe

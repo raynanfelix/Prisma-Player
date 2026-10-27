@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { localRateLimit } from "@/lib/security/rate-limit-local";
 import { db, schema } from "@/lib/db";
 import { validateOrigin } from "@/lib/security/csrf";
 import { originHeaderDisagrees, verifyEmbedEventTokenContext, verifyEmbedRenderCookie } from "@/lib/security/embed-origin";
@@ -26,13 +26,11 @@ export async function POST(request: Request) {
   const progressPercent = Number(body?.progressPercent ?? 0);
   const watchedSeconds = Math.max(0, Math.min(Number(body?.watchedSeconds ?? 0), 86400));
   if (![testId, variantId, sessionId].every((id) => uuid.test(id)) || !allowedEvents.has(eventType) || ![0, 25, 50, 75, 100].includes(progressPercent)) return NextResponse.json({ error: "invalid_event" }, { status: 400 });
-  // M5 (auditoria): teto AGREGADO por IP ANTES de qualquer IO. O limite por
-  // sessão abaixo continua existindo, mas a sessão é auto-declarada no corpo:
-  // sem este teto, um eventToken legítimo + cookie de render permitiam
-  // ingestão ilimitada rotacionando UUIDs de sessão (custo de writes no
-  // Neon sem teto). O IP é lido só dos cabeçalhos que a plataforma injeta
-  // (clientIp do rate-limit), nunca do cliente.
-  const ipLimited = await rateLimit(request, "ab-events-ip", {
+  // P0-1: ingest público usa o limitador por instância (mesma troca do
+  // /api/analytics-events): 2 writes de banco por lote saem do hot path.
+  // O IP continua lido só dos cabeçalhos que a plataforma injeta
+  // (clientIpFromRequest do rate-limit-shared), nunca do cliente.
+  const ipLimited = await localRateLimit(request, "ab-events-ip", {
     max: ANALYTICS.INGEST_IP_RATE_LIMIT_MAX_REQUESTS,
     windowMs: ANALYTICS.INGEST_IP_RATE_LIMIT_WINDOW_MS,
   });
@@ -65,7 +63,7 @@ export async function POST(request: Request) {
   // corpo não consegue forjar outra); tokens legados sem o claim caem no
   // sessionId do corpo, validado como UUID no topo da rota.
   const identity = verifiedEvent.sessionId ? `t:${verifiedEvent.sessionId}` : `s:${sessionId}`;
-  const limited = await rateLimit(request, `ab:${testId}:${variantId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS, identifier: identity });
+  const limited = await localRateLimit(request, `ab:${testId}:${variantId}`, { max: ANALYTICS.RATE_LIMIT_MAX_REQUESTS, windowMs: ANALYTICS.RATE_LIMIT_WINDOW_MS, identifier: identity });
   if (limited) return limited;
 
   let testStatus: string | undefined, videoStatus: string | undefined, playerId: string | undefined;

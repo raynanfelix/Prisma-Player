@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readJsonBody } from "@/lib/api/request";
 import { getAuth } from "@/lib/auth/server";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
 import { isValidEmail } from "@/features/auth/lib/validation";
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await getAuth().emailOtp.verifyEmail({ email, otp });
   if (error) {
-    const message = getAuthErrorMessage(error, "Código inválido ou expirado. Solicite um novo código.");
+    const message = getAuthErrorMessage(error, GENERIC_ERROR_MESSAGES.otpInvalidOrExpired);
     return NextResponse.json({ error: "verify_failed", message }, { status: 400, headers: NO_STORE });
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import posthog from "posthog-js";
 import type { CreatedVideo } from "@/features/videos/model/types";
 import { videosService } from "@/services/videos/client";
 
@@ -94,11 +93,9 @@ export function VideoUploadProvider({ children }: { children: React.ReactNode })
           parts: completed,
           durationSeconds: duration || null,
         });
-        posthog.capture("video_upload_completed", { storage_provider: "r2", file_name: file.name, size_bytes: file.size });
         updateTask(video.id, { progress: 100, state: "completed" });
       } catch (error) {
         if (uploadId) await videosService.multipart(video.id, { action: "abort", uploadId }).catch(() => undefined);
-        posthog.capture("video_upload_failed", { storage_provider: "r2", file_name: file.name, size_bytes: file.size, error: error instanceof Error ? error.message : "unknown" });
         // Mensagem genérica: error.message pode conter detalhes do R2/SDK
         // que não devem chegar ao navegador (tokens, paths internos).
         updateTask(video.id, { state: "failed", error: "Falha no envio do vídeo. Tente novamente." });

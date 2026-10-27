@@ -7,7 +7,6 @@ import { getStorageUsedBytes } from "@/lib/access/service";
 import { db, schema } from "@/lib/db";
 import { r2MaxUploadBytes, signR2ReadUrl } from "@/lib/storage/r2";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { getPostHogClient } from "@/lib/posthog-server";
 import { VIDEO } from "@/lib/constants";
 
 const { playerConfigs, videoEvents, videoFolders, videos } = schema;
@@ -207,13 +206,6 @@ export async function POST(request: Request) {
       created_at: row.createdAt.toISOString(),
       updated_at: row.updatedAt.toISOString(),
     };
-    const posthog = getPostHogClient();
-    posthog.capture({
-      distinctId: userId,
-      event: "video_created",
-      properties: { storage_provider: storageProvider, mime_type: mimeType, size_bytes: sizeBytes, status: requestedStatus },
-    });
-    await posthog.flush();
     if (requestedStatus === "processing") return NextResponse.json({ video }, { status: 201, headers: { Location: `/api/videos/${row.id}` } });
     const [player] = await db
       .insert(playerConfigs)

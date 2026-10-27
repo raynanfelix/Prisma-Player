@@ -3,16 +3,27 @@
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 
 /**
  * Botões reais de checkout/portal da página de Billing (Opção A - Stripe
  * Checkout hospedado). A rota devolve `{ url }` e o client redireciona; o
  * fulfillment NUNCA acontece aqui - a ativação vem do webhook.
  *
- * Estados cobertos por botão: idle → loading (spinner) → redirect; erro
- * vira mensagem inline honesta (rate limit, Stripe sem config, catálogo
- * sem seed, portal sem customer…).
+ * Bug A (auditoria 2026-10-26): o contrato antigo propagava a `message`
+ * detalhada do backend ("Diagnóstico REAL" da spec Billing Completo,
+ * item 0) - certo quando o dono era o único usuário, vazamento de infra
+ * num produto multi-tenant. Agora o texto exibido é SEMPRE controlado
+ * aqui, mapeado por CÓDIGO estável - mesmo padrão do DangerZone.
  */
+
+const CHECKOUT_ERROR_MESSAGES: Record<string, string> = {
+  stripe_unavailable: GENERIC_ERROR_MESSAGES.billingUnavailable,
+  price_not_found: GENERIC_ERROR_MESSAGES.billingUnavailable,
+  rate_limited: "Muitas tentativas seguidas - aguarde um minuto e tente de novo.",
+  sem_stripe_customer: "Nenhuma compra via Stripe nesta conta ainda - assine um plano antes de gerenciar a assinatura.",
+  network_unavailable: GENERIC_ERROR_MESSAGES.networkUnavailable,
+};
 
 type CheckoutResult = { ok: true; url: string } | { ok: false; message: string };
 
@@ -23,19 +34,14 @@ async function requestCheckoutUrl(endpoint: string, body: Record<string, unknown
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    const result = (await response.json().catch(() => null)) as { url?: string; message?: string } | null;
+    const result = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
     if (response.ok && typeof result?.url === "string") return { ok: true, url: result.url };
-    // Diagnóstico REAL (spec Billing Completo, item 0): as rotas de billing
-    // devolvem `message` detalhada (price_not_found, stripe_unavailable,
-    // sem_stripe_customer…) - ela SEMPRE vence o genérico; o texto padrão
-    // só sobrevive quando o backend não mandou nada.
-    if (response.status === 429) return { ok: false, message: result?.message ?? "Muitas tentativas seguidas - aguarde um minuto e tente de novo." };
-    if (response.status === 409) return { ok: false, message: result?.message ?? "Nenhuma compra via Stripe nesta conta ainda." };
-    if (response.status === 503) return { ok: false, message: result?.message ?? "Pagamentos temporariamente indisponíveis - configure o Stripe no ambiente." };
-    if (response.status === 502) return { ok: false, message: result?.message ?? "Catálogo de preços ainda não sincronizado - rode o seed do Stripe." };
-    return { ok: false, message: result?.message ?? "Não foi possível iniciar agora - tente novamente." };
+    // Map por código estável: a mensagem do servidor NUNCA é exibida cru -
+    // ela carrega detalhe operacional que pertence ao log, não à UI.
+    const code = typeof result?.error === "string" ? result.error : "";
+    return { ok: false, message: CHECKOUT_ERROR_MESSAGES[code] ?? "Não foi possível iniciar agora - tente novamente." };
   } catch {
-    return { ok: false, message: "Não foi possível iniciar agora - verifique sua conexão." };
+    return { ok: false, message: GENERIC_ERROR_MESSAGES.networkUnavailable };
   }
 }
 

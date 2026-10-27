@@ -11,6 +11,7 @@ const ROOT = join(process.cwd(), "src");
 const PRIVILEGED = [
   "lib/access/access-cache.ts",
   "lib/access/bootstrap.ts",
+  "lib/access/quota-cache.ts",
   "lib/access/service.ts",
   "lib/access/team-context.ts",
   "lib/account/team.ts",
@@ -23,6 +24,8 @@ const PRIVILEGED = [
   "lib/intelligence/benchmark.ts",
   "lib/realtime/server.ts",
   "lib/security/rate-limit.ts",
+  "lib/security/rate-limit-local.ts",
+  "lib/security/rate-limit-shared.ts",
   "lib/security/self-origins.ts",
   "lib/security/embed-origin.ts",
   "lib/security/browser-ua.ts",
@@ -34,7 +37,6 @@ const PRIVILEGED = [
   "lib/webhooks/delivery.ts",
   "lib/email/operational-report.ts",
   "lib/cache/embed-purge.ts",
-  "lib/posthog-server.ts",
   "lib/billing/service.ts",
   "lib/billing/ai-credits.ts",
   "lib/billing/stripe/client.ts",
@@ -50,6 +52,7 @@ const PRIVILEGED = [
   "lib/player/assets.ts",
   "lib/player/stream-key.ts",
   "lib/player/config-keys.ts",
+  "lib/player/embed-config.ts",
   "lib/player/embed-traffic.ts",
   "services/ads/server-events.ts",
 ];
@@ -60,7 +63,7 @@ const PRIVILEGED_IMPORT = new RegExp(
   // sem db, sem segredo) e as telas de plano no client precisam dele - o ban
   // continua cobrindo 100% dos módulos privilegiados do billing (lista
   // PRIVILEGED acima não mudou).
-  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit|embed-origin|browser-ua|auth-events|self-origins|neon-webhook|alert-webhook)|storage/|webhooks|email/|cache/|posthog-server|billing/(service|ai-credits|stripe)|ai/nvidia|api/(guard|request)|player/(assets|stream-key|config-keys|embed-traffic)|integrations/verify-pixels)|services/ads/server-events)`,
+  `@/(lib/(db|access/|auth/(server|session|errors)|security/(rate-limit(-local|-shared)?|embed-origin|browser-ua|auth-events|self-origins|neon-webhook|alert-webhook)|storage/|webhooks|email/|cache/|billing/(service|ai-credits|stripe)|ai/nvidia|api/(guard|request)|player/(assets|stream-key|config-keys|embed-config|embed-traffic)|integrations/verify-pixels)|services/ads/server-events)`,
 );
 
 function allFiles(dir: string): string[] {

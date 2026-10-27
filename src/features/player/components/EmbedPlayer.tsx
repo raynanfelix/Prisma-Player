@@ -663,7 +663,7 @@ export default function EmbedPlayer({ playerId, tracking, originToken }: { playe
         )}
         {promoSpot && (
           <a
-            href="https://prismaplayer.com.br"
+            href="https://prismaplayer.online"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Hospede sua VSL na Prisma Player e aumente suas vendas"

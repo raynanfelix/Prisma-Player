@@ -7,8 +7,27 @@ import type { AccountOverview, BillingCard, BillingInvoice } from "@/features/ac
 import { formatBRL } from "@/lib/billing/catalog";
 import { accountSettingsService } from "@/services/account/settings";
 import { ApiError } from "@/services/http/client";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { SettingsCard, SettingsSkeleton } from "./SettingsUi";
 import { CancelSurvey } from "./CancelSurvey";
+
+/**
+ * Bug A (auditoria 2026-10-26): este componente exibia `error.message`
+ * cru do servidor - em deploy sem STRIPE_SECRET_KEY o usuário final via
+ * a instrução de infra na tela. Map por CÓDIGO estável (mesmo padrão do
+ * DangerZone): o texto exibido é sempre controlado aqui.
+ */
+const PORTAL_ERROR_MESSAGES: Record<string, string> = {
+  stripe_unavailable: GENERIC_ERROR_MESSAGES.billingUnavailable,
+  sem_stripe_customer: "Nenhuma compra via Stripe nesta conta ainda - assine um plano antes de gerenciar a assinatura.",
+  rate_limited: "Muitas tentativas. Aguarde um minuto e tente novamente.",
+  network_unavailable: GENERIC_ERROR_MESSAGES.networkUnavailable,
+};
+
+function friendlyPortalError(error: unknown): string {
+  if (error instanceof ApiError) return PORTAL_ERROR_MESSAGES[error.code] ?? GENERIC_ERROR_MESSAGES.billingUnavailable;
+  return GENERIC_ERROR_MESSAGES.billingUnavailable;
+}
 
 /**
  * Tela Faturamento (spec Billing Completo, item 3): assinatura atual,
@@ -115,7 +134,7 @@ export function BillingSettingsTab({
       window.location.assign(url);
     } catch (error) {
       setUpdatingCard(false);
-      notify(error instanceof ApiError ? error.message : "Não foi possível abrir o portal de cobrança agora.");
+      notify(friendlyPortalError(error));
     }
   }
 

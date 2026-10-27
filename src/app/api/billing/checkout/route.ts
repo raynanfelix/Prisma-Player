@@ -7,6 +7,7 @@ import { guard } from "@/lib/api/guard";
 import { readJsonBody } from "@/lib/api/request";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { alertOperations } from "@/lib/security/alert-webhook";
+import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { db, schema } from "@/lib/db";
 import { safeLog } from "@/lib/utils/log";
 
@@ -59,11 +60,11 @@ export async function POST(request: Request) {
         .limit(1),
     ]);
     if (!priceId) {
+      // Bug A: instrução de seed de infra não vai ao cliente final - o
+      // lookup key vai ao log do servidor para o dono debugar.
+      safeLog("stripe_price_missing", { priceKey: `plano_${planSlug}_${periodSuffix}` });
       return NextResponse.json(
-        {
-          error: "price_not_found",
-          message: `Preço plano_${planSlug}_${billing} ainda não existe no Stripe - rode scripts/stripe-seed.mjs com a sua API key.`,
-        },
+        { error: "price_not_found", message: GENERIC_ERROR_MESSAGES.billingUnavailable },
         { status: 502, headers: NO_STORE },
       );
     }
@@ -91,8 +92,11 @@ export async function POST(request: Request) {
       kind: "billing_checkout_failed",
     });
     if (!process.env.STRIPE_SECRET_KEY) {
+      // Bug A (auditoria 2026-10-26): instrução de setup de infra não
+      // pertence ao corpo da resposta - o dono recebe o motivo pelo
+      // alertOperations acima; o cliente final vê mensagem genérica.
       return NextResponse.json(
-        { error: "stripe_unavailable", message: "Stripe não configurado - defina STRIPE_SECRET_KEY (restricted API key rk_…) no ambiente." },
+        { error: "stripe_unavailable", message: GENERIC_ERROR_MESSAGES.billingUnavailable },
         { status: 503, headers: NO_STORE },
       );
     }

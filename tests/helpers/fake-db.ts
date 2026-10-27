@@ -93,7 +93,11 @@ export function createFakeDb(): FakeDb {
     for (const method of CHAIN_METHODS) {
       chain[method] = (...args: unknown[]) => {
         if (method === "from") ref.set(args[0]);
-        if (method === "values" || method === "set") {
+        // `where`/`innerJoin` alimentam testes de regressão de query: a
+        // cláusula WHERE recebida é um SQL do drizzle serializável com
+        // `new PgDialect().sqlToQuery(...)` (ver embed-routes.test.ts, teste
+        // M9 da contagem de streams).
+        if (method === "values" || method === "set" || method === "where" || method === "innerJoin") {
           state.calls.push({ op, table: ref.get(), method, arg: args[0] });
         }
         return chain;
