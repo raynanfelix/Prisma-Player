@@ -1,6 +1,6 @@
 import { API_VERSION } from "@/lib/api/version";
 
-const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
+const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://app.prismaplayer.online").replace(/\/$/, "");
 
 /**
  * GET /api/openapi.json - OpenAPI 3.1 da superfície PÚBLICA da API (item 4 do

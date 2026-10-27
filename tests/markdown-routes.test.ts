@@ -112,7 +112,7 @@ describe("GET /api/openapi.json", () => {
     };
     expect(document.openapi).toMatch(/^3\.1\./);
     expect(document.info.title).toContain("Prisma Player");
-    expect(document.servers[0]?.url).toContain("prisma-player.vercel.app");
+    expect(document.servers[0]?.url).toContain("app.prismaplayer.online");
     expect(Object.keys(document.paths).length).toBeGreaterThanOrEqual(5);
     for (const path of [
       "/api/health",

@@ -1,4 +1,4 @@
-const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://prisma-player.vercel.app").replace(/\/$/, "");
+const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://app.prismaplayer.online").replace(/\/$/, "");
 
 /**
  * Contexto legível por IAs (convenção llms.txt) - item 3 do relatório

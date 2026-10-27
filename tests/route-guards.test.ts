@@ -24,7 +24,18 @@ const { authState, authSdk } = vi.hoisted(() => ({
     changePassword: async () => ({ error: null }),
     getSession: async () => ({ data: { user: null } }),
     signOut: async () => undefined,
-    handler: () => async () => new Response(JSON.stringify({ proxied: true }), { status: 200 }),
+    // Contrato real do @neondatabase/auth (next/server/index.d.mts: "export
+    // const { GET, POST } = auth.handler()"): handler() é FACTORY que devolve
+    // o mapa de métodos HTTP - nunca uma função única. O mock antigo modelava
+    // função única e o teste do catch-all falhava desde o Front D sem
+    // significar bug de produção.
+    handler: () => ({
+      GET: async () => new Response(JSON.stringify({ proxied: true }), { status: 200 }),
+      POST: async () => new Response(JSON.stringify({ proxied: true }), { status: 200 }),
+      PUT: async () => new Response(JSON.stringify({ proxied: true }), { status: 200 }),
+      DELETE: async () => new Response(JSON.stringify({ proxied: true }), { status: 200 }),
+      PATCH: async () => new Response(JSON.stringify({ proxied: true }), { status: 200 }),
+    }),
   },
 }));
 
@@ -143,7 +154,6 @@ beforeEach(() => {
 const unauthorizedCases: Array<[string, () => Promise<Response>]> = [
   ["GET /api/ab-tests", () => abTestsGet(get())],
   ["POST /api/ab-tests", () => abTestsPost(post({ videoId: UUID, name: "A" }))],
-  ["GET /api/ab-tests/[id]", () => abTestGet(get(), { params: Promise.resolve({ id: UUID }) })],
   ["GET /api/account/access", () => accessGet()],
   ["GET /api/account/inbox", () => inboxGet()],
   ["GET /api/account/overview", () => overviewGet()],
@@ -205,8 +215,7 @@ describe("guarda 403: sessao presente sem papel", () => {
   });
 });
 
-describe("guarda 400: rotas publicas de auth validam payload antes do SDK", () => {
-  it("POST /api/auth/login sem credenciais responde 400 invalid_credentials", async () => {
+describe("guarda 400: rotas publicas de auth validam payload antes do SDK", () => {  it("POST /api/auth/login sem credenciais responde 400 invalid_credentials", async () => {
     const response = await loginPost(post({}));
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "invalid_credentials" });
@@ -228,6 +237,14 @@ describe("guarda 400: rotas publicas de auth validam payload antes do SDK", () =
     const response = await updatePasswordPost(post({ password: "senha-forte-123" }));
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "reset_token_required" });
+  });
+
+  it("GET /api/ab-tests/[id] é PÚBLICA (sorteio A/B dentro do embed, sem guard) e valida params: sem sessionId responde 400 invalid_request", async () => {
+    // A varredura D4 a colocava na família 401 por engano: a rota é pública
+    // por design (comentário na própria rota) e valida UUIDs ANTES de tudo.
+    const response = await abTestGet(get(), { params: Promise.resolve({ id: UUID }) });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_request" });
   });
 });
 
