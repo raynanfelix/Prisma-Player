@@ -37,20 +37,19 @@ Com o domínio novo, o e-mail institucional mudou para `@prismaplayer.online`
 (o export DSAR já usa `privacidade@prismaplayer.online`) — decidir e aplicar
 nos 3 pontos.
 
-### B2. llms.txt duplicado no app (conflito de rota)
-`public/llms.txt` (estático, marketing) **e** `src/app/llms.txt/route.ts`
-(dinâmico, API/produto) respondem em `/llms.txt`. No Next, `public/` e route
-handler na mesma rota é colisão — comportamento depende da versão. Com a
-separação da landing (`docs/reports/LANDING_SEPARATION.md`), o estático migra
-para o repo da landing e o conflito desaparece. **Até lá**, conferir qual
-conteúdo está sendo servido.
+### B2. llms.txt duplicado no app — ✅ RESOLVIDO (27/10)
+`public/llms.txt` (estático, marketing) e `public/llms-full.txt` **removidos
+do app** — o route dinâmico `src/app/llms.txt/route.ts` (API/produto) ficou
+como única superfície e gera o conteúdo inline (nunca leu os estáticos). As
+versões de marketing já vivem no repo da landing (`public/llms*.txt`).
 
-### B3. Realtime client morto
-`src/lib/realtime/client.ts` é arquivo não importado (knip) e lê
-`NEXT_PUBLIC_NEON_REALTIME_URL` — env que nunca existiu (a Vercel tinha
-`NEON_REALTIME_URL`, nome errado, já removida). O server (`realtime/server.ts`
-+ `/api/realtime`) segue vivo para sealing. **Ação**: deletar o client.ts ou
-reativar a feature com a env correta — hoje é peso morto.
+### B3. Realtime client morto — ✅ RESOLVIDO (27/10)
+`src/lib/realtime/client.ts` **deletado** (arquivo não importado, lia
+`NEXT_PUBLIC_NEON_REALTIME_URL` que nunca existiu). O `.env.example` foi
+corrigido: documentava a URL pública e a `NEON_REALTIME_URL` (nome que
+nenhum código lê) — agora documenta só `NEON_REALTIME_SECRET`, que é o que
+o server sela, com nota para recriar o client caso a feature volte. O
+server (`realtime/server.ts` + `/api/realtime`) permanece.
 
 ### B4. Envs PG* ressuscitadas pela integração Neon↔Vercel
 Removi `PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGHOST_UNPOOLED` de ambos os
@@ -60,11 +59,11 @@ deploy de preview. Removi novamente. **Recomendação**: desativar o sync de
 envs da integração (Vercel → Storage → Neon → manage) ou aceitar o ruído
 (não quebra nada — o código só lê `DATABASE_URL`).
 
-### B5. Branches paralelas órfãs no remoto
-`origin/posthog/instrumentation-c2f9a8` e `origin/refactor/application-v2` —
-frentes antigas sem merge. Decidir: merge, arquivar ou deletar. O histórico
-do repo já colidiu uma vez por commit paralelo (lição registrada em
-bd874c0/eef72b0).
+### B5. Branches paralelas órfãs no remoto — ✅ RESOLVIDO (27/10)
+`posthog/instrumentation-c2f9a8` e `refactor/application-v2` tinham **zero
+commits fora da main** (verificado com `git log origin/main..branch` antes
+de deletar) — removidas do remoto via `git push origin --delete`. Obsoletas
+por definição: a instrumentação PostHog saiu integralmente do produto.
 
 ---
 
