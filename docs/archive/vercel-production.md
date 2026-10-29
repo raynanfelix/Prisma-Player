@@ -34,10 +34,10 @@ Somente URL e publishable key podem usar `NEXT_PUBLIC_`. A secret key nunca entr
 Valores do projeto Prisma Player:
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL=https://jghtmqzgyyonelfmjdxb.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_55e6DybK7f5sZwqlnCEHJw_Eju40F6L
-SUPABASE_URL=https://jghtmqzgyyonelfmjdxb.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_55e6DybK7f5sZwqlnCEHJw_Eju40F6L
+NEXT_PUBLIC_SUPABASE_URL=<redacted-supabase-project-url>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<redacted-publishable-key>
+SUPABASE_URL=<redacted-supabase-project-url>
+SUPABASE_PUBLISHABLE_KEY=<redacted-publishable-key>
 SUPABASE_SECRET_KEY=<cole a secret key completa somente na Vercel>
 SUPABASE_JWKS_URL=https://jghtmqzgyyonelfmjdxb.supabase.co/auth/v1/.well-known/jwks.json
 NEXT_PUBLIC_SITE_URL=https://prisma-player.vercel.app

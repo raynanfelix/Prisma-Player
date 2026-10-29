@@ -6,6 +6,7 @@ import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
+import { verifyTurnstileToken } from "@/lib/security/turnstile";
 
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);
@@ -18,12 +19,21 @@ export async function POST(request: Request) {
   const limited = await rateLimit(request, "auth-login", { max: 20, windowMs: 10 * 60_000, failClosed: true });
   if (limited) return limited;
 
-  const parsed = await readJsonBody<{ email?: unknown; password?: unknown }>(request);
+  const parsed = await readJsonBody<{ email?: unknown; password?: unknown; turnstileToken?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
+  const turnstileToken = typeof body?.turnstileToken === "string" ? body.turnstileToken : undefined;
   if (!email || !password) return NextResponse.json({ error: "invalid_credentials" }, { status: 400 });
+
+  // Validação do Cloudflare Turnstile ANTES de processar credenciais.
+  // Fail-closed em produção: sem token válido, rejeita com 403.
+  const turnstileResult = await verifyTurnstileToken(turnstileToken);
+  if (!turnstileResult.success) {
+    console.warn("login_turnstile_failed", { email, errorCodes: turnstileResult.errorCodes });
+    return NextResponse.json({ error: "turnstile_failed" }, { status: 403 });
+  }
   const accountLimited = await rateLimit(request, "auth-login-account", {
     max: 15, windowMs: 30 * 60_000, failClosed: true, identifier: hashRateLimitIdentifier(email),
   });
