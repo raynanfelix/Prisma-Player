@@ -7,6 +7,7 @@ import { csrfGuard } from "@/lib/security/csrf";
 import { recordAuthFailure } from "@/lib/security/auth-events";
 import { hashRateLimitIdentifier, rateLimit } from "@/lib/security/rate-limit";
 import { ensureAccountBootstrap } from "@/lib/access/bootstrap";
+import { verifyTurnstileToken } from "@/lib/security/turnstile";
 
 export async function POST(request: Request) {
   const csrf = csrfGuard(request);
@@ -16,13 +17,21 @@ export async function POST(request: Request) {
   if (limited) return limited;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000";
-  const parsed = await readJsonBody<{ name?: unknown; email?: unknown; password?: unknown }>(request);
+  const parsed = await readJsonBody<{ name?: unknown; email?: unknown; password?: unknown; turnstileToken?: unknown }>(request);
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
+  const turnstileToken = typeof body?.turnstileToken === "string" ? body.turnstileToken : undefined;
   if (!name || !email || !password) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+
+  // Validação do Turnstile ANTES de processar credenciais (fail-closed em produção).
+  const turnstileValid = await verifyTurnstileToken(turnstileToken);
+  if (!turnstileValid) {
+    await recordAuthFailure("signup_failed", email, request);
+    return NextResponse.json({ error: "turnstile_failed" }, { status: 403 });
+  }
   const accountLimited = await rateLimit(request, "auth-signup-account", {
     max: 3, windowMs: 60 * 60_000, failClosed: true, identifier: hashRateLimitIdentifier(email),
   });

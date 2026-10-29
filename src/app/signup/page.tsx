@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowBigUpDash, Check, CircleCheck, LoaderCircle } from "lucide-react";
@@ -19,6 +19,7 @@ import { clientRateMessage, consumeClientAttempt } from "@/lib/security/client-r
 import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { MARKETING_URL } from "@/lib/site";
 import { authService } from "@/services/auth/client";
+import { TurnstileWidget } from "@/features/auth/components/TurnstileWidget";
 
 const EMAIL_ALREADY_USED = /já possui uma conta|already registered|already been registered/i;
 const OTP_PATTERN = /^\d{6}$/;
@@ -50,6 +51,13 @@ export default function SignupPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   // Deep-link /signup?verify=1 (login com e-mail não verificado) muda o título.
   const [fromLogin, setFromLogin] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const handleTurnstileTokenChange = useCallback((token: string | null) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileError = useCallback(() => {
+    setNotice({ tone: "error", message: "Falha na verificação de segurança. Tente novamente." });
+  }, []);
   const submittingRef = useRef(false);
   const verifyingRef = useRef(false);
   const resendingRef = useRef(false);
@@ -148,7 +156,7 @@ export default function SignupPage() {
     setLoading(true);
     setNotice(null);
     try {
-      const data = await authService.signUpWithEmail({ name: trimmedName, email: normalizedEmail, password });
+      const data = await authService.signUpWithEmail({ name: trimmedName, email: normalizedEmail, password, turnstileToken: turnstileToken ?? undefined });
       if (data.session) {
         setNotice({ tone: "success", message: "Conta criada. Preparando seu espaço…" });
         // Mesmo padrao da pagina de login: navegação via router (Client Component).
@@ -420,9 +428,15 @@ export default function SignupPage() {
         </div>
 
         <AuthNotice notice={notice} />
+        <TurnstileWidget
+          siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY ?? ""}
+          action="signup"
+          onTokenChange={handleTurnstileTokenChange}
+          onError={handleTurnstileError}
+        />
         <Button
           type="submit"
-          disabled={loading || submitted}
+          disabled={loading || submitted || !turnstileToken}
           className="h-11 w-full rounded-xl bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] text-[#191A23] font-bold text-sm shadow-xs border border-black/5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (

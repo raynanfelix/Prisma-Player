@@ -40,7 +40,7 @@ export const authService = {
     }
   },
 
-  async signUpWithEmail(input: { name: string; email: string; password: string }) {
+  async signUpWithEmail(input: { name: string; email: string; password: string; turnstileToken?: string }) {
     try {
       const data = await apiRequest<{
         user: { id: string; email?: string } | null;
@@ -48,7 +48,7 @@ export const authService = {
         emailVerificationRequired?: boolean;
       }>("/api/auth/signup", {
         method: "POST",
-        body: { name: input.name, email: input.email, password: input.password },
+        body: { name: input.name, email: input.email, password: input.password, ...(input.turnstileToken ? { turnstileToken: input.turnstileToken } : {}) },
       });
       
       return {
