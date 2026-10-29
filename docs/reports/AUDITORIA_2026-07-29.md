@@ -145,7 +145,7 @@ recomendo estão na seção H.
 - **Prioridade:** 1
 
 ### 🔴 SEC-02 — Credencial real commitada no Git
-- **Arquivo:** `.env.example:7` — `BETTER_AUTH_API_KEY=ba_lod1zw2bebn316k9o2l1ris3hhfwg4hy`
+- **Arquivo:** `.env.example:7` — `BETTER_AUTH_API_KEY=<redacted-better-auth-api-key>`
 - **Histórico:** introduzida no commit `bcf9f5e` ("feat: migração inicial para Better Auth").
 - **Impacto:** a chave está no histórico do Git para sempre. Se o repositório for/ficar público, ou
   se qualquer colaborador clonar, ela está exposta. O Better Auth foi revertido (commit `155b02a`),

@@ -15,6 +15,7 @@ import { isValidEmail, suggestEmailCorrection } from "@/features/auth/lib/valida
 import { clientRateMessage, consumeClientAttempt } from "@/lib/security/client-rate-limit";
 import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
 import { authService, safeAuthRedirect } from "@/services/auth/client";
+import { TurnstileWidget } from "@/features/auth/components/TurnstileWidget";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<AuthNoticeState | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const submittingRef = useRef(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -118,7 +120,7 @@ export default function LoginPage() {
     setLoading(true);
     setNotice(null);
     try {
-      await authService.signInWithEmail(normalizedEmail, password);
+      await authService.signInWithEmail(normalizedEmail, password, turnstileToken ?? undefined);
       router.replace(safeAuthRedirect(new URLSearchParams(window.location.search).get("next")));
       router.refresh();
     } catch (error) {
@@ -215,9 +217,15 @@ export default function LoginPage() {
           )}
         </div>
         <AuthNotice notice={notice} />
+        <TurnstileWidget
+          siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY ?? ""}
+          action="login"
+          onTokenChange={setTurnstileToken}
+          onError={(err) => setNotice({ tone: "error", message: "Falha na verificação de segurança. Tente novamente." })}
+        />
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || !turnstileToken}
           className="h-11 w-full rounded-xl bg-[#B9FF66] hover:bg-[#a6ee50] dark:hover:bg-[#B9FF66] text-[#191A23] font-bold text-sm shadow-xs border border-black/5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? <><LoaderCircle className="animate-spin h-4 w-4 mr-2 text-[#191A23]" /> Entrando...</> : "Entrar no Painel"}

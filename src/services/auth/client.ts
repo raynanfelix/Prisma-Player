@@ -21,11 +21,11 @@ export function safeAuthRedirect(value: string | null, fallback = "/dashboard/vi
 }
 
 export const authService = {
-  async signInWithEmail(email: string, password: string) {
+  async signInWithEmail(email: string, password: string, turnstileToken?: string) {
     try {
       const data = await apiRequest<{ user: { id: string; email?: string } | null }>("/api/auth/login", {
         method: "POST",
-        body: { email: email.trim().toLowerCase(), password },
+        body: { email: email.trim().toLowerCase(), password, ...(turnstileToken ? { turnstileToken } : {}) },
       });
       if (data.user) {
         // LGPD Art. 6º III (minimização) + Art. 33 (transferência internacional):

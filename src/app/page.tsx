@@ -1,12 +1,10 @@
-import { permanentRedirect } from "next/navigation";
-
-import { MARKETING_URL } from "@/lib/site";
+import { redirect } from "next/navigation";
 
 /**
- * Este repositório é SÓ a aplicação (app.prismaplayer.online): o site de
- * vendas vive no repo da landing, servido em prismaplayer.online. A raiz
- * do app redireciona para lá (308 permanente - o conteúdo não volta).
+ * Raiz do app (app.prismaplayer.online): redireciona para /login.
+ * O site de marketing vive em prismaplayer.online (repo separado);
+ * quem acessa o domínio do app quer entrar na aplicação.
  */
 export default function Home() {
-  permanentRedirect(MARKETING_URL);
+  redirect("/login");
 }
