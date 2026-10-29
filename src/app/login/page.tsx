@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowBigUpDash, LoaderCircle, LockKeyhole } from "lucide-react";
@@ -27,6 +27,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<AuthNoticeState | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const handleTurnstileTokenChange = useCallback((token: string | null) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileError = useCallback(() => {
+    setNotice({ tone: "error", message: "Falha na verificação de segurança. Tente novamente." });
+  }, []);
   const submittingRef = useRef(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -220,8 +226,8 @@ export default function LoginPage() {
         <TurnstileWidget
           siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY ?? ""}
           action="login"
-          onTokenChange={setTurnstileToken}
-          onError={(err) => setNotice({ tone: "error", message: "Falha na verificação de segurança. Tente novamente." })}
+          onTokenChange={handleTurnstileTokenChange}
+          onError={handleTurnstileError}
         />
         <Button
           type="submit"

@@ -51,7 +51,13 @@ export function TurnstileWidget({
 }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onTokenChangeRef = useRef(onTokenChange);
+  const onErrorRef = useRef(onError);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // Mantém refs atualizados sem causar re-render ou remount do widget
+  onTokenChangeRef.current = onTokenChange;
+  onErrorRef.current = onError;
 
   // Carrega o script do Turnstile uma única vez
   useEffect(() => {
@@ -92,7 +98,11 @@ export function TurnstileWidget({
     };
   }, [onError]);
 
-  // Renderiza o widget quando o script estiver pronto e o container existir
+  // Renderiza o widget quando o script estiver pronto e o container existir.
+  // IMPORTANTE: onTokenChange e onError são acessados via ref para evitar que
+  // mudanças na identidade da função (re-render do pai) causem remount do
+  // widget, o que perderia o estado visual do checkbox. O widget só é
+  // remontado quando siteKey, action ou theme mudam.
   useEffect(() => {
     if (!scriptLoaded || !containerRef.current || !window.turnstile) return;
 
@@ -106,22 +116,22 @@ export function TurnstileWidget({
         theme,
         size: "normal",
         callback: (token: string) => {
-          onTokenChange(token);
+          onTokenChangeRef.current(token);
         },
         "error-callback": (error: unknown) => {
           console.error("[turnstile] Erro no widget:", error);
-          onTokenChange(null);
-          onError?.(error);
+          onTokenChangeRef.current(null);
+          onErrorRef.current?.(error);
         },
         "expired-callback": () => {
           // Token expirou — limpa e deixa o widget re-gerar automaticamente
-          onTokenChange(null);
+          onTokenChangeRef.current(null);
         },
       });
       widgetIdRef.current = id;
     } catch (error) {
       console.error("[turnstile] Falha ao renderizar widget:", error);
-      onError?.(error);
+      onErrorRef.current?.(error);
     }
 
     return () => {
@@ -135,7 +145,7 @@ export function TurnstileWidget({
         widgetIdRef.current = null;
       }
     };
-  }, [scriptLoaded, siteKey, action, theme, onTokenChange, onError]);
+  }, [scriptLoaded, siteKey, action, theme]);
 
   /**
    * Reseta o widget programaticamente.
