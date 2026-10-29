@@ -56,6 +56,7 @@ const PRIVILEGED = [
   "lib/player/embed-traffic.ts",
   "services/ads/server-events.ts",
   "lib/errors/capture-server.ts",
+"lib/errors/github-issues.ts",
 ];
 
 const PRIVILEGED_IMPORT = new RegExp(
