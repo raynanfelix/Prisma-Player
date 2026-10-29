@@ -7,7 +7,7 @@ import { SECURITY } from "@/lib/constants";
 const SCRIPT_SRC_EXTRA = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
 function contentSecurityPolicy(frameAncestors: string, nonce: string) {
-  const scriptSrc = `'self' 'nonce-${nonce}' 'wasm-unsafe-eval'${SCRIPT_SRC_EXTRA}`;
+  const scriptSrc = `'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://challenges.cloudflare.com${SCRIPT_SRC_EXTRA}`;
 
   return [
     "default-src 'self'",
@@ -16,12 +16,13 @@ function contentSecurityPolicy(frameAncestors: string, nonce: string) {
     "form-action 'self'",
     `frame-ancestors ${frameAncestors}`,
     `script-src ${scriptSrc}`,
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
-    "connect-src 'self' blob: https://*.r2.cloudflarestorage.com",
+    "connect-src 'self' blob: https://*.r2.cloudflarestorage.com https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
   ].join("; ");
 }
 
