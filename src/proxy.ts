@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { updateSession } from "@/lib/auth/session";
 import { getAuth } from "@/lib/auth/server";
 import { SECURITY } from "@/lib/constants";
-import { markdownRouteUrl, negotiateMarkdown, shouldAppendVaryAccept } from "@/lib/markdown/negotiate";
 
 const SCRIPT_SRC_EXTRA = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
@@ -42,24 +41,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Item 1 "Is Agentic" (Ora): negociação de conteúdo Markdown para agentes
-  // de IA. ADITIVO: sem `Accept: text/markdown` nada acontece além de um
-  // lookup puro (string) - o fluxo HTML/RSC anterior segue byte a byte. A
-  // decisão vive em src/lib/markdown/negotiate.ts (puro e testável) e o
-  // rewrite sai ANTES do CSP/nonce de propósito: a resposta Markdown vem do
-  // route handler /api/markdown (text/markdown sem script), que não consome
-  // nonce nem sessão, e agentes não carregam cookies de sessão.
-  const markdownDecision = negotiateMarkdown({
-    method: request.method,
-    accept: request.headers.get("accept"),
-    pathname: request.nextUrl.pathname,
-  });
-  if (markdownDecision.kind === "markdown-page" || markdownDecision.kind === "markdown-404") {
-    return NextResponse.rewrite(
-      new URL(markdownRouteUrl(markdownDecision.kind, markdownDecision.path), request.url),
-    );
-  }
-
   const nonce = crypto.randomUUID().replaceAll("-", "");
   const frameAncestors = request.nextUrl.pathname.startsWith("/embed") ? "*" : "'self'";
   const csp = contentSecurityPolicy(frameAncestors, nonce);
@@ -70,16 +51,6 @@ export async function proxy(request: NextRequest) {
 
   const response = await updateSession(request, requestHeaders);
   response.headers.set("Content-Security-Policy", csp);
-
-  // Item 1 "Is Agentic" (Ora): toda resposta de navegação de página declara
-  // `Vary: Accept` APPENDADO ao valor existente (nunca sobrescrever o Vary do
-  // Next: "rsc, next-router-state-tree, next-router-prefetch, ..."), para que
-  // caches não sirvam HTML a um agente que pediu text/markdown - e
-  // vice-versa. Assets (caminhos com extensão) e respostas de route handlers
-  // (/api, /auth, /ingest, /player-loader, /opengraph-image) ficam de fora.
-  if (shouldAppendVaryAccept({ method: request.method, pathname: request.nextUrl.pathname })) {
-    response.headers.append("vary", "Accept");
-  }
 
   // RM-02: o token de origem do embed só é útil para quem realmente carregou a
   // página no navegador. Este cookie (HttpOnly, curto) guarda o nonce desta

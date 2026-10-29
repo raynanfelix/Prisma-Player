@@ -1,39 +1,12 @@
-import type { Metadata } from "next";
-import { eq } from "drizzle-orm";
-import PositivusLanding from "@/features/landing-page/components/PositivusLanding";
-import { getCurrentUserId } from "@/lib/auth/server";
-import { db, schema } from "@/lib/db";
-import { ensureAccountBootstrap } from "@/lib/access/bootstrap";
+import { permanentRedirect } from "next/navigation";
 
-const { profiles } = schema;
+import { MARKETING_URL } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Player de VSL com Pitch Delay e Analytics de Retenção | Prisma Player",
-  description:
-    "Aumente conversões da sua VSL com Pitch Delay sincronizado ao segundo, analytics de retenção segundo a segundo, testes A/B nativos e proteção DRM anti-pirataria. Player feito para vender.",
-  alternates: { canonical: "/" },
-  keywords: [
-    "player de vsl",
-    "pitch delay",
-    "video sales letter",
-    "analytics de retenção",
-    "aumentar conversão vsl",
-    "proteção drm vídeo",
-    "testes ab vsl",
-    "player para infoproduto",
-  ],
-};
-
-export default async function Home() {
-  const userId = await getCurrentUserId();
-  let [profile] = userId
-    ? await db.select({ fullName: profiles.fullName }).from(profiles).where(eq(profiles.id, userId)).limit(1)
-    : [];
-  if (userId && !profile) {
-    // Self-heal: conta sem linha em profiles é inicializada do Neon Auth.
-    await ensureAccountBootstrap({ id: userId });
-    [profile] = await db.select({ fullName: profiles.fullName }).from(profiles).where(eq(profiles.id, userId)).limit(1);
-  }
-  const firstName = profile?.fullName?.trim().split(/\s+/)[0] || "Dashboard";
-  return <PositivusLanding account={userId ? { firstName } : null} />;
+/**
+ * Este repositório é SÓ a aplicação (app.prismaplayer.online): o site de
+ * vendas vive no repo da landing, servido em prismaplayer.online. A raiz
+ * do app redireciona para lá (308 permanente - o conteúdo não volta).
+ */
+export default function Home() {
+  permanentRedirect(MARKETING_URL);
 }

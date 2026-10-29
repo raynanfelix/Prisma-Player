@@ -17,6 +17,7 @@ import { useCapsLock } from "@/features/auth/hooks/use-caps-lock";
 import { isValidEmail, suggestEmailCorrection } from "@/features/auth/lib/validation";
 import { clientRateMessage, consumeClientAttempt } from "@/lib/security/client-rate-limit";
 import { GENERIC_ERROR_MESSAGES } from "@/lib/errors";
+import { MARKETING_URL } from "@/lib/site";
 import { authService } from "@/services/auth/client";
 
 const EMAIL_ALREADY_USED = /já possui uma conta|already registered|already been registered/i;
@@ -407,8 +408,8 @@ export default function SignupPage() {
               <Check aria-hidden size={12} className="pointer-events-none absolute text-[#191A23] opacity-0 peer-checked:opacity-100 font-bold" />
             </span>
             <span>
-              Concordo com os <Link href="/terms" target="_blank" className="font-semibold text-[#191A23] underline">Termos de Uso</Link> e a{" "}
-              <Link href="/privacy" target="_blank" className="font-semibold text-[#191A23] underline">Política de Privacidade</Link>.
+              Concordo com os <Link href={MARKETING_URL + "/terms"} target="_blank" className="font-semibold text-[#191A23] underline">Termos de Uso</Link> e a{" "}
+              <Link href={MARKETING_URL + "/privacy"} target="_blank" className="font-semibold text-[#191A23] underline">Política de Privacidade</Link>.
             </span>
           </label>
           {termsError && (

@@ -32,9 +32,9 @@ const document = {
       "Superfície pública do Prisma Player (player de VSL com Pitch Delay, analytics de retenção e testes A/B). " +
       "Não requer autenticação de conta; os endpoints de embed validam o contexto de origem do player publicado.\n\n" +
       "POLÍTICA DE VERSÃO: a versão é uma data e viaja no header `X-API-Version` das respostas públicas baratas " +
-      "(/api/health, /api/markdown, /api/openapi.json), igual a info.version deste documento. Breaking changes exigem " +
-      "aviso prévio de 90 dias, sinalizado pelo header `Sunset` e anunciado no changelog em /developers; nunca entram " +
-      "sem esse aviso. Não existe versão /v1 no path hoje porque a superfície pública é estável e pequena.\n\n" +
+      "(/api/health, /api/openapi.json), igual a info.version deste documento. Breaking changes exigem " +
+      "aviso prévio de 90 dias, sinalizado pelo header `Sunset` e anunciado no changelog do site de marketing " +
+      "(prismaplayer.online); nunca entram sem esse aviso. Não existe versão /v1 no path hoje porque a superfície pública é estável e pequena.\n\n" +
       "CONTRATO DE ERROS: toda resposta de erro JSON segue components.schemas.Error (código machine-readable em " +
       "`error`; `message` humano e `hint` quando existem). Endpoints /api/* desconhecidos respondem 404 JSON " +
       "(error: not_found) apontando para este documento. Respostas 429 trazem os headers RateLimit-Limit, " +
@@ -207,29 +207,7 @@ const document = {
         },
       },
     },
-    "/llms.txt": {
-      get: {
-        summary: "Índice do site para agentes de IA",
-        description: "Descrição do produto, quando usar e links principais, no formato llms.txt (text/plain).",
-        operationId: "getLlmsTxt",
-        responses: { "200": { description: "Índice llms.txt", content: { "text/plain": { schema: { type: "string" } } } } },
-      },
     },
-    "/api/markdown": {
-      get: {
-        summary: "Versão Markdown das páginas públicas",
-        description:
-          "Conteúdo Markdown (text/markdown) de uma página pública (?path=/, /pricing, /services, /about, /privacy, /terms, /cookies, /contact, /developers). " +
-          "O proxy do site faz essa negociação automaticamente quando a requisição pede Accept: text/markdown.",
-        operationId: "getMarkdownPage",
-        parameters: [{ name: "path", in: "query", required: false, schema: { type: "string" }, description: "Caminho da página pública (default: /)" }],
-        responses: {
-          "200": { description: "Página em Markdown", content: { "text/markdown": { schema: { type: "string" } } } },
-          "404": { description: "Caminho desconhecido (corpo em Markdown)" },
-        },
-      },
-    },
-  },
   "x-note":
     "APIs de conta, vídeos, billing e analytics internos exigem sessão autenticada (Better Auth/Neon) e respondem 401 fora dela - não fazem parte desta especificação pública.",
 } as const;

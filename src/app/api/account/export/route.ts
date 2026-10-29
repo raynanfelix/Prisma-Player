@@ -3,6 +3,7 @@ import { getCurrentUserId } from "@/lib/auth/server";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { MARKETING_URL } from "@/lib/site";
 
 const {
   accountAccess,
@@ -155,7 +156,7 @@ export async function GET(request: Request) {
     thirdPartyData: {
       note: "Dados tratados por operadores (Stripe: customer, assinaturas, faturas) permanecem nos sistemas deles e não são replicados neste arquivo. Para exercer direitos sobre esses dados, solicite também diretamente ao provedor, ou pelo nosso canal de privacidade.",
       providers: ["Stripe"],
-      privacyPolicyUrl: "/privacy",
+      privacyPolicyUrl: MARKETING_URL + "/privacy",
       privacyContactEmail: "privacidade@prismaplayer.online",
     },
   };

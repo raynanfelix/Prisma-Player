@@ -111,7 +111,7 @@ describe("GET /api/account/export - DSAR completo (LGPD art. 18, II e V)", () =>
     // ainda trata dados do titular, e o canal migrou para o domínio .online.
     const thirdParty = body["thirdPartyData"] as Record<string, unknown>;
     expect(thirdParty["providers"]).toEqual(["Stripe"]);
-    expect(String(thirdParty["privacyPolicyUrl"])).toBe("/privacy");
+    expect(String(thirdParty["privacyPolicyUrl"])).toBe("https://prismaplayer.online/privacy");
     expect(String(thirdParty["privacyContactEmail"])).toBe("privacidade@prismaplayer.online");
     expect(String(thirdParty["note"])).not.toContain("PostHog");
     expect(String(thirdParty["note"])).toContain("Stripe");

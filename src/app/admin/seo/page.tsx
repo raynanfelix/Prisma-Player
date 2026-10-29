@@ -3,6 +3,7 @@ import { SeoCheckForm, SeoTargetForm } from "@/components/admin/SeoForms";
 import { CheckCircle2, Globe, Search, XCircle } from "lucide-react";
 import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { MARKETING_URL } from "@/lib/site";
 
 const { seoTargets, visibilityChecks } = schema;
 
@@ -29,7 +30,7 @@ async function probe(url: string, match?: RegExp): Promise<{ ok: boolean; detail
  * manualmente (3-5 execuções por plataforma, conforme skill ai-seo).
  */
 export default async function AdminSeoPage() {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+  const base = MARKETING_URL;
   const [robots, sitemap, llms, pricing, targetRows, checkRows] = await Promise.all([
     probe(`${base}/robots.txt`, /GPTBot|PerplexityBot|ClaudeBot|Google-Extended/i),
     probe(`${base}/sitemap.xml`, /<loc>/),
