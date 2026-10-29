@@ -1358,3 +1358,37 @@ export const roadmapTasks = pgTable(
     ),
   ],
 );
+
+/* ------------------------------------------------------------------ */
+/* Error Capture System (Phase 1).                                     */
+/* ------------------------------------------------------------------ */
+
+export const errorEvents = pgTable(
+  "error_events",
+  {
+    id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    fingerprint: text("fingerprint").notNull(),
+    severity: text("severity").notNull(),
+    status: text("status").notNull().default("new"),
+    count: integer("count").notNull().default(1),
+    firstSeen: timestamp("first_seen", { withTimezone: true }).notNull().defaultNow(),
+    lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+    sample: jsonb("sample").notNull(),
+    issueUrl: text("issue_url"),
+    issueNumber: integer("issue_number"),
+    version: text("version"),
+  },
+  (t) => [
+    uniqueIndex("error_events_fingerprint_idx").on(t.fingerprint),
+    index("error_events_status_severity_idx").on(t.status, t.severity),
+    index("error_events_last_seen_idx").on(t.lastSeen.desc()),
+    check(
+      "error_events_severity_check",
+      sql`${t.severity} in ('critical', 'high', 'medium', 'low')`,
+    ),
+    check(
+      "error_events_status_check",
+      sql`${t.status} in ('new', 'investigating', 'fixed', 'validated', 'reopened')`,
+    ),
+  ],
+);
