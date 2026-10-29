@@ -6,8 +6,15 @@ import { SECURITY } from "@/lib/constants";
 
 const SCRIPT_SRC_EXTRA = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
-function contentSecurityPolicy(frameAncestors: string, nonce: string) {
-  const scriptSrc = `'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://challenges.cloudflare.com${SCRIPT_SRC_EXTRA}`;
+function contentSecurityPolicy(frameAncestors: string, nonce: string, isLoginPage = false) {
+  // Turnstile requires 'unsafe-eval' even in production for its challenge script,
+  // plus data:/blob: in connect-src for Web Worker communication. These are only
+  // added on /login to avoid weakening CSP globally.
+  const turnstileScriptExtra = isLoginPage ? " 'unsafe-eval'" : "";
+  const scriptSrc = `'self' 'nonce-${nonce}' 'wasm-unsafe-eval' https://challenges.cloudflare.com${SCRIPT_SRC_EXTRA}${turnstileScriptExtra}`;
+  const connectSrc = isLoginPage
+    ? "'self' blob: data: https://*.r2.cloudflarestorage.com https://challenges.cloudflare.com https://*.cloudflarecaptcha.com https://*.dnstest.challenges.cloudflare.com https://dnstest.dev"
+    : "'self' blob: https://*.r2.cloudflarestorage.com https://challenges.cloudflare.com";
 
   return [
     "default-src 'self'",
@@ -21,7 +28,7 @@ function contentSecurityPolicy(frameAncestors: string, nonce: string) {
     "media-src 'self' blob: https:",
     "font-src 'self' data: https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
-    "connect-src 'self' blob: https://*.r2.cloudflarestorage.com https://challenges.cloudflare.com",
+    `connect-src ${connectSrc}`,
     "frame-src https://challenges.cloudflare.com",
   ].join("; ");
 }
@@ -44,7 +51,8 @@ export async function proxy(request: NextRequest) {
 
   const nonce = crypto.randomUUID().replaceAll("-", "");
   const frameAncestors = request.nextUrl.pathname.startsWith("/embed") ? "*" : "'self'";
-  const csp = contentSecurityPolicy(frameAncestors, nonce);
+  const isLoginPage = request.nextUrl.pathname === "/login";
+  const csp = contentSecurityPolicy(frameAncestors, nonce, isLoginPage);
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
