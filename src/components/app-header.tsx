@@ -5,7 +5,6 @@ import { AppBreadcrumbs } from "@/components/app-breadcrumbs";
 import { navLinks } from "@/components/app-shared";
 import { CustomSidebarTrigger } from "@/components/custom-sidebar-trigger";
 import AccountMenu from "@/components/dashboard/AccountMenu";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Separator } from "@/components/ui/separator";
 import InboxButton from "@/features/inbox/components/InboxButton";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -32,7 +31,6 @@ export function AppHeader() {
         <AppBreadcrumbs page={page} />
       </div>
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-        <ThemeToggle />
         <InboxButton />
         <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
         <AccountMenu />
