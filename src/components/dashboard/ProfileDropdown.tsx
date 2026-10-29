@@ -83,7 +83,7 @@ const THEMES = [
 ] as const;
 
 const AVATAR_TONES = [
-  "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900",
+  "bg-[#B9FF66] text-[#191A23] dark:bg-zinc-100 dark:text-zinc-900",
   "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100",
   "bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200 ring-inset dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700",
 ];
@@ -258,7 +258,7 @@ function HoldSignOut({ duration, onComplete }: { duration: number; onComplete: (
       <span className="sr-only">, pressione e segure para confirmar</span>
       <span
         aria-hidden="true"
-        className="absolute inset-0 flex items-center gap-2.5 rounded-[10px] bg-zinc-900 px-2.5 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900"
+        className="absolute inset-0 flex items-center gap-2.5 rounded-[10px] bg-[#B9FF66] px-2.5 text-[#191A23] dark:bg-zinc-100 dark:text-zinc-900"
         style={{
           clipPath: holding || done ? "inset(0 0 0 0 round 10px)" : "inset(0 100% 0 0 round 10px)",
           transition: holding ? `clip-path ${duration}ms linear` : "clip-path 240ms cubic-bezier(0.23, 1, 0.32, 1)",
@@ -514,7 +514,7 @@ export default function ProfileDropdown({
         ref={triggerRef}
         type="button"
       >
-        <Avatar account={account} className="size-9 text-[11px]" status={status} tone={tone} />
+        <Avatar account={account} className="size-9 text-[11px]" tone={tone} />
       </button>
 
       {phase === "closed" ? null : (
@@ -532,7 +532,6 @@ export default function ProfileDropdown({
                   {account.plan ? <motion.span className="shrink-0 pt-0.5 text-xs text-zinc-400 dark:text-zinc-500" style={{ opacity: bodyOpacity }}>{account.plan}</motion.span> : null}
                 </div>
                 <motion.div aria-label={account.name} className="outline-none" id={menuId} role="menu" style={{ opacity: bodyOpacity }} tabIndex={-1}>
-                  <StatusRow onChange={setStatus} status={status} />
                   <ThemeRow onChange={setTheme} reduced={reduced} theme={theme} uid={uid} />
                   <Separator />
                   {items.map((item, index) => <LinkItem index={index} item={item} key={item.label} onSelect={select} />)}
