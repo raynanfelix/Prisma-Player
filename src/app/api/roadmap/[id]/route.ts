@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { guard } from "@/lib/api/guard";
 import { getCurrentAdminUser } from "@/lib/auth/server";
 import { readJsonBody } from "@/lib/api/request";
-import { normalizeRoadmapText, validateRoadmapPatch, type RoadmapStage } from "@/lib/roadmap";
+import { normalizeRoadmapText, validateRoadmapPatch, type RoadmapStage, ROADMAP_STAGES } from "@/lib/roadmap";
 import { audit } from "@/lib/admin/support";
 import { db, schema } from "@/lib/db";
 
@@ -32,7 +32,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   const body = parsed.body ?? {};
 
   const check = validateRoadmapPatch(body);
-  if (check.error) return NextResponse.json({ error: check.error }, { status: 400 });
+  if (check.error) {
+    console.error("[roadmap PATCH] validation error:", check.error, "hasChanges:", check.hasChanges, "body:", JSON.stringify(body), "validStages:", ROADMAP_STAGES);
+    return NextResponse.json({ error: check.error, details: check, validStages: ROADMAP_STAGES }, { status: 400 });
+  }
 
   const patch: Partial<typeof roadmapTasks.$inferInsert> = { updatedAt: new Date() };
   const auditDetails: Record<string, unknown> = { task_id: id };

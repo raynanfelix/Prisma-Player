@@ -23,6 +23,7 @@ import {
   useContext,
   useMemo,
   useState,
+  type ElementType,
 } from "react";
 
 export type KanbanColumnProps = {
@@ -192,9 +193,21 @@ export function KanbanCard({
     opacity: isDragging ? 0.4 : 1,
     touchAction: "none",
   };
+
+  // Filter attributes to only include valid DOM attributes for React 19 compatibility
+  const validAttributes = canDrag
+    ? Object.fromEntries(
+        Object.entries(attributes).filter(([key]) =>
+          key.startsWith("data-") || key.startsWith("aria-") || ["id", "role", "tabIndex"].includes(key)
+        )
+      )
+    : {};
+  const validListeners = canDrag ? listeners : {};
+
   return (
     <div
-      {...(canDrag ? { ...attributes, ...listeners } : {})}
+      {...validAttributes}
+      {...validListeners}
       className={`${canDrag ? "cursor-grab" : "cursor-default"} rounded-xl border border-slate-200 bg-white p-3 shadow-xs dark:border-zinc-800 dark:bg-card ${isDragging ? "ring-2 ring-selected/40" : "hover:border-slate-300 dark:hover:border-zinc-700"}`}
       data-dragging={isDragging ? "" : undefined}
       style={style}
@@ -212,7 +225,10 @@ export function KanbanCard({
 export function KanbanOverlay({ children }: { children?: (item: KanbanItem) => ReactNode }) {
   const { activeItemId, data } = useKanban();
   const item = data.find((entry) => entry.id === activeItemId);
-  if (!item || !children) return null;
+  if (!item || !children) {
+    // Return an empty fragment instead of null to avoid React 19 "Element type is invalid" errors
+    return <></>;
+  }
   return (
     <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}>
       <div className="w-64 rotate-2 cursor-grabbing rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-2 ring-selected/50 dark:border-zinc-700 dark:bg-card">
