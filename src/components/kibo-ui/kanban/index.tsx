@@ -224,16 +224,18 @@ export function KanbanCard({
 /** Overlay do card sendo arrastado. Montado automaticamente pelo KanbanProvider via prop `overlay`. */
 export function KanbanOverlay({ children }: { children?: (item: KanbanItem) => ReactNode }) {
   const { activeItemId, data } = useKanban();
-  const item = data.find((entry) => entry.id === activeItemId);
-  if (!item || !children) {
-    // Return an empty fragment instead of null to avoid React 19 "Element type is invalid" errors
-    return <></>;
-  }
   return (
     <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}>
-      <div className="w-64 rotate-2 cursor-grabbing rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-2 ring-selected/50 dark:border-zinc-700 dark:bg-card">
-        {children(item)}
-      </div>
+      {((active: { id: string } | null) => {
+        if (!active) return null;
+        const item = data.find((entry) => entry.id === active.id);
+        if (!item || !children) return null;
+        return (
+          <div className="w-64 rotate-2 cursor-grabbing rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-2 ring-selected/50 dark:border-zinc-700 dark:bg-card">
+            {children(item)}
+          </div>
+        );
+      }) as unknown as React.ReactNode}
     </DragOverlay>
   );
 }
