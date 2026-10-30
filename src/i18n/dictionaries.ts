@@ -5,16 +5,19 @@ export const uiMessages = {
     language: "Idioma", account: "Conta", administration: "Administração", logout: "Sair",
     videos: "Meus vídeos", abTests: "Testes A/B", security: "Segurança", conversions: "Conversões",
     intelligence: "Inteligência", settings: "Configurações", plan: "Plano", help: "Ajuda",
+    cancel: "Cancelar", confirm: "Confirmar", "confirm.irreversible": "Esta ação não pode ser desfeita. ", "confirm.toProceedOr": " para continuar ou ", "confirm.toGoBack": " Cancelar para voltar."
   },
   "en-US": {
     language: "Language", account: "Account", administration: "Administration", logout: "Sign out",
     videos: "My videos", abTests: "A/B tests", security: "Security", conversions: "Conversions",
     intelligence: "Intelligence", settings: "Settings", plan: "Plan", help: "Help",
+    cancel: "Cancel", confirm: "Confirm", "confirm.irreversible": "This action cannot be undone. ", "confirm.toProceedOr": " to proceed or ", "confirm.toGoBack": " Cancel to go back."
   },
   "es-ES": {
     language: "Idioma", account: "Cuenta", administration: "Administración", logout: "Cerrar sesión",
     videos: "Mis videos", abTests: "Pruebas A/B", security: "Seguridad", conversions: "Conversiones",
     intelligence: "Inteligencia", settings: "Configuración", plan: "Plan", help: "Ayuda",
+    cancel: "Cancelar", confirm: "Confirmar", "confirm.irreversible": "Esta acción no se puede deshacer. ", "confirm.toProceedOr": " para continuar o ", "confirm.toGoBack": " Cancelar para volver."
   },
 } as const;
 
@@ -48,7 +51,8 @@ const en: Record<string, string> = {
   "Prévia ao vivo": "Live preview", "Timeline": "Timeline", "Vídeo": "Video", "Salvar": "Save", "Salvo": "Saved", "Apagar": "Delete", "Voltar aos vídeos": "Back to videos",
   "Perfil e preferências": "Profile and preferences", "Dados pessoais": "Personal details", "Nome completo": "Full name", "Telefone": "Phone", "E-mail": "Email", "Notificações": "Notifications", "Salvar alterações": "Save changes",
   "Equipe": "Team", "Membros": "Members", "Convidar membro": "Invite member", "Administrador": "Administrator", "Analista": "Analyst", "Visualizador": "Viewer", "Proprietário": "Owner",
-};
+  "cancel": "Cancel", "confirm": "Confirm", "confirm.irreversible": "This action cannot be undone. ", "confirm.toProceedOr": " to proceed or ", "confirm.toGoBack": " Cancel to go back."
+}
 
 const es: Record<string, string> = {
   "R$ 97": "18 €", "R$ 197": "36 €", "R$ 397": "72 €",
@@ -77,6 +81,7 @@ const es: Record<string, string> = {
   "Prévia ao vivo": "Vista previa en vivo", "Timeline": "Línea de tiempo", "Vídeo": "Video", "Salvar": "Guardar", "Salvo": "Guardado", "Apagar": "Eliminar", "Voltar aos vídeos": "Volver a los videos",
   "Perfil e preferências": "Perfil y preferencias", "Dados pessoais": "Datos personales", "Nome completo": "Nombre completo", "Telefone": "Teléfono", "E-mail": "Correo electrónico", "Notificações": "Notificaciones", "Salvar alterações": "Guardar cambios",
   "Equipe": "Equipo", "Membros": "Miembros", "Convidar membro": "Invitar miembro", "Administrador": "Administrador", "Analista": "Analista", "Visualizador": "Lector", "Proprietário": "Propietario",
-};
+  "cancel": "Cancelar", "confirm": "Confirmar", "confirm.irreversible": "Esta acción no se puede deshacer. ", "confirm.toProceedOr": " para continuar o ", "confirm.toGoBack": " Cancelar para volver."
+}
 
 export const legacyTranslations: Record<Exclude<AppLocale, "pt-BR">, Record<string, string>> = { "en-US": en, "es-ES": es };

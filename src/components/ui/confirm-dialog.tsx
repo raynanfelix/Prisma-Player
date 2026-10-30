@@ -42,7 +42,7 @@ function ConfirmDialog({
       footer={
         <>
           <Button variant="outline" type="button" onClick={onClose}>
-            Cancelar
+            {t("cancel")}
           </Button>
           <Button
             type="button"
@@ -57,16 +57,16 @@ function ConfirmDialog({
     >
       <div className="flex items-start gap-3">
         <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${options.danger ? "bg-red-50 dark:bg-red-950/40 text-red-600" : "bg-slate-100 dark:bg-card text-slate-600 dark:text-zinc-300"}`}>
-          <AlertTriangle size={18} />
+          <AlertTriangle size={18} aria-hidden />
         </span>
         <p className="text-xs leading-5 text-slate-600 dark:text-zinc-400">
-          {"Esta ação não pode ser desfeita."}
+          {t("confirm.irreversible")}
           <strong className="font-bold text-slate-900 dark:text-white">
             {options.confirmLabel}
           </strong>{" "}
-          {" para continuar ou em "}&nbsp;
-          <strong className="font-bold text-slate-900 dark:text-white">{"Cancelar"}</strong>{" "}
-          para voltar.
+          {t("confirm.toProceedOr")}&nbsp;
+          <strong className="font-bold text-slate-900 dark:text-white">{t("cancel")}</strong>{" "}
+          {t("confirm.toGoBack")}
         </p>
       </div>
     </Dialog>
