@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { desc } from "drizzle-orm";
 import { AlertTriangle } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
+import { OpenIssueButton } from "@/components/errors/OpenIssueButton";
 import { requireAdmin } from "@/lib/auth/server";
 import { db, schema } from "@/lib/db";
 
@@ -57,6 +58,7 @@ export default async function AdminErrorsPage() {
                 <th className="px-4 py-3 font-semibold text-zinc-700 dark:text-zinc-300">Ocorrências</th>
                 <th className="px-4 py-3 font-semibold text-zinc-700 dark:text-zinc-300">Status</th>
                 <th className="px-4 py-3 font-semibold text-zinc-700 dark:text-zinc-300">Última</th>
+                <th className="px-4 py-3 font-semibold text-zinc-700 dark:text-zinc-300">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -84,6 +86,20 @@ export default async function AdminErrorsPage() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
                       {new Date(row.lastSeen).toLocaleString("pt-BR")}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.issueUrl ? (
+                        <a
+                          href={row.issueUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-[#B9FF66] px-2.5 py-1 text-xs font-bold text-[#191A23] transition-opacity hover:opacity-90"
+                        >
+                          Ver Issue
+                        </a>
+                      ) : (
+                        <OpenIssueButton fingerprint={row.fingerprint} />
+                      )}
                     </td>
                   </tr>
                 );

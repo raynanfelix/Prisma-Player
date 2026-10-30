@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, isNull, sql } from "drizzle-orm";
+import { desc, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { createGitHubIssue } from "@/lib/errors/github-issues";
 
@@ -16,24 +16,46 @@ const { errorEvents } = schema;
  */
 export async function POST(request: Request) {
   try {
-    // Basic auth: only allow from Vercel Cron (has header) or internal calls
+    // Parse optional body for manual single-fingerprint trigger
+    const body = await request.json().catch(() => null);
+    const manualFingerprint =
+      body && typeof body === "object" && typeof (body as Record<string, unknown>).fingerprint === "string"
+        ? ((body as Record<string, unknown>).fingerprint as string)
+        : null;
+
+    // Basic auth: only allow from Vercel Cron (has header) or internal/admin calls
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Allow localhost/internal calls without auth for dev convenience
-      const url = new URL(request.url);
-      if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
-        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-      }
+    const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const url = new URL(request.url);
+    const isLocal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+
+    if (!isCron && !isLocal && !manualFingerprint) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    // Fetch candidate error events: no issue_url yet, ordered by severity then recency
-    const candidates = await db
-      .select()
-      .from(errorEvents)
-      .where(isNull(errorEvents.issueUrl))
-      .orderBy(desc(errorEvents.severity), desc(errorEvents.lastSeen))
-      .limit(20); // Process up to 20 per run to respect rate limits
+    let candidates: Array<typeof errorEvents.$inferSelect>;
+
+    if (manualFingerprint) {
+      // Manual trigger: fetch specific fingerprint regardless of thresholds
+      const row = await db
+        .select()
+        .from(errorEvents)
+        .where(eq(errorEvents.fingerprint, manualFingerprint))
+        .limit(1);
+      if (!row.length) {
+        return NextResponse.json({ error: "not_found", details: [] }, { status: 404 });
+      }
+      candidates = row;
+    } else {
+      // Cron mode: fetch unlinked events ordered by severity then recency
+      candidates = await db
+        .select()
+        .from(errorEvents)
+        .where(isNull(errorEvents.issueUrl))
+        .orderBy(desc(errorEvents.severity), desc(errorEvents.lastSeen))
+        .limit(20);
+    }
 
     const results: Array<{
       fingerprint: string;
