@@ -31,7 +31,10 @@ const COLUMNS: Array<{ id: RoadmapStage; name: string; color: string }> = [
   { id: "pronto", name: ROADMAP_STAGE_LABELS.pronto, color: "#10B981" },
 ];
 
-const shortDate = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short" });
+// timeZone fixo: o formatter roda no SSR (UTC da Vercel) e na hidratação
+// (fuso do cliente). Sem tz, task criada perto da meia-noite renderiza
+// dias diferentes → mismatch de texto → React error #418 (args[]=text).
+const shortDate = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "America/Sao_Paulo" });
 
 const inputClass =
   "h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs outline-none focus:border-selected dark:border-zinc-800 dark:bg-card";

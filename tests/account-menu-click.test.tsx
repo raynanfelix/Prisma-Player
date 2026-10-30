@@ -35,7 +35,8 @@ describe("AccountMenu interaction", () => {
       );
     });
 
-    const trigger = document.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLButtonElement;
+    // ProfileDropdown (KokonutUI): trigger é o botão de avatar com aria-haspopup.
+    const trigger = document.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement;
     expect(trigger).toBeTruthy();
 
     const errors: unknown[] = [];
@@ -49,9 +50,12 @@ describe("AccountMenu interaction", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    const content = document.querySelector('[data-slot="dropdown-menu-content"]');
-    console.log("CONTENT PRESENT:", Boolean(content));
+    // Painel aberto: o trigger alterna aria-expanded e itens do menu existem.
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    const menuItems = document.querySelectorAll("[data-menu-item]");
+    console.log("MENU ITEMS:", menuItems.length);
     console.log("ERRORS:", errors.length ? String(errors[0]) : "none");
+    expect(menuItems.length).toBeGreaterThan(0);
     expect(errors).toHaveLength(0);
   });
 });

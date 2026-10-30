@@ -326,8 +326,10 @@ describe("getAccountAccess - expiração do trial derruba o acesso (lazy, entre 
   });
 
   it("trial vigente (termina no futuro) → acesso completo", async () => {
+    // Data RELATIVA: data fixa vira bomba-relógio (o teste quebrava quando o
+    // "futuro" hardcoded virava passado em 2026-10-30T00:00Z).
     dbState.selectRows = {
-      account_access: [{ onboardingCompleted: true, trialStatus: "active", trialEndsAt: new Date("2026-10-30T00:00:00.000Z") }],
+      account_access: [{ onboardingCompleted: true, trialStatus: "active", trialEndsAt: new Date(Date.now() + 7 * 86_400_000) }],
       subscriptions: [],
     };
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db, schema } from "@/lib/db";
+import { captureServerError } from "@/lib/errors/capture-server";
 
 const { adminAuditLog } = schema;
 
@@ -28,6 +29,23 @@ export function validateNoteBody(body: string): string | null {
   return null;
 }
 
+/**
+ * Auditoria admin: telemetria best-effort, NUNCA derruba a mutação que já
+ * commitou. O CHECK `admin_audit_log_action_check` (migration 0000, estendido
+ * em 0007) rejeita actions não catalogadas e o insert lança — sem este
+ * fail-open, o audit quebrado devolvia 400/500 para mutações JÁ aplicadas no
+ * banco (bug real do roadmap: task movida com sucesso, resposta 400).
+ */
 export async function audit(adminId: string, action: string, targetUserId: string | null, details: Record<string, unknown> = {}) {
-  await db.insert(adminAuditLog).values({ adminUserId: adminId, action, targetUserId, details });
+  try {
+    await db.insert(adminAuditLog).values({ adminUserId: adminId, action, targetUserId, details });
+  } catch (error) {
+    console.error("admin_audit_failed", {
+      action,
+      adminId,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    // Alimenta o próprio sistema de captura de erros (dogfooding).
+    await captureServerError({ error, component: "admin/audit", severity: "medium" }).catch(() => undefined);
+  }
 }
