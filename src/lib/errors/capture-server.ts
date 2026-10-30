@@ -3,6 +3,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { sanitizeError, computeFingerprint } from "./sanitize";
+import { notifyCriticalError } from "./analyzer";
 
 const { errorEvents } = schema;
 
@@ -49,9 +50,11 @@ export async function captureServerError(input: {
         sample = EXCLUDED.sample,
         version = EXCLUDED.version
     `);
+
+    // Notify via Telegram for critical/high severity errors (fail-open).
+    // Runs after DB write so notification failure never blocks capture.
+    void notifyCriticalError(sanitized, fingerprint);
   } catch {
     // Fail-open: error capture must never break the app.
-    // In production this would go to console.error or alertOperations,
-    // but we avoid recursive capture loops.
   }
 }

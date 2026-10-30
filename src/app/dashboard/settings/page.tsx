@@ -4,6 +4,7 @@ import { Layers } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/dashboard/PageHeader";
+import Reveal from "@/components/motion/reveal";
 import Tabs from "@/components/dashboard/Tabs";
 import { BillingSettingsTab } from "@/features/account/components/BillingSettingsTab";
 import { OverviewPanel } from "@/features/account/components/OverviewPanel";
@@ -96,7 +97,9 @@ export default function SettingsPage() {
         </main>
       }
     >
-      <SettingsContent />
+      <Reveal>
+        <SettingsContent />
+      </Reveal>
     </Suspense>
   );
 }

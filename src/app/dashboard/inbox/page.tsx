@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/dashboard/PageHeader";
+import Reveal from "@/components/motion/reveal";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface InboxItem {
@@ -150,6 +151,7 @@ export default function InboxPage() {
   };
 
   return (
+    <Reveal>
     <>
       <section className="dashboard-content flex flex-1 flex-col space-y-5 pb-12">
       <PageHeader
@@ -431,5 +433,6 @@ export default function InboxPage() {
     </section>
       {confirmDialog}
     </>
+    </Reveal>
   );
 }

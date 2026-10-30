@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { and, desc, eq } from "drizzle-orm";
 
+import Reveal from "@/components/motion/reveal";
 import IntegrationsStore, {
   type IntegrationItem,
   type VslOption,
@@ -59,17 +60,19 @@ export default async function IntegracoesPage() {
   const benchmarkData = await loadAccountBenchmark(readyRows.map((row) => ({ id: row.id, title: row.title })));
 
   return (
-    <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-6">
-      <header>
-        <h1 className="text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">Marketplace de apps</h1>
-        <p className="mt-1 text-[12px] themeable-text-ink-muted-48">Pixels, webhooks e atribuição para suas VSLs - configurados uma vez por conta.</p>
-      </header>
-      <IntegrationsStore
-        integrations={integrations}
-        vsls={vsls}
-        capabilities={plan.capabilities}
-        benchmarkData={benchmarkData}
-      />
-    </main>
+    <Reveal>
+      <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-6">
+        <header>
+          <h1 className="text-[22px] font-semibold tracking-[-.03em] themeable-text-ink">Marketplace de apps</h1>
+          <p className="mt-1 text-[12px] themeable-text-ink-muted-48">Pixels, webhooks e atribuição para suas VSLs - configurados uma vez por conta.</p>
+        </header>
+        <IntegrationsStore
+          integrations={integrations}
+          vsls={vsls}
+          capabilities={plan.capabilities}
+          benchmarkData={benchmarkData}
+        />
+      </main>
+    </Reveal>
   );
 }

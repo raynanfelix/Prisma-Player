@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { desc } from "drizzle-orm";
 import { KanbanSquare } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
+import Reveal from "@/components/motion/reveal";
 import RoadmapBoard, { type RoadmapTask } from "@/components/dashboard/RoadmapBoard";
 import { requireUser, getCurrentAdminUser } from "@/lib/auth/server";
 import { db, schema } from "@/lib/db";
@@ -32,15 +33,17 @@ export default async function DashboardRoadmapPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        icon={<KanbanSquare className="size-5" />}
-        title="Roadmap"
-      />
-      <p className="m-0 text-sm text-slate-500 dark:text-zinc-400">
-        Sugira o que você quer que a equipe faça. Nossa equipe move cada pedido entre as etapas: Backlog, Faremos, Estamos preparando e Pronto.
-      </p>
-      <RoadmapBoard initialTasks={tasks} isAdmin={Boolean(admin)} />
-    </div>
+    <Reveal>
+      <div className="flex flex-col gap-4">
+        <PageHeader
+          icon={<KanbanSquare className="size-5" />}
+          title="Roadmap"
+        />
+        <p className="m-0 text-sm text-slate-500 dark:text-zinc-400">
+          Sugira o que você quer que a equipe faça. Nossa equipe move cada pedido entre as etapas: Backlog, Faremos, Estamos preparando e Pronto.
+        </p>
+        <RoadmapBoard initialTasks={tasks} isAdmin={Boolean(admin)} />
+      </div>
+    </Reveal>
   );
 }
