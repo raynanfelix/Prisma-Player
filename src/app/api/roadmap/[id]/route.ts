@@ -28,13 +28,17 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!uuid.test(id)) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
   const parsed = await readJsonBody<{ stage?: unknown; title?: unknown; description?: unknown; requesterName?: unknown }>(request);
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) {
+    console.error("[roadmap PATCH] JSON parse error:", parsed.response);
+    return parsed.response;
+  }
   const body = parsed.body ?? {};
+  console.log("[roadmap PATCH] received body:", JSON.stringify(body));
 
   const check = validateRoadmapPatch(body);
   if (check.error) {
     console.error("[roadmap PATCH] validation error:", check.error, "hasChanges:", check.hasChanges, "body:", JSON.stringify(body), "validStages:", ROADMAP_STAGES);
-    return NextResponse.json({ error: check.error, details: check, validStages: ROADMAP_STAGES }, { status: 400 });
+    return NextResponse.json({ error: check.error, details: check, validStages: ROADMAP_STAGES, receivedStage: body.stage, receivedBody: body }, { status: 400 });
   }
 
   const patch: Partial<typeof roadmapTasks.$inferInsert> = { updatedAt: new Date() };
