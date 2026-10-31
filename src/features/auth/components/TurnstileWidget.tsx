@@ -56,8 +56,10 @@ export function TurnstileWidget({
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
   // Mantém refs atualizados sem causar re-render ou remount do widget
-  onTokenChangeRef.current = onTokenChange;
-  onErrorRef.current = onError;
+  useLayoutEffect(() => {
+    onTokenChangeRef.current = onTokenChange;
+    onErrorRef.current = onError;
+  }, [onTokenChange, onError]);
 
   // Carrega o script do Turnstile uma única vez
   useEffect(() => {

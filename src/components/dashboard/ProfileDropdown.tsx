@@ -379,7 +379,7 @@ export default function ProfileDropdown({
   const mainRef = useRef<HTMLDivElement>(null);
   const accountsRef = useRef<HTMLDivElement>(null);
   const phaseRef = useRef<Phase>("closed");
-  phaseRef.current = phase;
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const openIntent = useRef<{ focus: "first" | "last" | "menu"; resume: boolean }>({ focus: "menu", resume: false });
   const pageFocus = useRef<"first" | "switch" | null>(null);

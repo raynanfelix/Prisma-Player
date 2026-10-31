@@ -65,17 +65,15 @@ export default function AccountMenu() {
     } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
       setThemeState("dark");
     }
+  }, []);
 
+  useEffect(() => {
     void Promise.allSettled([
       accountSettingsService.getOverview(),
       accountSettingsService.getProfile().then((r) => r.profile),
     ]).then(([ovResult]) => {
       if (ovResult.status === "fulfilled") {
         setOverview(ovResult.value);
-        // Admin check is embedded in overview.access or separate call
-        // For now, we rely on the existing access check pattern if needed,
-        // but Overview usually contains enough for the menu header.
-        // If specific admin flag is needed separately:
         import("@/services/account/client").then(({ accountService }) => {
           void accountService.getAccess().then((acc) => setIsAdmin(acc.isAdmin));
         });
